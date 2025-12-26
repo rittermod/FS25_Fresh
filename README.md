@@ -1,6 +1,6 @@
 # Fresh (In Development)
 
-Fresh adds shelf life to your produce - crops age over time and will spoil if not sold or used!
+Fresh adds shelf life to your produce and bales - crops age over time and will spoil if not sold or used!
 
 ## Why Fresh?
 
@@ -14,26 +14,27 @@ Fresh tracks your goods using a batch system - each harvest or production run is
 
 ## Development Status
 
-**Current Phase:** Alpha (Pallets/Bigbags & Object Storage)
+**Current Phase:** Alpha 2 (Pallets, Bales & Object Storage)
 
 ### What's Working
 
 - Pallet tracking for 100 product types across 10 categories
-- Age display when looking at pallets ("Expires in: X days")
-- Warning indicator when produce nears expiration
+- Bale tracking for 4 forage types (grass, hay, straw, silage)
+- Expiry display when looking at pallets or bales ("Expires in: X days")
+- Warning indicator when produce or bales near expiration
 - Automatic removal of expired goods with notification
-- Object storage persistence (continue aging in storage)
+- Fermenting bales (wrapped grass) age after fermentation completes
+- Object storage persistence (pallets and bales continue aging in storage)
 - Multiplayer synchronization
 - Savegame persistence
 
 ### In Progress
 
-- Bale support (grass, hay, straw, silage)
+- Bulk support (trailers, silos, tanks, etc)
 
 ### Planned
 
-- Bulk support
-- Placeable storage tracking (silos, tanks)
+- Placeable storage tracking
 - Transfer chain (age flows between containers)
 - Production integration
 
