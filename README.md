@@ -14,7 +14,7 @@ Fresh tracks your goods using a batch system - each harvest or production run is
 
 ## Development Status
 
-**Current Phase:** Alpha 2 (Pallets, Bales & Object Storage)
+**Current Phase:** Alpha 3 (Pallets, Bales & Object Storage)
 
 ### What's Working
 
@@ -25,6 +25,8 @@ Fresh tracks your goods using a batch system - each harvest or production run is
 - Automatic removal of expired goods with notification
 - Fermenting bales (wrapped grass) age after fermentation completes
 - Object storage persistence (pallets and bales continue aging in storage)
+- Storage HUD shows expiring item counts with warning highlight
+- Oldest items retrieved first from storage (FIFO)
 - Multiplayer synchronization
 - Savegame persistence
 
