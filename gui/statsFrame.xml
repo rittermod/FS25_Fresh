@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<GUI name="RmStatsFrame">
+    <GuiElement profile="fs25_menuContainer">
+
+        <!-- Header with icon -->
+        <GuiElement profile="fs25_menuHeaderPanel">
+            <Bitmap profile="fs25_menuHeaderIconBg">
+                <Bitmap profile="fs25_menuHeaderIcon" imageSliceId="gui.icon_ingameMenu_finances"/>
+            </Bitmap>
+            <Text profile="fs25_menuHeaderTitle" text="$l10n_fresh_stats_title"/>
+        </GuiElement>
+
+        <!-- ============================================================= -->
+        <!-- SUMMARY CARDS ROW (4 cards, ~370px each + spacing)            -->
+        <!-- ============================================================= -->
+        <GuiElement profile="rmFreshContainer" position="20px -70px" size="1540px 80px">
+
+            <!-- Card 1: Expired Today -->
+            <RoundCorner profile="rmFreshStatCardBg" position="0px 0px" size="360px 70px">
+                <Text profile="rmFreshStatCardLabel" position="10px -10px" size="340px 20px" text="$l10n_fresh_stats_today"/>
+                <Text profile="rmFreshStatCardValue" position="10px -35px" size="340px 28px" id="todayExpiredValue" text="0 L"/>
+            </RoundCorner>
+
+            <!-- Card 2: Expired This Month -->
+            <RoundCorner profile="rmFreshStatCardBg" position="380px 0px" size="360px 70px">
+                <Text profile="rmFreshStatCardLabel" position="10px -10px" size="340px 20px" text="$l10n_fresh_stats_month"/>
+                <Text profile="rmFreshStatCardValue" position="10px -35px" size="340px 28px" id="monthExpiredValue" text="0 L"/>
+            </RoundCorner>
+
+            <!-- Card 3: Expired Last 12 Months -->
+            <RoundCorner profile="rmFreshStatCardBg" position="760px 0px" size="360px 70px">
+                <Text profile="rmFreshStatCardLabel" position="10px -10px" size="340px 20px" text="$l10n_fresh_stats_12months"/>
+                <Text profile="rmFreshStatCardValue" position="10px -35px" size="340px 28px" id="last12MonthsExpiredValue" text="0 L"/>
+            </RoundCorner>
+
+            <!-- Card 4: Total Expired -->
+            <RoundCorner profile="rmFreshStatCardBg" position="1140px 0px" size="360px 70px">
+                <Text profile="rmFreshStatCardLabel" position="10px -10px" size="340px 20px" text="$l10n_fresh_stats_total"/>
+                <Text profile="rmFreshStatCardValue" position="10px -35px" size="340px 28px" id="totalExpiredValue" text="0 L"/>
+            </RoundCorner>
+
+        </GuiElement>
+
+        <!-- ============================================================= -->
+        <!-- LEFT SIDE: Product Breakdown (~700px wide)                    -->
+        <!-- ============================================================= -->
+
+        <!-- Left section header -->
+        <Text profile="fs25_settingsSectionHeader" position="20px -155px" text="$l10n_fresh_stats_breakdown"/>
+
+        <!-- Left table header -->
+        <Bitmap profile="rmFreshTableList" id="breakdownHeader" position="20px -210px" size="700px 40px">
+            <Text profile="rmFreshTableHeaderLeftAligned" position="40px 0px" size="260px 40px" text="$l10n_fresh_column_product"/>
+            <Text profile="rmFreshTableHeaderRightAligned" position="310px 0px" size="180px 40px" text="$l10n_fresh_column_amount_lost"/>
+            <Text profile="rmFreshTableHeaderRightAligned" position="500px 0px" size="180px 40px" text="$l10n_fresh_column_value"/>
+            <ThreePartBitmap profile="fs25_lineSeparatorBottom" position="0px 2px"/>
+        </Bitmap>
+
+        <!-- Left breakdown list with scrollbar wrapper -->
+        <GuiElement profile="rmFreshContainer" id="breakdownContainer" position="20px -255px" size="720px 605px" with="anchorTopLeft">
+            <SmoothList profile="rmFreshTableList" id="breakdownList" position="0px 0px" size="700px 620px" with="anchorTopLeft">
+                <ListItem profile="rmFreshTableListItem" name="breakdownRowTemplate" size="700px 48px">
+                    <Bitmap profile="rmFreshFillTypeIcon" position="5px -9px" size="30px 30px" name="fillTypeIcon"/>
+                    <Text profile="rmFreshTableRowCellLeftAligned" position="40px 0px" size="260px 48px" name="fillTypeName" textLayoutMode="scrolling"/>
+                    <Text profile="rmFreshTableRowCellRightAligned" position="310px 0px" size="180px 48px" name="amount"/>
+                    <Text profile="rmFreshTableRowCellRightAligned" position="500px 0px" size="180px 48px" name="value"/>
+                </ListItem>
+            </SmoothList>
+            <!-- Left scrollbar -->
+            <ThreePartBitmap profile="fs25_listSliderBox" id="breakdownSliderBox" position="-5px 0px" size="12px 620px" with="anchorTopRight">
+                <Slider profile="fs25_listSlider" size="6px 612px" dataElementId="breakdownList" id="breakdownSlider"/>
+            </ThreePartBitmap>
+        </GuiElement>
+
+        <!-- Left empty state -->
+        <Text profile="fs25_settingsMultiTextOptionTitle" id="breakdownEmpty" position="20px -450px" size="700px 40px" text="$l10n_fresh_stats_breakdown_empty" textAlignment="center" visible="false"/>
+
+        <!-- ============================================================= -->
+        <!-- RIGHT SIDE: Recent Losses (~800px wide, starts at 780px)      -->
+        <!-- ============================================================= -->
+
+        <!-- Right section header -->
+        <Text profile="fs25_settingsSectionHeader" position="780px -155px" text="$l10n_fresh_stats_recent"/>
+
+        <!-- Right table header -->
+        <Bitmap profile="rmFreshTableList" id="recentHeader" position="780px -210px" size="780px 40px">
+            <Text profile="rmFreshTableHeaderLeftAligned" position="10px 0px" size="115px 40px" text="$l10n_fresh_column_datetime"/>
+            <Text profile="rmFreshTableHeaderLeftAligned" position="130px 0px" size="160px 40px" text="$l10n_fresh_column_product"/>
+            <Text profile="rmFreshTableHeaderRightAligned" position="300px 0px" size="95px 40px" text="$l10n_fresh_column_amount_lost"/>
+            <Text profile="rmFreshTableHeaderRightAligned" position="405px 0px" size="95px 40px" text="$l10n_fresh_column_value"/>
+            <Text profile="rmFreshTableHeaderLeftAligned" position="510px 0px" size="250px 40px" text="$l10n_fresh_column_storage"/>
+            <ThreePartBitmap profile="fs25_lineSeparatorBottom" position="0px 2px"/>
+        </Bitmap>
+
+        <!-- Right recent list with scrollbar wrapper -->
+        <GuiElement profile="rmFreshContainer" id="recentContainer" position="780px -255px" size="800px 605px" with="anchorTopLeft">
+            <SmoothList profile="rmFreshTableList" id="recentList" position="0px 0px" size="780px 620px" with="anchorTopLeft">
+                <ListItem profile="rmFreshTableListItem" name="recentRowTemplate" size="780px 48px">
+                    <Text profile="rmFreshTableRowCellLeftAligned" position="10px 0px" size="115px 48px" name="dateTime"/>
+                    <Bitmap profile="rmFreshFillTypeIcon" position="130px -9px" size="30px 30px" name="fillTypeIcon"/>
+                    <Text profile="rmFreshTableRowCellLeftAligned" position="165px 0px" size="125px 48px" name="fillTypeName" textLayoutMode="scrolling"/>
+                    <Text profile="rmFreshTableRowCellRightAligned" position="300px 0px" size="95px 48px" name="amount"/>
+                    <Text profile="rmFreshTableRowCellRightAligned" position="405px 0px" size="95px 48px" name="value"/>
+                    <Text profile="rmFreshTableRowCellLeftAligned" position="510px 0px" size="250px 48px" name="storage" textLayoutMode="scrolling"/>
+                </ListItem>
+            </SmoothList>
+            <!-- Right scrollbar -->
+            <ThreePartBitmap profile="fs25_listSliderBox" id="recentSliderBox" position="-5px 0px" size="12px 620px" with="anchorTopRight">
+                <Slider profile="fs25_listSlider" size="6px 612px" dataElementId="recentList" id="recentSlider"/>
+            </ThreePartBitmap>
+        </GuiElement>
+
+        <!-- Right empty state -->
+        <Text profile="fs25_settingsMultiTextOptionTitle" id="recentEmpty" position="780px -450px" size="780px 40px" text="$l10n_fresh_stats_log_empty" textAlignment="center" visible="false"/>
+
+    </GuiElement>
+</GUI>

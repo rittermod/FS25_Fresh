@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<modDesc descVersion="105">
+    <author>Ritter</author>
+    <version>0.5.0.0</version>
+    <title>
+        <en>Fresh</en>
+    </title>
+    <description>
+        <en><![CDATA[
+Fresh adds shelf life to your produce and bales - crops age over time and will spoil if not sold or used!
+
+Your harvested crops, processed products, and baled forage now have realistic shelf lives. Fresh vegetables spoil quickly, while canned products last much longer. Bales of grass spoil within days, while silage stays fresh for months. Customize shelf lives via the Fresh Menu!
+
+Fresh Menu (Right Shift+F):
+- Inventory Overview: see all perishables with oldest ages
+- Loss Statistics: track what you've lost
+- Settings: customize shelf lives per product
+
+Features:
+- 100+ products with realistic shelf lives
+- 4 bale types with fermentation handling
+- Vehicles, bales, silos, productions, husbandries supported
+- Oldest items retrieved first from storage
+- Daily loss notifications
+- Multiplayer support (server-authoritative)
+- Ages saved with your game
+
+Notes:
+- Early access - feedback welcome
+- Only base game products in this version
+
+Documentation: https://github.com/rittermod/FS25_Fresh
+
+Changelog:
+
+0.5.0.0 (Early Access):
+- Added Fresh Menu (Right Shift+F) with inventory, statistics, and settings
+- Added configurable shelf lives per product
+- Added loss tracking with daily notifications
+- Improved transfer handling (batch ages preserved)
+- Rebuilt core architecture for stability
+
+0.4.0.0 (Alpha 5):
+- Added placeable storage tracking (silos, productions, husbandry)
+- Added husbandry feed tracking
+- Added expiring count display for placeables
+- Added multiplayer sync for placeable storage
+
+0.3.0.0 (Alpha 4):
+- Added bulk vehicle tracking (trailers, tankers, combines)
+- Expanded from pallets to all vehicles with fill capacity
+
+0.2.0.0 (Alpha 2):
+- Added bale perishability with 4 forage types
+- Added bale storage aging (barns/sheds)
+- Added fermenting bale handling
+
+0.1.0.0 (Alpha 1):
+- Initial alpha release
+- Added perishable goods system for 100 product types
+- Added multiplayer support and savegame persistence
+        ]]>        </en>
+    </description>
+
+    <iconFilename>icon_fresh.dds</iconFilename>
+    <multiplayer supported="true"/>
+
+    <!-- External localization files -->
+    <l10n filenamePrefix="languages/l10n"/>
+
+    <!-- Input action: Toggle Fresh menu -->
+    <actions>
+        <action name="RM_FRESH_MENU"/>
+    </actions>
+
+    <inputBinding>
+        <actionBinding action="RM_FRESH_MENU">
+            <binding device="KB_MOUSE_DEFAULT" input="KEY_rshift KEY_f"/>
+        </actionBinding>
+    </inputBinding>
+
+    <extraSourceFiles>
+        <sourceFile filename="scripts/main.lua"/>
+    </extraSourceFiles>
+
+</modDesc>

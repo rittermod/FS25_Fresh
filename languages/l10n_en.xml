@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<l10n>
+    <texts>
+        <!-- Expires in display -->
+        <text name="fresh_expires_in" text="Expires in"/>
+        <text name="fresh_expires_hour" text="1 hour"/>
+        <text name="fresh_expires_hours" text="%d hours"/>
+        <text name="fresh_expires_day" text="1 day"/>
+        <text name="fresh_expires_days" text="%d days"/>
+        <text name="fresh_expires_month" text="1 month"/>
+        <text name="fresh_expires_months" text="%.1f months"/>
+
+        <!-- Status messages -->
+        <text name="fresh_expired" text="Expired"/>
+        <text name="fresh_near_expiration" text="Near Expiration"/>
+
+        <!-- Daily loss notification (summary at day change) -->
+        <text name="fresh_dailyLossNotification" text="Lost %.0f units due to products expiring"/>
+
+        <!-- Storage HUD (used by both placeable storage and husbandry feed) -->
+        <text name="fresh_storage_expiring" text="(%d expiring)"/>
+        <text name="fresh_storage_expiring_volume" text="(%s expiring)"/>
+
+        <!-- Fresh Menu keybind -->
+        <text name="input_RM_FRESH_MENU" text="Fresh Menu"/>
+
+        <!-- Overview tab -->
+        <text name="fresh_overview_title" text="Fresh Overview (preview)"/>
+
+        <!-- Settings tab -->
+        <text name="fresh_settings_title" text="Fresh Settings (preview)"/>
+
+        <!-- Settings expiration duration options -->
+        <text name="fresh_expire_never" text="Do not expire"/>
+        <text name="fresh_expire_1_month" text="1 month"/>
+        <text name="fresh_expire_2_months" text="2 months"/>
+        <text name="fresh_expire_3_months" text="3 months"/>
+        <text name="fresh_expire_4_months" text="4 months"/>
+        <text name="fresh_expire_5_months" text="5 months"/>
+        <text name="fresh_expire_6_months" text="6 months"/>
+        <text name="fresh_expire_9_months" text="9 months"/>
+        <text name="fresh_expire_1_year" text="1 year"/>
+        <text name="fresh_expire_1_5_years" text="1.5 years"/>
+        <text name="fresh_expire_2_years" text="2 years"/>
+        <text name="fresh_expire_3_years" text="3 years"/>
+        <text name="fresh_expire_5_years" text="5 years"/>
+
+        <!-- Settings global section -->
+        <text name="fresh_settings_global" text="Global Settings"/>
+        <text name="fresh_settings_enableExpiration" text="Enable Expiration"/>
+        <text name="fresh_settings_enableExpiration_tooltip" text="When enabled, perishable goods will age over time and eventually expire if not sold or used."/>
+        <text name="fresh_settings_showWarnings" text="Show Warnings"/>
+        <text name="fresh_settings_showWarnings_tooltip" text="Show notifications in info boxwhen produce is about to expire."/>
+        <text name="fresh_settings_fillTypes" text="Expiration Times"/>
+
+        <!-- Settings reset button -->
+        <text name="fresh_settings_resetDefaults" text="Reset to Defaults"/>
+        <text name="fresh_settings_resetConfirm" text="Reset all settings to mod defaults? This cannot be undone."/>
+        <text name="fresh_settings_reset" text="Settings reset to mod defaults"/>
+
+        <!-- Status Frame / Inventory Overview -->
+        <text name="fresh_inventory_title" text="Inventory Overview (preview)"/>
+        <text name="fresh_inventory_summary" text="Total: %d product types in %d containers"/>
+        <text name="fresh_inventory_empty" text="No perishable items currently tracked"/>
+        <text name="fresh_no_farm" text="No farm selected. Join a farm to view inventory."/>
+        <text name="fresh_column_type" text="Product"/>
+        <text name="fresh_column_amount" text="Amount"/>
+        <text name="fresh_column_expiring" text="Expiring"/>
+        <text name="fresh_column_age" text="Next Expiry"/>
+        <text name="fresh_column_status" text="Status"/>
+        <text name="fresh_status_ok" text="OK"/>
+        <text name="fresh_status_expiring" text="Expiring"/>
+        <text name="fresh_sort_label" text="Sort by"/>
+        <text name="fresh_sort_by_type" text="Type"/>
+        <text name="fresh_sort_by_expiring" text="Expiring amount"/>
+        <text name="fresh_sort_by_age" text="Next expiry"/>
+
+        <!-- Expiring Soon table -->
+        <text name="fresh_expires_within" text="Expires within"/>
+        <text name="fresh_expires_24h" text="24 hours"/>
+        <text name="fresh_expires_48h" text="48 hours"/>
+        <text name="fresh_expires_72h" text="72 hours"/>
+        <text name="fresh_column_storage" text="Storage"/>
+        <text name="fresh_column_timeleft" text="Next Expiry"/>
+        <text name="fresh_expiring_empty" text="Nothing expiring soon"/>
+        <text name="fresh_expiring_summary" text="%d items (%.0f L total)"/>
+        <text name="fresh_expires_soon" text="&lt; 1 hour"/>
+
+        <!-- Statistics Frame -->
+        <text name="fresh_stats_title" text="Loss Statistics"/>
+        <text name="fresh_stats_today" text="Lost Today"/>
+        <text name="fresh_stats_month" text="Lost This Month"/>
+        <text name="fresh_stats_12months" text="Lost Last 12 Months"/>
+        <text name="fresh_stats_total" text="Total Lost"/>
+        <text name="fresh_stats_breakdown" text="Product loss last 12 months"/>
+        <text name="fresh_stats_recent" text="Recent Losses"/>
+        <text name="fresh_stats_breakdown_empty" text="No losses recorded"/>
+        <text name="fresh_stats_log_empty" text="No recent losses"/>
+        <text name="fresh_column_product" text="Product"/>
+        <text name="fresh_column_amount_lost" text="Amount"/>
+        <text name="fresh_column_value" text="Value"/>
+        <text name="fresh_column_datetime" text="Date/Time"/>
+    </texts>
+</l10n>

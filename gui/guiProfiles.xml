@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<GUIProfiles>
+    <!-- Extend existing FS25 profiles for consistency -->
+
+    <!-- Fill type icon for settings frame -->
+    <Profile name="rmFreshFillTypeIcon" extends="emptyPanel" with="anchorTopLeft">
+        <imageColor value="1 1 1 1"/>
+        <imageSelectedColor value="1 1 1 1"/>
+    </Profile>
+
+    <!-- Sort selector row with dark background -->
+    <Profile name="rmFreshSortRow" extends="baseReference" with="anchorTopLeft">
+        <imageColor value="$preset_fs25_colorMainGrey"/>
+    </Profile>
+
+    <!-- Container for grouping -->
+    <Profile name="rmFreshContainer" extends="baseReference" with="anchorTopLeft">
+        <!-- <imageColor value="$preset_fs25_colorMainHighlight"/> -->
+    </Profile>
+
+    <!-- =========================================================== -->
+    <!-- Table/List profiles for Overview Frame                      -->
+    <!-- Based on TransactionLog mod patterns                        -->
+    <!-- =========================================================== -->
+
+    <!-- Table container profile -->
+    <Profile name="rmFreshTableList" extends="emptyPanel" with="anchorTopLeft pivotTopLeft">
+        <imageColor value="$preset_fs25_colorGreyDark_50"/>
+    </Profile>
+
+    <!-- Table list item with alternating colors -->
+    <Profile name="rmFreshTableListItem" extends="baseReference" with="anchorTopStretchingX alternating">
+        <height value="48px"/>
+        <imageColor value="$preset_fs25_colorGrey"/>
+        <imageSelectedColor value="$preset_fs25_colorMainHighlight"/>
+        <alternateBackgroundColor value="$preset_fs25_colorGreyDark_50"/>
+    </Profile>
+
+    <!-- Table header profiles -->
+    <Profile name="rmFreshTableHeaderLeftAligned" extends="baseReference">
+        <imageColor value="0 0 0 0"/>
+        <textFocusedColor value="$preset_fs25_colorMainHighlight"/>
+        <textHighlightedColor value="$preset_fs25_colorMainHighlight"/>
+        <textSize value="16px"/>
+        <textBold value="true"/>
+        <textUpperCase value="true"/>
+        <textColor value="$preset_colorWhite_50"/>
+        <textAlignment value="left"/>
+        <textDisabledColor value="$preset_colorDisabled"/>
+    </Profile>
+
+    <Profile name="rmFreshTableHeaderRightAligned" extends="rmFreshTableHeaderLeftAligned">
+        <textAlignment value="right"/>
+    </Profile>
+
+    <Profile name="rmFreshTableHeaderCentered" extends="rmFreshTableHeaderLeftAligned">
+        <textAlignment value="center"/>
+    </Profile>
+
+    <!-- Table row cell profiles -->
+    <Profile name="rmFreshTableRowCellLeftAligned" extends="baseReference" with="anchorStretchingYLeft">
+        <textBold value="false"/>
+        <textSize value="15px"/>
+        <textAlignment value="left"/>
+        <textColor value="$preset_fs25_colorMainLight"/>
+        <textSelectedColor value="$preset_fs25_colorMainDark"/>
+        <textDisabledColor value="$preset_colorDisabled"/>
+    </Profile>
+
+    <Profile name="rmFreshTableRowCellRightAligned" extends="rmFreshTableRowCellLeftAligned">
+        <textAlignment value="right"/>
+    </Profile>
+
+    <Profile name="rmFreshTableRowCellCentered" extends="rmFreshTableRowCellLeftAligned">
+        <textAlignment value="center"/>
+    </Profile>
+
+    <!-- Table summary row -->
+    <Profile name="rmFreshTableSummary" extends="emptyPanel" with="anchorStretchingYLeft pivotTopLeft">
+    </Profile>
+
+    <!-- =========================================================== -->
+    <!-- Statistics Frame Card Profiles                               -->
+    <!-- =========================================================== -->
+
+    <!-- Card background with rounded corners and border -->
+    <Profile name="rmFreshStatCardBg" extends="baseReference" with="anchorTopLeft">
+        <color value="$preset_fs25_colorGreyDark_50"/>
+    </Profile>
+
+    <!-- Card label text (smaller, muted color) -->
+    <Profile name="rmFreshStatCardLabel" extends="baseReference" with="anchorTopLeft">
+        <textSize value="14px"/>
+        <textColor value="0.7 0.7 0.7 1"/>
+        <textBold value="false"/>
+        <textUpperCase value="true"/>
+    </Profile>
+
+    <!-- Card value text (larger, bold, white) -->
+    <Profile name="rmFreshStatCardValue" extends="baseReference" with="anchorTopLeft">
+        <textSize value="24px"/>
+        <textBold value="true"/>
+        <textColor value="1 1 1 1"/>
+    </Profile>
+
+</GUIProfiles>

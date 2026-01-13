@@ -1,0 +1,18 @@
+# Build outputs
+*.zip
+build/
+
+# Editor files
+.vscode/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*~
+
+# Test files (local only)
+scripts/tests/

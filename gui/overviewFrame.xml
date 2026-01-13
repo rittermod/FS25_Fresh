@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<GUI name="RmOverviewFrame">
+    <GuiElement profile="fs25_menuContainer">
+
+        <!-- Header with icon -->
+        <GuiElement profile="fs25_menuHeaderPanel">
+            <Bitmap profile="fs25_menuHeaderIconBg">
+                <Bitmap profile="fs25_menuHeaderIcon" imageSliceId="gui.icon_ingameMenu_calendar"/>
+            </Bitmap>
+            <Text profile="fs25_menuHeaderTitle" text="$l10n_fresh_inventory_title"/>
+        </GuiElement>
+
+        <!-- ============================================================= -->
+        <!-- LEFT SIDE: Expiring Soon (755px wide)                         -->
+        <!-- ============================================================= -->
+
+        <!-- Left expiry selector -->
+        <Bitmap profile="rmFreshSortRow" position="20px -70px" size="755px 40px">
+            <Text profile="fs25_settingsMultiTextOptionTitle" position="10px 0px" text="$l10n_fresh_expires_within"/>
+            <MultiTextOption profile="fs25_settingsMultiTextOption" id="expirySelector" onClick="onExpiryFilterChanged" position="-5px 0px"/>
+        </Bitmap>
+
+        <!-- Left table header -->
+        <Bitmap profile="rmFreshTableList" id="expiringHeader" position="20px -120px" size="755px 40px">
+            <Text profile="rmFreshTableHeaderLeftAligned" position="40px 0px" size="160px 40px" text="$l10n_fresh_column_type"/>
+            <Text profile="rmFreshTableHeaderLeftAligned" position="205px 0px" size="200px 40px" text="$l10n_fresh_column_storage"/>
+            <Text profile="rmFreshTableHeaderRightAligned" position="415px 0px" size="120px 40px" text="$l10n_fresh_column_amount"/>
+            <Text profile="rmFreshTableHeaderRightAligned" position="545px 0px" size="180px 40px" text="$l10n_fresh_column_timeleft"/>
+            <ThreePartBitmap profile="fs25_lineSeparatorBottom" position="0px 2px"/>
+        </Bitmap>
+
+        <!-- Left expiring list with scrollbar wrapper -->
+        <GuiElement profile="rmFreshContainer" position="20px -165px" size="775px 700px" with="anchorTopLeft">
+            <SmoothList profile="rmFreshTableList" id="expiringList" position="0px 0px" size="755px 700px" with="anchorTopLeft">
+                <ListItem profile="rmFreshTableListItem" name="expiringRowTemplate" size="755px 48px">
+                    <Bitmap profile="rmFreshFillTypeIcon" position="5px -9px" size="30px 30px" name="expiringIcon"/>
+                    <Text profile="rmFreshTableRowCellLeftAligned" position="40px 0px" size="160px 48px" name="expiringProduct" textLayoutMode="scrolling"/>
+                    <Text profile="rmFreshTableRowCellLeftAligned" position="205px 0px" size="200px 48px" name="expiringStorage" textLayoutMode="scrolling"/>
+                    <Text profile="rmFreshTableRowCellRightAligned" position="415px 0px" size="120px 48px" name="expiringAmount"/>
+                    <Text profile="rmFreshTableRowCellRightAligned" position="545px 0px" size="180px 48px" name="expiringTimeLeft"/>
+                </ListItem>
+            </SmoothList>
+            <!-- Left scrollbar -->
+            <ThreePartBitmap profile="fs25_listSliderBox" id="expiringSliderBox" position="-5px 0px" size="12px 700px" with="anchorTopRight">
+                <Slider profile="fs25_listSlider" size="6px 692px" dataElementId="expiringList" id="expiringSlider"/>
+            </ThreePartBitmap>
+        </GuiElement>
+
+        <!-- Left empty state -->
+        <Text profile="fs25_settingsMultiTextOptionTitle" id="expiringEmptyState" position="20px -350px" size="755px 40px" text="$l10n_fresh_expiring_empty" textAlignment="center" visible="false"/>
+
+        <!-- Left summary row -->
+        <Bitmap profile="rmFreshTableSummary" id="expiringSummaryRow" position="20px -880px" size="755px 40px">
+            <Text profile="rmFreshTableRowCellLeftAligned" position="0px 0px" size="600px 40px" id="expiringSummaryText"/>
+        </Bitmap>
+
+        <!-- ============================================================= -->
+        <!-- RIGHT SIDE: Inventory by Product Type (755px wide, starts at 815px) -->
+        <!-- ============================================================= -->
+
+        <!-- Right sort selector -->
+        <Bitmap profile="rmFreshSortRow" position="815px -70px" size="755px 40px">
+            <Text profile="fs25_settingsMultiTextOptionTitle" position="10px 0px" text="$l10n_fresh_sort_label"/>
+            <MultiTextOption profile="fs25_settingsMultiTextOption" id="sortSelector" onClick="onSortChanged" position="-5px 0px"/>
+        </Bitmap>
+
+        <!-- Right table header -->
+        <Bitmap profile="rmFreshTableList" id="tableHeader" position="815px -120px" size="755px 40px">
+            <Text profile="rmFreshTableHeaderLeftAligned" position="40px 0px" size="200px 40px" text="$l10n_fresh_column_type"/>
+            <Text profile="rmFreshTableHeaderRightAligned" position="250px 0px" size="120px 40px" text="$l10n_fresh_column_amount"/>
+            <Text profile="rmFreshTableHeaderRightAligned" position="380px 0px" size="120px 40px" text="$l10n_fresh_column_expiring"/>
+            <Text profile="rmFreshTableHeaderRightAligned" position="510px 0px" size="120px 40px" text="$l10n_fresh_column_age"/>
+            <Text profile="rmFreshTableHeaderCentered" position="640px 0px" size="100px 40px" text="$l10n_fresh_column_status"/>
+            <ThreePartBitmap profile="fs25_lineSeparatorBottom" position="0px 2px"/>
+        </Bitmap>
+
+        <!-- Right inventory list with scrollbar wrapper -->
+        <GuiElement profile="rmFreshContainer" position="815px -165px" size="775px 700px">
+
+            <SmoothList profile="rmFreshTableList" id="inventoryList" position="0px 0px" size="755px 700px" with="anchorTopLeft">
+                <ListItem profile="rmFreshTableListItem" name="inventoryRowTemplate" size="755px 48px">
+                    <Bitmap profile="rmFreshFillTypeIcon" position="5px -9px" size="30px 30px" name="fillTypeIcon"/>
+                    <Text profile="rmFreshTableRowCellLeftAligned" position="40px 0px" size="200px 48px" name="fillTypeName" textLayoutMode="scrolling"/>
+                    <Text profile="rmFreshTableRowCellRightAligned" position="250px 0px" size="120px 48px" name="amount"/>
+                    <Text profile="rmFreshTableRowCellRightAligned" position="380px 0px" size="120px 48px" name="expiringAmount"/>
+                    <Text profile="rmFreshTableRowCellRightAligned" position="510px 0px" size="120px 48px" name="oldestAge"/>
+                    <Text profile="rmFreshTableRowCellCentered" position="640px 0px" size="100px 48px" name="status"/>
+                </ListItem>
+            </SmoothList>
+            <!-- Right scrollbar -->
+            <ThreePartBitmap profile="fs25_listSliderBox" id="inventorySliderBox" position="-5px 0px" size="12px 700px" with="anchorTopRight">
+                <Slider profile="fs25_listSlider" size="6px 692px" dataElementId="inventoryList" id="inventorySlider"/>
+            </ThreePartBitmap>
+        </GuiElement>
+
+        <!-- Right empty state -->
+        <Text profile="fs25_settingsMultiTextOptionTitle" id="emptyState" position="815px -350px" size="755px 40px" text="$l10n_fresh_inventory_empty" textAlignment="center" visible="false"/>
+
+        <!-- Right summary row -->
+        <Bitmap profile="rmFreshTableSummary" id="summaryRow" position="815px -880px" size="755px 40px">
+            <Text profile="rmFreshTableRowCellLeftAligned" position="0px 0px" size="600px 40px" id="summaryText"/>
+        </Bitmap>
+
+    </GuiElement>
+</GUI>
