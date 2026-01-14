@@ -398,20 +398,60 @@ end
 -- =============================================================================
 
 --- Show freshness status in vehicle HUD info
---- NETWORK SAFE: Uses entity reference lookup (works on server and client)
+--- NETWORK SAFE: Uses spec.containerIds (populated on both server and client)
+--- RIT-120: Display one line per fillType, showing shortest expiration time
 function RmVehicleAdapter:showInfo(superFunc, box)
     superFunc(self, box)
 
-    -- Use entity reference lookup (works on both server and client)
-    local containerId = RmFreshManager:getContainerIdByEntity(self)
-    if containerId then
-        local info = RmFreshManager:getDisplayInfo(containerId)
-        if info then
-            box:addLine(g_i18n:getText("fresh_expires_in"), info.text)
-            if info.isWarning then
-                box:addLine(g_i18n:getText("fresh_near_expiration"), nil, true)
+    local spec = self[RmVehicleAdapter.SPEC_TABLE_NAME]
+    if not spec or not spec.containerIds then return end
+
+    -- Group by fillTypeIndex, keeping container with oldest batch (expires soonest)
+    local byFillType = {} -- fillTypeIndex → { containerId, oldestAge }
+
+    for _, containerId in pairs(spec.containerIds) do
+        local container = RmFreshManager:getContainer(containerId)
+        if container and container.batches and #container.batches > 0 then
+            local ftIndex = container.fillTypeIndex
+            local oldestAge = container.batches[1].ageInPeriods
+
+            if not byFillType[ftIndex] or oldestAge > byFillType[ftIndex].oldestAge then
+                byFillType[ftIndex] = {
+                    containerId = containerId,
+                    oldestAge = oldestAge,
+                }
             end
         end
+    end
+
+    -- Count unique fillTypes for label formatting
+    local fillTypeCount = 0
+    for _ in pairs(byFillType) do
+        fillTypeCount = fillTypeCount + 1
+    end
+
+    local hasWarning = false
+
+    for ftIndex, data in pairs(byFillType) do
+        local info = RmFreshManager:getDisplayInfo(data.containerId)
+        if info then
+            local label = g_i18n:getText("fresh_expires_in")
+            -- Append localized fillType name when multiple fillTypes
+            if fillTypeCount > 1 then
+                local fillType = g_fillTypeManager:getFillTypeByIndex(ftIndex)
+                local displayName = fillType and fillType.title or "?"
+                label = label .. " (" .. displayName .. ")"
+            end
+            box:addLine(label, info.text)
+            if info.isWarning then
+                hasWarning = true
+            end
+        end
+    end
+
+    -- Show single warning if any container is near expiration
+    if hasWarning then
+        box:addLine(g_i18n:getText("fresh_near_expiration"), nil, true)
     end
 end
 
