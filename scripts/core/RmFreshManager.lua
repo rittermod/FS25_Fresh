@@ -1726,6 +1726,11 @@ function RmFreshManager:getDisplayInfo(containerId)
     local container = self.containers[containerId]
     if not container then return nil end
 
+    -- Skip display if fillType is not currently perishable (RIT-140)
+    if not RmFreshSettings:isPerishableByIndex(container.fillTypeIndex) then
+        return nil
+    end
+
     if not container.batches or #container.batches == 0 then
         return nil
     end
