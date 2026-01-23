@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <modDesc descVersion="105">
     <author>Ritter</author>
-    <version>0.6.0.0</version>
+    <version>0.6.1.0</version>
     <title>
         <en>Fresh</en>
     </title>
@@ -33,6 +33,9 @@ Notes:
 Documentation: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
+
+0.6.1.0:
+- Fixed age distribution showing on empty vehicles/placeables (floating point precision issue)
 
 0.6.0.0 (Early Access):
 - Added age distribution HUD: colored freshness bars when near placeables and vehicles

@@ -740,6 +740,9 @@ function RmFreshManager:onHourChanged()
         Log:info("HOURLY_RECONCILE: added=%.1f removed=%.1f", reconStats.totalAdded, reconStats.totalRemoved)
     end
 
+    -- Cleanup phantom batches (floating-point artifacts with amount < 0.001)
+    self:cleanupEmptyBatches()
+
     -- Check if expiration is enabled globally (AC #12)
     if not RmFreshSettings:isExpirationEnabled() then
         Log:trace("HOURLY_AGING: Skipped - expiration disabled")
@@ -2666,6 +2669,38 @@ function RmFreshManager:reconcileAll()
         stats.containersProcessed, stats.containersSkipped, stats.totalAdded, stats.totalRemoved, #modifiedContainers)
 
     return stats
+end
+
+--- Cleanup empty/near-zero batches from all containers
+--- Removes phantom batches caused by floating-point precision issues
+--- SERVER ONLY - called from onHourChanged
+---@return number Count of batches removed
+function RmFreshManager:cleanupEmptyBatches()
+    if g_server == nil then return 0 end
+
+    local removedCount = 0
+    local EPSILON = 0.001
+
+    for _, container in pairs(self.containers) do
+        local batches = container.batches
+        if batches then
+            local i = 1
+            while i <= #batches do
+                if batches[i].amount < EPSILON then
+                    table.remove(batches, i)
+                    removedCount = removedCount + 1
+                else
+                    i = i + 1
+                end
+            end
+        end
+    end
+
+    if removedCount > 0 then
+        Log:debug("CLEANUP_EMPTY_BATCHES: removed %d phantom batches", removedCount)
+    end
+
+    return removedCount
 end
 
 --- Helper: Add amount during reconciliation (under-tracked scenario)

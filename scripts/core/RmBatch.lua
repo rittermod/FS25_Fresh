@@ -219,6 +219,10 @@ function RmBatch.consumeFIFO(batches, amount)
             })
             totalConsumed = totalConsumed + remaining
             oldest.amount = oldest.amount - remaining
+            -- Clean up empty/near-zero batches (floating-point artifacts)
+            if oldest.amount < 0.001 then
+                table.remove(batches, 1)
+            end
             remaining = 0
         end
     end
