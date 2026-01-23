@@ -12,7 +12,7 @@ local modDirectory = g_currentModDirectory
 
 source(modDirectory .. "scripts/rmlib/RmLogging.lua")
 Log = RmLogging.getLogger("Fresh")
-Log:setLevel(RmLogging.LOG_LEVEL.DEBUG)
+-- Log:setLevel(RmLogging.LOG_LEVEL.DEBUG)
 
 -- =============================================================================
 -- CORE MODULES
@@ -44,6 +44,8 @@ source(modDirectory .. "scripts/events/RmSettingsChangeRequestEvent.lua")
 -- =============================================================================
 
 source(modDirectory .. "scripts/gui/RmFreshMenu.lua")
+source(modDirectory .. "scripts/gui/RmFreshInfoBox.lua")
+source(modDirectory .. "scripts/gui/RmFreshAgeDisplay.lua")
 source(modDirectory .. "scripts/gui/frames/RmOverviewFrame.lua")
 source(modDirectory .. "scripts/gui/frames/RmStatsFrame.lua")
 source(modDirectory .. "scripts/gui/frames/RmSettingsFrame.lua")
@@ -148,6 +150,9 @@ local function onLoadMapFinished()
     -- Setup Fresh menu GUI
     RmFreshMenu.setupGui()
 
+    -- Install age display HUD hooks
+    RmFreshAgeDisplay.install()
+
     Log:info("Fresh initialized")
 end
 
@@ -167,6 +172,9 @@ end
 
 --- Lifecycle hook: called on map unload
 local function onDeleteMap()
+    -- Uninstall age display (remove drawable)
+    RmFreshAgeDisplay.uninstall()
+
     -- Unregister console commands
     RmFreshConsole:unregisterCommands()
 

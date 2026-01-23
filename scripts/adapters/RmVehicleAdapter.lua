@@ -453,6 +453,11 @@ function RmVehicleAdapter:showInfo(superFunc, box)
     if hasWarning then
         box:addLine(g_i18n:getText("fresh_near_expiration"), nil, true)
     end
+
+    -- Draw age distribution display (if enabled)
+    if RmFreshAgeDisplay and RmFreshAgeDisplay.drawForVehicle then
+        RmFreshAgeDisplay.drawForVehicle(self, box)
+    end
 end
 
 -- =============================================================================

@@ -21,6 +21,9 @@
         <text name="fresh_storage_expiring" text="(%d expiring)"/>
         <text name="fresh_storage_expiring_volume" text="(%s expiring)"/>
 
+        <!-- Age Distribution HUD -->
+        <text name="fresh_age_display_title" text="Freshness"/>
+
         <!-- Fresh Menu keybind -->
         <text name="input_RM_FRESH_MENU" text="Fresh Menu"/>
 
@@ -50,7 +53,9 @@
         <text name="fresh_settings_enableExpiration" text="Enable Expiration"/>
         <text name="fresh_settings_enableExpiration_tooltip" text="When enabled, perishable goods will age over time and eventually expire if not sold or used."/>
         <text name="fresh_settings_showWarnings" text="Show Warnings"/>
-        <text name="fresh_settings_showWarnings_tooltip" text="Show notifications in info boxwhen produce is about to expire."/>
+        <text name="fresh_settings_showWarnings_tooltip" text="Show notifications in info box when produce is about to expire."/>
+        <text name="fresh_settings_showAgeDisplay" text="Show Age Display"/>
+        <text name="fresh_settings_showAgeDisplay_tooltip" text="Show age distribution bars when near storages."/>
         <text name="fresh_settings_fillTypes" text="Expiration Times"/>
 
         <!-- Settings reset button -->

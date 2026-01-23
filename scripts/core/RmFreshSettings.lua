@@ -27,6 +27,7 @@ RmFreshSettings.DEFAULT_WARNING = 0.75  -- 75% of expiration period
 RmFreshSettings.GLOBAL_DEFAULTS = {
     enableExpiration = true,
     showWarnings = true,
+    showAgeDisplay = true,
 }
 
 --- Merge threshold for batch compaction (0.01 periods = ~7 in-game hours)

@@ -220,6 +220,15 @@ function RmSettingsFrame:refreshData()
     else
         Log:warning("SETTINGS_UI: checkShowWarnings not found")
     end
+
+    if self.checkShowAgeDisplay then
+        local showAgeDisplay = RmFreshSettings:getGlobal("showAgeDisplay")
+        local state = (showAgeDisplay ~= false) and 2 or 1
+        self.checkShowAgeDisplay:setState(state)
+        Log:trace("    checkShowAgeDisplay state=%d", state)
+    else
+        Log:warning("SETTINGS_UI: checkShowAgeDisplay not found")
+    end
     RmSettingsFrame.isRefreshing = false
 
     -- Update fillType selectors
@@ -576,6 +585,34 @@ function RmSettingsFrame:onClickShowWarnings(state, _element)
     Log:trace("<<< onClickShowWarnings")
 end
 
+function RmSettingsFrame:onClickShowAgeDisplay(state, _element)
+    Log:trace(">>> onClickShowAgeDisplay(state=%s)", tostring(state))
+
+    -- Skip if this is a programmatic refresh (not user interaction)
+    if RmSettingsFrame.isRefreshing then
+        Log:trace("    skipped (isRefreshing)")
+        return
+    end
+
+    if not self:isAdmin() then
+        return
+    end
+
+    local enabled = (state == 2)
+
+    if g_server then
+        RmFreshSettings:setGlobal("showAgeDisplay", enabled)
+    else
+        if RmSettingsChangeRequestEvent then
+            g_client:getServerConnection():sendEvent(
+                RmSettingsChangeRequestEvent.new("setGlobal", "showAgeDisplay", enabled)
+            )
+        end
+    end
+
+    Log:trace("<<< onClickShowAgeDisplay")
+end
+
 function RmSettingsFrame:onResetDefaults()
     Log:trace(">>> onResetDefaults()")
 
@@ -639,6 +676,9 @@ function RmSettingsFrame:updateReadonlyState()
     end
     if self.checkShowWarnings then
         self.checkShowWarnings:setDisabled(disabled)
+    end
+    if self.checkShowAgeDisplay then
+        self.checkShowAgeDisplay:setDisabled(disabled)
     end
 
     -- Disable all fillType selectors (using shared table)

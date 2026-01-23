@@ -562,6 +562,23 @@ function RmFreshManager:getContainersByType(containerType)
     return result
 end
 
+--- Get all containers for a specific runtime entity
+--- Used by HUD display hooks (e.g., RmFreshAgeDisplay) to find all containers
+--- for a placeable when player is in trigger zone
+---@param entity table The entity object (Placeable, Vehicle, etc.)
+---@return table Array of containers belonging to this entity
+function RmFreshManager:getContainersByRuntimeEntity(entity)
+    if entity == nil then return {} end
+
+    local result = {}
+    for _, container in pairs(self.containers) do
+        if container.runtimeEntity == entity then
+            table.insert(result, container)
+        end
+    end
+    return result
+end
+
 --- Get all containers in the registry
 --- Returns the containers table directly (not a copy)
 --- Used for iteration in console commands and save/load

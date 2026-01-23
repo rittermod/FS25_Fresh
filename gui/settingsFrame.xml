@@ -32,6 +32,14 @@
                 <Text profile="fs25_settingsMultiTextOptionTitle" text="$l10n_fresh_settings_showWarnings"/>
             </Bitmap>
 
+            <!-- Show Age Display toggle -->
+            <Bitmap profile="fs25_multiTextOptionContainer" onCreate="onCreateSettingRow">
+                <BinaryOption profile="fs25_settingsBinaryOption" id="checkShowAgeDisplay" onClick="onClickShowAgeDisplay">
+                    <Text profile="fs25_multiTextOptionTooltip" name="ignore" text="$l10n_fresh_settings_showAgeDisplay_tooltip"/>
+                </BinaryOption>
+                <Text profile="fs25_settingsMultiTextOptionTitle" text="$l10n_fresh_settings_showAgeDisplay"/>
+            </Bitmap>
+
             <!-- Section: Expiration Times (placeholder for fillType list) -->
             <Text profile="fs25_settingsSectionHeader" text="$l10n_fresh_settings_fillTypes"/>
 
