@@ -399,7 +399,7 @@ end
 
 --- Show freshness status in vehicle HUD info
 --- NETWORK SAFE: Uses spec.containerIds (populated on both server and client)
---- RIT-120: Display one line per fillType, showing shortest expiration time
+--- Display one line per fillType, showing shortest expiration time
 function RmVehicleAdapter:showInfo(superFunc, box)
     superFunc(self, box)
 

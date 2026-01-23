@@ -32,6 +32,7 @@ Fresh tracks your products using a batch system - each harvest or production run
 ### Settings & Customization
 - Configure shelf life for the product types
 - Enable/disable expiration globally or per-product
+- Toggle age distribution display on/off
 - Per-savegame settings
 - Multiplayer: host/admin controls settings for all players
 
@@ -51,6 +52,7 @@ Fresh tracks your products using a batch system - each harvest or production run
 - Placeables: silos, productions, husbandries, object storage
 
 ### Visual Feedback
+- Age distribution bars when near placeables/vehicles (color-coded: blue=fresh, green=good, orange=warning, red=critical)
 - Expiry countdown on vehicles and bales ("Expires in: X days")
 - Expiring amounts shown per fill type for placeables
 - Warning highlight when products near expiration
@@ -99,6 +101,12 @@ Fresh tracks your products using a batch system - each harvest or production run
 - **Platform**: PC (Windows/macOS)
 
 ## Changelog
+
+### 0.6.0.0 (Alpha - 2026-01-23)
+- Added age distribution HUD: colored freshness bars appear when near placeables and vehicles
+- Added toggle in Settings to enable/disable age distribution display
+- Fixed freshness display to show per fillType (vehicles with multiple products now show all)
+- Fixed expiration info only showing for perishable fillTypes
 
 ### 0.5.0.0 (Early Access - 2026-01-13)
 - Added Fresh Menu (Right Shift+F) with tabbed interface for inventory, statistics, and settings
