@@ -332,7 +332,7 @@ function RmBaleAdapter.onFillLevelSet(bale, fillLevel)
     local entityId = bale.uniqueId
     if entityId == nil or entityId == "" then
         -- Log warning to test if this ever happens - if it does, we need deferred registration
-        Log:warning("BALE_TEST: uniqueId is nil on setFillLevel hook - deferred registration may be needed")
+        Log:warning("uniqueId is nil on setFillLevel hook - deferred registration may be needed")
         return
     end
 
@@ -363,7 +363,7 @@ function RmBaleAdapter.onLoadHook(bale, fillTypeOverride, fillLevelOverride)
     local entityId = bale.uniqueId
     if entityId == nil or entityId == "" then
         -- Log warning to test if this ever happens - if it does, we need deferred registration
-        Log:warning("BALE_TEST: uniqueId is nil on applyBaleAttributes hook - deferred registration may be needed")
+        Log:warning("uniqueId is nil on applyBaleAttributes hook - deferred registration may be needed")
         return
     end
 

@@ -19,7 +19,7 @@ Fresh tracks your products using a batch system - each harvest or production run
 
 - Early access release - testing and feedback welcome
 - Most storage types supported: vehicles, bales, silos, productions, husbandries
-- Only base game products supported in this alpha
+- Supports products from basegame, DLCs, and maps/mods
 - Customize shelf lives via the Fresh Menu
 
 ## Features
@@ -30,7 +30,7 @@ Fresh tracks your products using a batch system - each harvest or production run
 - **Settings**: Customize shelf lives for any product
 
 ### Settings & Customization
-- Configure shelf life for the product types
+- Configure shelf life for any product (basegame, DLCs, maps/mods)
 - Enable/disable expiration globally or per-product
 - Toggle age distribution display on/off
 - Per-savegame settings
@@ -70,7 +70,6 @@ Fresh tracks your products using a batch system - each harvest or production run
 ## Limitations
 
 - No loose item tracking (loose grass, grains, etc on the ground)
-- Only base game products supported in this alpha
 
 ## Installation
 
@@ -101,6 +100,14 @@ Fresh tracks your products using a batch system - each harvest or production run
 - **Platform**: PC (Windows/macOS)
 
 ## Changelog
+
+### 0.7.0.0 (Alpha - 2026-01-24)
+- Added support for ALL fillTypes - basegame, DLCs, and maps/mods now configurable
+- Improved Settings sorting - products with types appear first for easier navigation
+- Added tooltips in Settings showing fillType details (internal name, type classification)
+
+### 0.6.1.0
+- Fixed age distribution showing on empty vehicles/placeables (floating point precision issue)
 
 ### 0.6.0.0 (Alpha - 2026-01-23)
 - Added age distribution HUD: colored freshness bars appear when near placeables and vehicles

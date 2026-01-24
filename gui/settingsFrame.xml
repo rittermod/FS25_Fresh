@@ -45,7 +45,9 @@
 
             <!-- Template row for fillType selectors (hidden, removed after cloning) -->
             <Bitmap profile="fs25_multiTextOptionContainer" id="fillTypeRowTemplate" visible="false">
-                <MultiTextOption profile="fs25_settingsMultiTextOption" name="fillTypeSelector"/>
+                <MultiTextOption profile="fs25_settingsMultiTextOption" name="fillTypeSelector">
+                    <Text profile="fs25_multiTextOptionTooltip" name="fillTypeTooltip"/>
+                </MultiTextOption>
                 <Bitmap profile="rmFreshFillTypeIcon" position="10px -7px" size="30px 30px" name="fillTypeIcon"/>
                 <Text profile="fs25_settingsMultiTextOptionTitle" position="50px 0px" name="fillTypeTitle"/>
             </Bitmap>

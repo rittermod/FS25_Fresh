@@ -208,7 +208,6 @@
         <fillType name="DRYGRASS_WINDROW" period="18.0"/>
         <fillType name="GRASS" period="1.0"/>
         <fillType name="DRYGRASS" period="18.0"/>
-        <fillType name="ALFALFA" period="1.0"/>
 
     </fillTypes>
 </freshSettings>

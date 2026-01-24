@@ -41,6 +41,21 @@ RmSettingsFrame.PERIOD_TO_INDEX = {} -- Built in buildPeriodToIndexMap()
 --- Selectors are stored here so all instances can access them.
 RmSettingsFrame.fillTypeSelectorsShared = nil -- fillTypeName → MultiTextOptionElement
 
+--- Fallback categories to check when boolean type flags are all false
+--- (workaround for mods like LazyDistribution that overwrite fillTypes without preserving flags)
+RmSettingsFrame.TYPE_FALLBACK_CATEGORIES = {
+    -- Bulk product categories
+    "COMBINE",      -- harvestable crops (WHEAT, BARLEY, OAT, etc.)
+    "FARMSILO",     -- storable crops
+    "TRAINWAGON",   -- trainable bulk goods
+    -- Pallet/processed product categories
+    "PRODUCT",                   -- processed goods
+    "SELLINGSTATION_PRODUCTSFOOD", -- food products
+    -- Bale/windrow categories
+    "WINDROW",              -- grass/straw materials
+    "SELLINGSTATION_BALES", -- bale-able materials
+}
+
 --- Reference to the frame instance that built the rows (owns the GUI elements)
 RmSettingsFrame.builderInstance = nil
 
@@ -241,24 +256,69 @@ end
 -- FILLTYPE ROW BUILDING
 -- =============================================================================
 
---- Get list of perishable fillTypes from mod defaults (sorted by title)
----@return table Array of { name = string, title = string }
+--- Check if fillType belongs to any fallback category indicating it's a real product
+--- Used when boolean type flags (isBulkType, isPalletType, isBaleType) are all false
+--- due to mod conflicts (e.g., LazyDistribution overwrites fillTypes without preserving flags)
+---@param fillTypeIndex number The fillType index
+---@return boolean True if fillType is in any fallback category
+function RmSettingsFrame:checkCategoryFallback(fillTypeIndex)
+    for _, categoryName in ipairs(RmSettingsFrame.TYPE_FALLBACK_CATEGORIES) do
+        if g_fillTypeManager:getIsFillTypeInCategory(fillTypeIndex, categoryName) then
+            return true
+        end
+    end
+    return false
+end
+
+--- Get list of ALL fillTypes sorted by type relevance, then expiration, then alphabetically
+--- Sort order: 1) Has type + expires, 2) Has type + doesn't expire, 3) No type (bottom)
+---@return table Array of { name = string, title = string, expires = boolean, hasType = boolean }
 function RmSettingsFrame:getPerishableFillTypes()
     local fillTypes = {}
 
-    -- Only show fillTypes that have mod defaults (configured in defaultSettings.xml)
-    for fillTypeName, _ in pairs(RmFreshSettings.modDefaults or {}) do
-        local fillTypeData = RmFreshSettings.allFillTypes[fillTypeName]
-        if fillTypeData then
+    -- Get ALL fillTypes from game (not just mod defaults)
+    for fillTypeName, fillTypeData in pairs(RmFreshSettings.allFillTypes or {}) do
+        -- Skip UNKNOWN fillType
+        if fillTypeName ~= "UNKNOWN" then
+            local expiration = RmFreshSettings:getExpiration(fillTypeName)
+
+            -- Check if fillType has a type classification (Bulk/Pallet/Bale)
+            local hasType = false
+            local fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(fillTypeName)
+            if fillTypeIndex then
+                local fillType = g_fillTypeManager:getFillTypeByIndex(fillTypeIndex)
+                if fillType then
+                    hasType = fillType.isBulkType or fillType.isPalletType or fillType.isBaleType or false
+
+                    -- If no type flags set, check category fallback
+                    -- (workaround for mods that overwrite fillTypes without preserving flags)
+                    if not hasType then
+                        hasType = self:checkCategoryFallback(fillTypeIndex)
+                    end
+                end
+            end
+
             table.insert(fillTypes, {
                 name = fillTypeName,
-                title = fillTypeData.title or fillTypeName
+                title = fillTypeData.title or fillTypeName,
+                expires = expiration ~= nil,
+                hasType = hasType
             })
         end
     end
 
-    -- Sort alphabetically by title
+    -- Sort: hasType first, then expires, then alphabetically
+    -- Priority: 1) hasType+expires, 2) hasType+!expires, 3) !hasType (bottom)
     table.sort(fillTypes, function(a, b)
+        -- First priority: hasType (true comes before false)
+        if a.hasType ~= b.hasType then
+            return a.hasType
+        end
+        -- Second priority: expires (true comes before false)
+        if a.expires ~= b.expires then
+            return a.expires
+        end
+        -- Third priority: alphabetically by title
         return a.title:lower() < b.title:lower()
     end)
 
@@ -273,6 +333,30 @@ function RmSettingsFrame:buildOptionTexts()
         table.insert(texts, g_i18n:getText(opt.label))
     end
     return texts
+end
+
+--- Build tooltip text for a fillType with distinguishing information
+---@param fillTypeName string The internal fillType name (e.g., "WHEAT")
+---@param fillType table|nil The fillType object from g_fillTypeManager (may be nil)
+---@return string Tooltip text
+function RmSettingsFrame:buildFillTypeTooltip(fillTypeName, fillType)
+    local parts = {}
+
+    -- Always show the internal name
+    table.insert(parts, string.format("Fill type: %s", fillTypeName))
+
+    if fillType then
+        -- Show type classification
+        local typeInfo = {}
+        if fillType.isBulkType then table.insert(typeInfo, "Bulk") end
+        if fillType.isPalletType then table.insert(typeInfo, "Pallet") end
+        if fillType.isBaleType then table.insert(typeInfo, "Bale") end
+        if #typeInfo > 0 then
+            table.insert(parts, "Type: " .. table.concat(typeInfo, ", "))
+        end
+    end
+
+    return table.concat(parts, " | ")
 end
 
 --- Get the option index for a fillType's current expiration setting
@@ -392,21 +476,25 @@ function RmSettingsFrame:createFillTypeRow(fillTypeName, fillTypeTitle, optionTe
         titleText:setText(fillTypeTitle)
     end
 
-    -- Find and set the fillType icon
+    -- Find and set the fillType icon and build tooltip
+    local fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(fillTypeName)
+    local fillType = fillTypeIndex and g_fillTypeManager:getFillTypeByIndex(fillTypeIndex)
+
     local iconElement = rowContainer:getDescendantByName("fillTypeIcon")
     if iconElement ~= nil then
-        local fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(fillTypeName)
-        if fillTypeIndex ~= nil then
-            local fillType = g_fillTypeManager:getFillTypeByIndex(fillTypeIndex)
-            if fillType ~= nil and fillType.hudOverlayFilename ~= nil then
-                iconElement:setImageFilename(fillType.hudOverlayFilename)
-                iconElement:setVisible(true)
-            else
-                iconElement:setVisible(false)
-            end
+        if fillType ~= nil and fillType.hudOverlayFilename ~= nil then
+            iconElement:setImageFilename(fillType.hudOverlayFilename)
+            iconElement:setVisible(true)
         else
             iconElement:setVisible(false)
         end
+    end
+
+    -- Set tooltip with distinguishing information
+    local tooltipElement = rowContainer:getDescendantByName("fillTypeTooltip")
+    if tooltipElement ~= nil then
+        local tooltipText = self:buildFillTypeTooltip(fillTypeName, fillType)
+        tooltipElement:setText(tooltipText)
     end
 
     -- Note: clone(boxLayout) already adds the element to boxLayout - no addElement() needed
