@@ -101,6 +101,9 @@ Fresh tracks your products using a batch system - each harvest or production run
 
 ## Changelog
 
+### 0.7.1.0 (Alpha - 2026-01-27)
+- Fixed TMR mixer output tracking - FORAGE amount now correctly tracks all ingredients
+
 ### 0.7.0.0 (Alpha - 2026-01-24)
 - Added support for ALL fillTypes - basegame, DLCs, and maps/mods now configurable
 - Improved Settings sorting - products with types appear first for easier navigation
