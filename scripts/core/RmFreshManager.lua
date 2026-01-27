@@ -1185,7 +1185,8 @@ function RmFreshManager:onFillChanged(containerId, fillUnitIndex, delta, fillTyp
                 -- For non-transfer fills (buy station), correction simply expires unused
                 self.pendingCorrection[fillType] = {
                     containerId = containerId,
-                    timestamp = g_time or 0
+                    timestamp = g_time or 0,
+                    amount = delta  -- Amount added, for splitting merged batches during correction
                 }
                 Log:trace("FILL_CHANGED_CORRECTION_RECORDED: fillType=%d container=%s (awaiting source)",
                     fillType, containerId)
@@ -1225,13 +1226,22 @@ function RmFreshManager:onFillChanged(containerId, fillUnitIndex, delta, fillTyp
                         if timeDiff < 50 then
                             local destContainer = self.containers[correction.containerId]
                             if destContainer and #destContainer.batches > 0 then
-                                -- Find the most recent batch (last in array) and correct its age
+                                -- Correct the most recent batch's age (split if merged with existing fill)
                                 local lastBatch = destContainer.batches[#destContainer.batches]
                                 local oldAge = lastBatch.ageInPeriods
                                 local newAge = peeked.batches[1].age -- Use oldest source batch age
-                                lastBatch.ageInPeriods = newAge
+                                local correctionAmount = correction.amount or lastBatch.amount
 
-                                -- Re-sort batches after age change (maintains FIFO order)
+                                if lastBatch.amount > correctionAmount + 0.001 then
+                                    -- Batch merged with existing fill: split off the corrected portion
+                                    lastBatch.amount = lastBatch.amount - correctionAmount
+                                    table.insert(destContainer.batches, { amount = correctionAmount, ageInPeriods = newAge })
+                                else
+                                    -- Batch IS the new fill (no merge occurred): correct in-place
+                                    lastBatch.ageInPeriods = newAge
+                                end
+
+                                -- Re-merge after age change (maintains FIFO order)
                                 RmBatch.mergeSimilarBatches(destContainer.batches, RmFreshSettings.MERGE_THRESHOLD)
 
                                 Log:debug(
@@ -1253,6 +1263,56 @@ function RmFreshManager:onFillChanged(containerId, fillUnitIndex, delta, fillTyp
                     end
                     -- Clear correction record (consumed or expired)
                     self.pendingCorrection[fillType] = nil
+
+                    -- Mixture correction expansion (RIT-152)
+                    -- When source loses a mixture (e.g., PIGFOOD), destinations recorded
+                    -- corrections under ingredient fillTypes. Expand and correct each.
+                    -- This handles bigbag/pallet dumps where UnloadTrigger pulls fill
+                    -- directly (no dischargeToObject hook available).
+                    local mixture = g_currentMission and g_currentMission.animalFoodSystem
+                        and g_currentMission.animalFoodSystem:getMixtureByFillType(fillType)
+                    if mixture then
+                        local sourceAge = peeked.batches[1] and peeked.batches[1].age or 0
+                        local correctedCount = 0
+                        for _, ingredient in ipairs(mixture.ingredients) do
+                            local ingredientFillType = ingredient.fillTypes[1]
+                            local ingredientCorrection = self.pendingCorrection[ingredientFillType]
+                            if ingredientCorrection and ingredientCorrection.containerId ~= containerId then
+                                local timeDiff = (g_time or 0) - ingredientCorrection.timestamp
+                                if timeDiff < 50 then
+                                    local destContainer = self.containers[ingredientCorrection.containerId]
+                                    if destContainer and #destContainer.batches > 0 then
+                                        local lastBatch = destContainer.batches[#destContainer.batches]
+                                        local oldAge = lastBatch.ageInPeriods
+                                        local correctionAmount = ingredientCorrection.amount or lastBatch.amount
+
+                                        if lastBatch.amount > correctionAmount + 0.001 then
+                                            -- Batch merged with existing fill: split off corrected portion
+                                            lastBatch.amount = lastBatch.amount - correctionAmount
+                                            table.insert(destContainer.batches, { amount = correctionAmount, ageInPeriods = sourceAge })
+                                        else
+                                            -- Batch IS the new fill: correct in-place
+                                            lastBatch.ageInPeriods = sourceAge
+                                        end
+
+                                        RmBatch.mergeSimilarBatches(destContainer.batches, RmFreshSettings.MERGE_THRESHOLD)
+                                        self:broadcastContainerUpdate(ingredientCorrection.containerId,
+                                            RmFreshUpdateEvent.OP_UPDATE, destContainer)
+                                        correctedCount = correctedCount + 1
+                                        Log:debug("MIXTURE_CORRECTION_APPLIED: ingredient=%d dest=%s age=%.4f->%.4f amount=%.1f",
+                                            ingredientFillType, ingredientCorrection.containerId, oldAge, sourceAge, correctionAmount)
+                                    end
+                                end
+                                self.pendingCorrection[ingredientFillType] = nil
+                            end
+                        end
+                        if correctedCount > 0 then
+                            Log:debug("MIXTURE_CORRECTION: fillType=%d corrected=%d/%d ingredients sourceAge=%.4f",
+                                fillType, correctedCount, #mixture.ingredients, sourceAge)
+                            -- Clear mixture fillType pending (consumed by correction)
+                            self.transferPendingByFillType[fillType] = nil
+                        end
+                    end
                 else
                     -- playerCanEmpty=false: consumption only, don't stage for transfer
                     Log:debug("FILL_CHANGED_CONSUMPTION_ONLY: container=%s fillType=%d amount=%.1f (playerCanEmpty=false, not staged)",

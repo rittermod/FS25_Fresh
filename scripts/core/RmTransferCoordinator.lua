@@ -134,19 +134,15 @@ end
 -- DISCHARGEABLE HOOK (Vehicle → Target)
 -- =============================================================================
 
---- Install Dischargeable hook for Vehicle → Target transfers
+--- Dischargeable hook registration
+--- NOTE: dischargeToObject is registered via RmVehicleAdapter.registerOverwrittenFunctions()
+--- using SpecializationUtil.registerOverwrittenFunction(). This is REQUIRED because late
+--- Utils.overwrittenFunction hooks don't reach already-loaded vehicle instances.
+--- The LoadingStation hook does NOT have this issue because LoadingStation is not a
+--- vehicle specialization.
 function RmTransferCoordinator.installDischargeableHook()
-    if Dischargeable == nil then
-        Log:warning("Dischargeable not found - discharge hook skipped")
-        return
-    end
-
-    Dischargeable.dischargeToObject = Utils.overwrittenFunction(
-        Dischargeable.dischargeToObject,
-        RmTransferCoordinator.dischargeToObject
-    )
-
-    Log:debug("Dischargeable hook installed")
+    -- No-op: hook is now registered via VehicleAdapter specialization system
+    Log:debug("Dischargeable hook: registered via VehicleAdapter specialization (type-level)")
 end
 
 --- Wrapped Dischargeable transfer function
@@ -200,6 +196,40 @@ function RmTransferCoordinator.dischargeToObject(vehicle, superFunc, dischargeNo
             RmFreshManager:setTransferPending(destContainerId, peeked.batches)
             Log:debug("DISCHARGE_STAGE: %s -> %s amount=%.1f batches=%d",
                 sourceContainerId, destContainerId, peeked.totalAmount, #peeked.batches)
+        end
+    end
+
+    -- Mixture-aware staging for unresolved destinations (e.g., husbandry food troughs)
+    -- When dest can't be resolved but source is a mixture, pre-expand to ingredient
+    -- fillType pending entries so HusbandryFoodAdapter can match by fillType
+    if sourceContainerId and not destContainerId then
+        Log:trace("    mixture check: source=%s has no dest, checking fillType=%d", sourceContainerId, fillType)
+        local mixture = g_currentMission.animalFoodSystem:getMixtureByFillType(fillType)
+        if mixture then
+            local peeked = RmFreshManager:peekBatches(sourceContainerId, emptyLiters)
+            if peeked.totalAmount > 0 then
+                local stagedCount = 0
+                for _, ingredient in ipairs(mixture.ingredients) do
+                    local ingredientFillType = ingredient.fillTypes[1]
+                    if RmFreshSettings:isPerishableByIndex(ingredientFillType) then
+                        local scaledBatches = {}
+                        for _, batch in ipairs(peeked.batches) do
+                            table.insert(scaledBatches, {
+                                amount = batch.amount * ingredient.weight,
+                                age = batch.age
+                            })
+                        end
+                        RmFreshManager:setTransferPendingByFillType(ingredientFillType, scaledBatches)
+                        stagedCount = stagedCount + 1
+                        Log:trace("    mixture ingredient: fillType=%d weight=%.2f batches=%d",
+                            ingredientFillType, ingredient.weight, #scaledBatches)
+                    else
+                        Log:trace("    mixture ingredient skipped: fillType=%d (non-perishable)", ingredientFillType)
+                    end
+                end
+                Log:debug("DISCHARGE_MIXTURE_EXPAND: %s fillType=%d -> %d ingredients (%d perishable) amount=%.1f",
+                    sourceContainerId, fillType, #mixture.ingredients, stagedCount, peeked.totalAmount)
+            end
         end
     end
 
