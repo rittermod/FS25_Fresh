@@ -283,6 +283,49 @@ function RmVehicleAdapter.doRegistration(vehicle, entityId)
     end
 end
 
+--- Rescan all vehicles for newly-perishable fillUnits (RIT-139)
+--- Called when settings change makes a fillType perishable
+---@return number count Number of new containers registered
+function RmVehicleAdapter.rescanForPerishables()
+    if not g_currentMission or not g_currentMission.vehicleSystem then return 0 end
+
+    Log:trace(">>> RmVehicleAdapter.rescanForPerishables()")
+    local count = 0
+    for _, vehicle in ipairs(g_currentMission.vehicleSystem.vehicles) do
+        local spec = vehicle[RmVehicleAdapter.SPEC_TABLE_NAME]
+        if spec and spec.containerIds then
+            local fillUnits = vehicle.spec_fillUnit and vehicle.spec_fillUnit.fillUnits
+            if fillUnits then
+                for fillUnitIndex, fillUnit in ipairs(fillUnits) do
+                    local fillType = fillUnit.fillType
+                    if spec.containerIds[fillUnitIndex] == nil
+                       and fillType ~= nil
+                       and RmFreshSettings:isPerishableByIndex(fillType)
+                       and (fillUnit.fillLevel or 0) > 0 then
+
+                        local identityMatch = RmVehicleAdapter:buildIdentityMatch(vehicle, fillUnitIndex)
+                        local containerId, wasReconciled = RmFreshManager:registerContainer(
+                            "vehicle", identityMatch, vehicle,
+                            { location = vehicle:getName() or "Vehicle" }
+                        )
+                        spec.containerIds[fillUnitIndex] = containerId
+                        if not wasReconciled and containerId and (fillUnit.fillLevel or 0) > 0 then
+                            RmFreshManager:addBatch(containerId, fillUnit.fillLevel, 0)
+                        end
+                        count = count + 1
+
+                        Log:debug("RESCAN_VEHICLE: fillType=%s containerId=%s name=%s",
+                            identityMatch.storage.fillTypeName, containerId or "nil",
+                            vehicle:getName() or "unknown")
+                    end
+                end
+            end
+        end
+    end
+    Log:trace("<<< RmVehicleAdapter.rescanForPerishables = %d", count)
+    return count
+end
+
 function RmVehicleAdapter:onDelete()
     -- Server only - clients don't register containers
     if not self.isServer then return end

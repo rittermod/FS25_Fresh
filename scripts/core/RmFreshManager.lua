@@ -722,6 +722,38 @@ function RmFreshManager:finalizeReconciliation()
     return orphanCount
 end
 
+--- Rescan world entities for containers that became perishable after settings change
+--- Called from RmFreshSettings:onSettingsChanged() (server only)
+--- RIT-139: Containers not registered when fillType initially non-perishable
+function RmFreshManager:rescanForNewPerishables()
+    if g_server == nil then return end
+
+    Log:trace(">>> rescanForNewPerishables()")
+    local totalRegistered = 0
+
+    for entityType, adapter in pairs(self.adapters) do
+        if adapter.rescanForPerishables then
+            local count = adapter.rescanForPerishables()
+            totalRegistered = totalRegistered + count
+            if count > 0 then
+                Log:info("RESCAN: %s registered %d new containers", entityType, count)
+            else
+                Log:trace("    %s: no new containers", entityType)
+            end
+        else
+            Log:trace("    %s: no rescanForPerishables method", entityType)
+        end
+    end
+
+    if totalRegistered > 0 then
+        Log:info("RESCAN: Total %d new containers registered from settings change", totalRegistered)
+    else
+        Log:debug("RESCAN: No new containers needed")
+    end
+
+    Log:trace("<<< rescanForNewPerishables = %d", totalRegistered)
+end
+
 --- Called every in-game hour
 --- SERVER ONLY - processes aging, expirations, and triggers sync
 --- CRITICAL: Server guard prevents client execution (clients receive state via sync events)

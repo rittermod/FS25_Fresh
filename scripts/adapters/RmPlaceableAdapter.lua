@@ -656,6 +656,29 @@ function RmPlaceableAdapter.registerStorageContents(placeable, spec, storage)
     return registered
 end
 
+--- Rescan all placeables for newly-perishable storage fillTypes (RIT-139)
+--- Called when settings change makes a fillType perishable
+---@return number count Number of new containers registered
+function RmPlaceableAdapter.rescanForPerishables()
+    if not g_currentMission or not g_currentMission.placeableSystem then return 0 end
+
+    Log:trace(">>> RmPlaceableAdapter.rescanForPerishables()")
+    local count = 0
+    for _, placeable in ipairs(g_currentMission.placeableSystem.placeables) do
+        local spec = placeable[RmPlaceableAdapter.SPEC_TABLE_NAME]
+        if spec and spec.containerIds then
+            local storages = RmPlaceableAdapter.discoverStorages(placeable)
+            for _, storageInfo in ipairs(storages) do
+                count = count + RmPlaceableAdapter.registerStorageContents(
+                    placeable, spec, storageInfo.storage
+                )
+            end
+        end
+    end
+    Log:trace("<<< RmPlaceableAdapter.rescanForPerishables = %d", count)
+    return count
+end
+
 --- Defer registration until uniqueId is available (for purchased placeables)
 --- Pattern from VehicleAdapter with timeout protection
 ---@param placeable table Placeable entity
