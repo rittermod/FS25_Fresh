@@ -176,12 +176,16 @@ function RmFreshMenu.addPlayerActionEvents(playerInputComponent, controlling)
         callbackState, disableConflictingBindings
     )
 
-    if success then
-        g_inputBinding:setActionEventTextVisibility(actionEventId, false)
-        Log:debug("RM_FRESH_MENU action registered, eventId=%s", tostring(actionEventId))
-    else
+    if not success and controlling ~= "VEHICLE" then
+        -- Only log error if not in vehicle context
+        -- When controlling == "VEHICLE", success is false even if registration succeeded
         Log:error("Failed to register RM_FRESH_MENU action")
+        return
     end
+
+    -- Hide the action event text from HUD
+    g_inputBinding:setActionEventTextVisibility(actionEventId, false)
+    Log:debug("RM_FRESH_MENU action registered, eventId=%s", tostring(actionEventId))
 end
 
 --- Install hook into PlayerInputComponent
