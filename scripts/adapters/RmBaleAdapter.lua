@@ -313,7 +313,7 @@ function RmBaleAdapter.install()
     Log:info("BALE_ADAPTER: Hooks installed")
 end
 
---- Rescan all bales for newly-perishable fill types (RIT-139)
+--- Rescan all bales for newly-perishable fill types
 --- Called when settings change makes a fillType perishable
 ---@return number count Number of new containers registered
 function RmBaleAdapter.rescanForPerishables()

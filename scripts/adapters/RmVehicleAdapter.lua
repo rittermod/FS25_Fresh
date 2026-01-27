@@ -283,7 +283,7 @@ function RmVehicleAdapter.doRegistration(vehicle, entityId)
     end
 end
 
---- Rescan all vehicles for newly-perishable fillUnits (RIT-139)
+--- Rescan all vehicles for newly-perishable fillUnits
 --- Called when settings change makes a fillType perishable
 ---@return number count Number of new containers registered
 function RmVehicleAdapter.rescanForPerishables()
@@ -298,7 +298,7 @@ function RmVehicleAdapter.rescanForPerishables()
             if fillUnits then
                 for fillUnitIndex, fillUnit in ipairs(fillUnits) do
                     local fillType = fillUnit.fillType
-                    -- RIT-179: Clear stale adapter ref if Manager no longer has this container
+                    -- Clear stale adapter ref if Manager no longer has this container
                     local existingId = spec.containerIds[fillUnitIndex]
                     if existingId ~= nil and RmFreshManager.containers[existingId] == nil then
                         Log:debug("RESCAN_STALE_REF: fu=%d containerId=%s (clearing)", fillUnitIndex, existingId)
@@ -374,7 +374,7 @@ function RmVehicleAdapter:onFillUnitFillLevelChanged(fillUnitIndex, fillLevelDel
 
     local containerId = spec.containerIds and spec.containerIds[fillUnitIndex]
 
-    -- RIT-179: Clear stale adapter ref if Manager no longer has this container
+    -- Clear stale adapter ref if Manager no longer has this container
     if containerId ~= nil and RmFreshManager.containers[containerId] == nil then
         Log:debug("VEHICLE_STALE_REF: fu=%d containerId=%s (clearing)", fillUnitIndex, containerId)
         spec.containerIds[fillUnitIndex] = nil

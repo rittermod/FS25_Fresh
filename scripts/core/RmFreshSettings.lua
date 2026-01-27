@@ -16,12 +16,12 @@ local Log = RmLogging.getLogger("Fresh")
 RmFreshSettings.MOD_DEFAULTS_PATH = "data/defaultSettings.xml"
 
 --- Validation bounds for user override validation
-RmFreshSettings.MIN_EXPIRATION = 1.0   -- 1 month minimum (periods)
-RmFreshSettings.MAX_EXPIRATION = 60.0  -- 5 years maximum (periods)
+RmFreshSettings.MIN_EXPIRATION = 1.0  -- 1 month minimum (periods)
+RmFreshSettings.MAX_EXPIRATION = 60.0 -- 5 years maximum (periods)
 
 --- Warning threshold multiplier (calculated at runtime, not stored per-fillType)
 --- Future: Could become a global setting if users want to configure it
-RmFreshSettings.DEFAULT_WARNING = 0.75  -- 75% of expiration period
+RmFreshSettings.DEFAULT_WARNING = 0.75 -- 75% of expiration period
 
 --- Global setting defaults
 RmFreshSettings.GLOBAL_DEFAULTS = {
@@ -160,7 +160,7 @@ function RmFreshSettings:getExpiration(fillTypeName)
     local userOverride = self.userOverrides.fillTypes[fillTypeName]
     if userOverride ~= nil then
         if userOverride.expires == false then
-            return nil  -- User explicitly set "do not expire"
+            return nil -- User explicitly set "do not expire"
         end
         if userOverride.period ~= nil then
             return userOverride.period
@@ -171,7 +171,7 @@ function RmFreshSettings:getExpiration(fillTypeName)
     local modDefault = self.modDefaults[fillTypeName]
     if modDefault ~= nil then
         if modDefault.expires == false then
-            return nil  -- Mod default is "do not expire"
+            return nil -- Mod default is "do not expire"
         end
         if modDefault.period ~= nil then
             return modDefault.period
@@ -303,7 +303,7 @@ function RmFreshSettings:onSettingsChanged()
         broadcast = true
     end
 
-    -- Rescan world for newly-perishable containers (RIT-139)
+    -- Rescan world for newly-perishable containers
     if g_server and RmFreshManager then
         RmFreshManager:rescanForNewPerishables()
     end

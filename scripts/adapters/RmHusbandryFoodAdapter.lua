@@ -7,7 +7,7 @@
 RmHusbandryFoodAdapter = {}
 RmHusbandryFoodAdapter.MOD_NAME = g_currentModName
 RmHusbandryFoodAdapter.SPEC_TABLE_NAME = ("spec_%s.rmHusbandryFoodAdapter"):format(g_currentModName)
-RmHusbandryFoodAdapter.ENTITY_TYPE = "husbandryfood"  -- Distinct from PlaceableAdapter's "placeable"
+RmHusbandryFoodAdapter.ENTITY_TYPE = "husbandryfood" -- Distinct from PlaceableAdapter's "placeable"
 
 local Log = RmLogging.getLogger("Fresh")
 
@@ -86,7 +86,7 @@ function RmHusbandryFoodAdapter:onLoad(savegame)
     -- Skip construction preview placeables (PlaceableAdapter pattern)
     local propertyState = self:getPropertyState()
     if propertyState == PlaceablePropertyState.CONSTRUCTION_PREVIEW or
-       propertyState == PlaceablePropertyState.NONE then
+        propertyState == PlaceablePropertyState.NONE then
         Log:trace("HUSBANDRY_FOOD_SKIP_NON_OWNED: propertyState=%d name=%s",
             propertyState or 0, self:getName() or "unknown")
         return
@@ -100,9 +100,9 @@ function RmHusbandryFoodAdapter:onLoad(savegame)
     end
 
     -- Initialize spec data structure (mirrors PlaceableAdapter)
-    spec.containerIds = {}           -- fillTypeName -> containerId
+    spec.containerIds = {}            -- fillTypeName -> containerId
     spec.dirtyFlag = self:getNextDirtyFlag()
-    spec.deferredRegistration = false  -- Prevent double scheduling
+    spec.deferredRegistration = false -- Prevent double scheduling
 
     Log:debug("HUSBANDRY_FOOD_INIT: propertyState=%d uniqueId=%s name=%s",
         propertyState or 0, self.uniqueId or "?", self:getName() or "unknown")
@@ -199,7 +199,7 @@ function RmHusbandryFoodAdapter.doRegistration(placeable, entityId)
     Log:trace("<<< doRegistration registered=%d containers", registered)
 end
 
---- Rescan all husbandry food placeables for newly-perishable food (RIT-139)
+--- Rescan all husbandry food placeables for newly-perishable food
 --- Called when settings change makes a fillType perishable
 ---@return number count Number of new containers registered
 function RmHusbandryFoodAdapter.rescanForPerishables()
@@ -217,10 +217,9 @@ function RmHusbandryFoodAdapter.rescanForPerishables()
                     local fillTypeName = g_fillTypeManager:getFillTypeNameByIndex(fillTypeIndex)
                     -- Not already registered + now perishable + has fill + not a mixture
                     if fillTypeName
-                       and spec.containerIds[fillTypeName] == nil
-                       and fillLevel > 0
-                       and RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
-
+                        and spec.containerIds[fillTypeName] == nil
+                        and fillLevel > 0
+                        and RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
                         local mixture = g_currentMission.animalFoodSystem:getMixtureByFillType(fillTypeIndex)
                         if mixture == nil then
                             RmHusbandryFoodAdapter.registerFoodContainer(placeable, spec, fillTypeIndex, fillLevel)
@@ -261,7 +260,7 @@ function RmHusbandryFoodAdapter.deferRegistration(placeable)
         update = function(self, _dt)
             -- Guard: mission teardown (review finding: avoid accessing nil g_currentMission)
             if g_currentMission == nil then
-                return  -- Can't remove updateable, but will be cleaned up with mission
+                return -- Can't remove updateable, but will be cleaned up with mission
             end
 
             local p = self.placeable
@@ -313,7 +312,7 @@ function RmHusbandryFoodAdapter:onLoadFinished(savegame)
     -- Skip construction preview placeables (PlaceableAdapter pattern)
     local propertyState = self:getPropertyState()
     if propertyState == PlaceablePropertyState.CONSTRUCTION_PREVIEW or
-       propertyState == PlaceablePropertyState.NONE then
+        propertyState == PlaceablePropertyState.NONE then
         Log:trace("<<< onLoadFinished (preview/none, skipping)")
         return
     end
@@ -435,7 +434,8 @@ function RmHusbandryFoodAdapter:addFood(superFunc, farmId, deltaFillLevel, fillT
         -- suppressInitialBatch=true: let onFillChanged handle batch (supports transfer pending)
         local actualFillLevel = self.spec_husbandryFood.fillLevels[fillTypeIndex] or result
         local wasReconciled
-        containerId, wasReconciled = RmHusbandryFoodAdapter.registerFoodContainer(self, spec, fillTypeIndex, actualFillLevel, true)
+        containerId, wasReconciled = RmHusbandryFoodAdapter.registerFoodContainer(self, spec, fillTypeIndex,
+            actualFillLevel, true)
         if not containerId then
             Log:trace("<<< addFood = %.1f (registration failed)", result)
             return result
@@ -446,7 +446,7 @@ function RmHusbandryFoodAdapter:addFood(superFunc, farmId, deltaFillLevel, fillT
         -- If reconciled from save, skip onFillChanged - batches already restored
         if wasReconciled then
             Log:trace("    skipping onFillChanged (reconciled from save)")
-            self:raiseDirtyFlags(spec.dirtyFlag)  -- Still sync to clients
+            self:raiseDirtyFlags(spec.dirtyFlag) -- Still sync to clients
             Log:debug("HUSBANDRY_FOOD_ADD: fillType=%s amount=%.1f containerId=%s (reconciled)",
                 fillTypeName, result, containerId)
             Log:trace("<<< addFood = %.1f (reconciled)", result)
@@ -536,7 +536,7 @@ end
 function RmHusbandryFoodAdapter:updateInfo(superFunc, infoTable)
     Log:trace(">>> updateInfo(husbandryFood=%s)", self.uniqueId or "?")
 
-    local startCount = #infoTable  -- Track count BEFORE superFunc
+    local startCount = #infoTable -- Track count BEFORE superFunc
     superFunc(self, infoTable)
 
     local spec = self[RmHusbandryFoodAdapter.SPEC_TABLE_NAME]
@@ -826,7 +826,7 @@ function RmHusbandryFoodAdapter:onWriteUpdateStream(streamId, connection, dirtyM
 
     -- Check if our dirty flag is set in the mask
     local isDirty = spec ~= nil and spec.dirtyFlag ~= nil and
-                    bitAND(dirtyMask, spec.dirtyFlag) ~= 0
+        bitAND(dirtyMask, spec.dirtyFlag) ~= 0
     Log:trace("onWriteUpdateStream: isDirty=%s (mask=%s, flag=%s)",
         tostring(isDirty), tostring(dirtyMask), tostring(spec and spec.dirtyFlag))
 

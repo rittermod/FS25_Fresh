@@ -18,7 +18,7 @@ local Log = RmLogging.getLogger("Fresh")
 ---@param placeable table Placeable entity
 ---@return string uniqueId FS25's stable uniqueId
 function RmPlaceableAdapter:getEntityId(placeable)
-    return placeable.uniqueId  -- FS25's stable uniqueId
+    return placeable.uniqueId -- FS25's stable uniqueId
 end
 
 --- Build identity structure for a placeable storage
@@ -79,12 +79,12 @@ function RmPlaceableAdapter.detectCapabilities(placeable, fillTypeIndex)
     if placeable.spec_silo then
         local s = placeable.spec_silo
         if s.unloadingStation and s.unloadingStation.getIsFillTypeSupported
-           and s.unloadingStation:getIsFillTypeSupported(fillTypeIndex) then
+            and s.unloadingStation:getIsFillTypeSupported(fillTypeIndex) then
             playerCanFill = true
             Log:trace("    spec_silo.unloadingStation supports fillType → playerCanFill=true")
         end
         if s.loadingStation and s.loadingStation.getIsFillTypeSupported
-           and s.loadingStation:getIsFillTypeSupported(fillTypeIndex) then
+            and s.loadingStation:getIsFillTypeSupported(fillTypeIndex) then
             playerCanEmpty = true
             Log:trace("    spec_silo.loadingStation supports fillType → playerCanEmpty=true")
         end
@@ -98,12 +98,12 @@ function RmPlaceableAdapter.detectCapabilities(placeable, fillTypeIndex)
     if placeable.spec_husbandry then
         local s = placeable.spec_husbandry
         if s.unloadingStation and s.unloadingStation.getIsFillTypeSupported
-           and s.unloadingStation:getIsFillTypeSupported(fillTypeIndex) then
+            and s.unloadingStation:getIsFillTypeSupported(fillTypeIndex) then
             playerCanFill = true
             Log:trace("    spec_husbandry.unloadingStation supports fillType → playerCanFill=true")
         end
         if s.loadingStation and s.loadingStation.getIsFillTypeSupported
-           and s.loadingStation:getIsFillTypeSupported(fillTypeIndex) then
+            and s.loadingStation:getIsFillTypeSupported(fillTypeIndex) then
             playerCanEmpty = true
             Log:trace("    spec_husbandry.loadingStation supports fillType → playerCanEmpty=true")
         end
@@ -113,12 +113,12 @@ function RmPlaceableAdapter.detectCapabilities(placeable, fillTypeIndex)
     if placeable.spec_productionPoint and placeable.spec_productionPoint.productionPoint then
         local pp = placeable.spec_productionPoint.productionPoint
         if pp.unloadingStation and pp.unloadingStation.getIsFillTypeSupported
-           and pp.unloadingStation:getIsFillTypeSupported(fillTypeIndex) then
+            and pp.unloadingStation:getIsFillTypeSupported(fillTypeIndex) then
             playerCanFill = true
             Log:trace("    spec_productionPoint.unloadingStation supports fillType → playerCanFill=true")
         end
         if pp.loadingStation and pp.loadingStation.getIsFillTypeSupported
-           and pp.loadingStation:getIsFillTypeSupported(fillTypeIndex) then
+            and pp.loadingStation:getIsFillTypeSupported(fillTypeIndex) then
             playerCanEmpty = true
             Log:trace("    spec_productionPoint.loadingStation supports fillType → playerCanEmpty=true")
         end
@@ -140,7 +140,7 @@ function RmPlaceableAdapter.detectCapabilities(placeable, fillTypeIndex)
         for _, milkFillType in ipairs(placeable.spec_husbandryMilk.fillTypes) do
             if milkFillType == fillTypeIndex then
                 playerCanFill = false
-                playerCanEmpty = true  -- Can collect milk via LoadingStation
+                playerCanEmpty = true -- Can collect milk via LoadingStation
                 Log:trace("    spec_husbandryMilk override → playerCanFill=false (production output)")
                 break
             end
@@ -187,7 +187,8 @@ function RmPlaceableAdapter.detectCapabilities(placeable, fillTypeIndex)
                                 isPureOutput = true
                                 Log:trace("    fillType %d is PURE output (not in inputs)", fillTypeIndex)
                             else
-                                Log:trace("    fillType %d is BOTH input AND output → keeping playerCanFill", fillTypeIndex)
+                                Log:trace("    fillType %d is BOTH input AND output → keeping playerCanFill",
+                                    fillTypeIndex)
                             end
                             break
                         end
@@ -272,8 +273,8 @@ function RmPlaceableAdapter.discoverStorages(placeable)
     -- ProductionPoint: mills, BGA, etc. (ProductionPoint.lua uses Storage class)
     -- NOTE: Triple-nested path requires explicit nil checks at each level
     if placeable.spec_productionPoint ~= nil and
-       placeable.spec_productionPoint.productionPoint ~= nil and
-       placeable.spec_productionPoint.productionPoint.storage ~= nil then
+        placeable.spec_productionPoint.productionPoint ~= nil and
+        placeable.spec_productionPoint.productionPoint.storage ~= nil then
         table.insert(storages, {
             storage = placeable.spec_productionPoint.productionPoint.storage,
             sourceSpec = "productionPoint"
@@ -373,7 +374,7 @@ function RmPlaceableAdapter:addFillLevel(containerId, delta)
 
     local fillTypeName = g_fillTypeManager:getFillTypeNameByIndex(fillTypeIndex)
     local currentLevel = storage:getFillLevel(fillTypeIndex) or 0
-    local newLevel = math.max(0, currentLevel + delta)  -- Prevent negative
+    local newLevel = math.max(0, currentLevel + delta) -- Prevent negative
 
     storage:setFillLevel(newLevel, fillTypeIndex)
 
@@ -642,7 +643,8 @@ function RmPlaceableAdapter.registerStorageContents(placeable, spec, storage)
                     Log:debug("PLACEABLE_REGISTERED: fillType=%s containerId=%s reconciled=%s name=%s",
                         fillTypeName, containerId or "nil", tostring(wasReconciled), placeable:getName() or "unknown")
                 else
-                    Log:debug("PLACEABLE_REGISTERED_EMPTY: fillType=%s containerId=%s name=%s (pre-registered for production)",
+                    Log:debug(
+                        "PLACEABLE_REGISTERED_EMPTY: fillType=%s containerId=%s name=%s (pre-registered for production)",
                         fillTypeName, containerId or "nil", placeable:getName() or "unknown")
                 end
             end
@@ -656,7 +658,7 @@ function RmPlaceableAdapter.registerStorageContents(placeable, spec, storage)
     return registered
 end
 
---- Rescan all placeables for newly-perishable storage fillTypes (RIT-139)
+--- Rescan all placeables for newly-perishable storage fillTypes
 --- Called when settings change makes a fillType perishable
 ---@return number count Number of new containers registered
 function RmPlaceableAdapter.rescanForPerishables()
@@ -701,7 +703,7 @@ function RmPlaceableAdapter.deferRegistration(placeable)
         update = function(self, _dt)
             -- Guard: mission teardown (review finding: avoid accessing nil g_currentMission)
             if g_currentMission == nil then
-                return  -- Can't remove updateable, but will be cleaned up with mission
+                return -- Can't remove updateable, but will be cleaned up with mission
             end
 
             local p = self.placeable
@@ -822,7 +824,7 @@ function RmPlaceableAdapter:onLoad(_savegame)
     -- PlaceablePropertyState: NONE=1, OWNED=2, CONSTRUCTION_PREVIEW=3
     local propertyState = self:getPropertyState()
     if propertyState == PlaceablePropertyState.CONSTRUCTION_PREVIEW or
-       propertyState == PlaceablePropertyState.NONE then
+        propertyState == PlaceablePropertyState.NONE then
         Log:trace("PLACEABLE_SKIP_NON_OWNED: propertyState=%d name=%s",
             propertyState or 0, self:getName() or "unknown")
         return
@@ -859,7 +861,7 @@ function RmPlaceableAdapter:onLoadFinished(_savegame)
     -- Skip construction preview placeables (similar to vehicle shop preview)
     local propertyState = self:getPropertyState()
     if propertyState == PlaceablePropertyState.CONSTRUCTION_PREVIEW or
-       propertyState == PlaceablePropertyState.NONE then
+        propertyState == PlaceablePropertyState.NONE then
         Log:trace("<<< onLoadFinished (preview/none, skipping)")
         return
     end
@@ -989,7 +991,7 @@ end
 function RmPlaceableAdapter:updateInfo(superFunc, infoTable)
     Log:trace(">>> updateInfo(placeable=%s)", self.uniqueId or "?")
 
-    local startCount = #infoTable  -- Track count BEFORE superFunc
+    local startCount = #infoTable -- Track count BEFORE superFunc
     superFunc(self, infoTable)
 
     local spec = self[RmPlaceableAdapter.SPEC_TABLE_NAME]

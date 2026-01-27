@@ -724,7 +724,7 @@ end
 
 --- Rescan world entities for containers that became perishable after settings change
 --- Called from RmFreshSettings:onSettingsChanged() (server only)
---- RIT-139: Containers not registered when fillType initially non-perishable
+--- Containers not registered when fillType initially non-perishable
 function RmFreshManager:rescanForNewPerishables()
     if g_server == nil then return end
 
@@ -1067,7 +1067,7 @@ end
 function RmFreshManager:onFillChanged(containerId, fillUnitIndex, delta, fillType)
     if g_server == nil then return end -- Server only
 
-    -- RIT-179: Check fillType mismatch BEFORE non-perishable early return.
+    -- Check fillType mismatch BEFORE non-perishable early return.
     -- When a registered container's fillUnit now holds a different, non-perishable
     -- fillType, the container is stale and must be unregistered.
     local container = self.containers[containerId]
@@ -1229,7 +1229,7 @@ function RmFreshManager:onFillChanged(containerId, fillUnitIndex, delta, fillTyp
                 self.pendingCorrection[fillType] = {
                     containerId = containerId,
                     timestamp = g_time or 0,
-                    amount = delta  -- Amount added, for splitting merged batches during correction
+                    amount = delta -- Amount added, for splitting merged batches during correction
                 }
                 Log:trace("FILL_CHANGED_CORRECTION_RECORDED: fillType=%d container=%s (awaiting source)",
                     fillType, containerId)
@@ -1278,7 +1278,8 @@ function RmFreshManager:onFillChanged(containerId, fillUnitIndex, delta, fillTyp
                                 if lastBatch.amount > correctionAmount + 0.001 then
                                     -- Batch merged with existing fill: split off the corrected portion
                                     lastBatch.amount = lastBatch.amount - correctionAmount
-                                    table.insert(destContainer.batches, { amount = correctionAmount, ageInPeriods = newAge })
+                                    table.insert(destContainer.batches,
+                                        { amount = correctionAmount, ageInPeriods = newAge })
                                 else
                                     -- Batch IS the new fill (no merge occurred): correct in-place
                                     lastBatch.ageInPeriods = newAge
@@ -1307,7 +1308,7 @@ function RmFreshManager:onFillChanged(containerId, fillUnitIndex, delta, fillTyp
                     -- Clear correction record (consumed or expired)
                     self.pendingCorrection[fillType] = nil
 
-                    -- Mixture correction expansion (RIT-152)
+                    -- Mixture correction expansion
                     -- When source loses a mixture (e.g., PIGFOOD), destinations recorded
                     -- corrections under ingredient fillTypes. Expand and correct each.
                     -- This handles bigbag/pallet dumps where UnloadTrigger pulls fill
@@ -1332,18 +1333,22 @@ function RmFreshManager:onFillChanged(containerId, fillUnitIndex, delta, fillTyp
                                         if lastBatch.amount > correctionAmount + 0.001 then
                                             -- Batch merged with existing fill: split off corrected portion
                                             lastBatch.amount = lastBatch.amount - correctionAmount
-                                            table.insert(destContainer.batches, { amount = correctionAmount, ageInPeriods = sourceAge })
+                                            table.insert(destContainer.batches,
+                                                { amount = correctionAmount, ageInPeriods = sourceAge })
                                         else
                                             -- Batch IS the new fill: correct in-place
                                             lastBatch.ageInPeriods = sourceAge
                                         end
 
-                                        RmBatch.mergeSimilarBatches(destContainer.batches, RmFreshSettings.MERGE_THRESHOLD)
+                                        RmBatch.mergeSimilarBatches(destContainer.batches,
+                                            RmFreshSettings.MERGE_THRESHOLD)
                                         self:broadcastContainerUpdate(ingredientCorrection.containerId,
                                             RmFreshUpdateEvent.OP_UPDATE, destContainer)
                                         correctedCount = correctedCount + 1
-                                        Log:debug("MIXTURE_CORRECTION_APPLIED: ingredient=%d dest=%s age=%.4f->%.4f amount=%.1f",
-                                            ingredientFillType, ingredientCorrection.containerId, oldAge, sourceAge, correctionAmount)
+                                        Log:debug(
+                                            "MIXTURE_CORRECTION_APPLIED: ingredient=%d dest=%s age=%.4f->%.4f amount=%.1f",
+                                            ingredientFillType, ingredientCorrection.containerId, oldAge, sourceAge,
+                                            correctionAmount)
                                     end
                                 end
                                 self.pendingCorrection[ingredientFillType] = nil
@@ -1358,7 +1363,8 @@ function RmFreshManager:onFillChanged(containerId, fillUnitIndex, delta, fillTyp
                     end
                 else
                     -- playerCanEmpty=false: consumption only, don't stage for transfer
-                    Log:debug("FILL_CHANGED_CONSUMPTION_ONLY: container=%s fillType=%d amount=%.1f (playerCanEmpty=false, not staged)",
+                    Log:debug(
+                        "FILL_CHANGED_CONSUMPTION_ONLY: container=%s fillType=%d amount=%.1f (playerCanEmpty=false, not staged)",
                         containerId, fillType, peeked.totalAmount)
                 end
             end
@@ -1862,7 +1868,7 @@ function RmFreshManager:getDisplayInfo(containerId)
     local oldest = container.batches[1]
     local config = RmFreshSettings:getThresholdByIndex(container.fillTypeIndex)
     local daysPerPeriod = (g_currentMission and g_currentMission.environment and g_currentMission.environment.daysPerPeriod) or
-    1
+        1
 
     local text = RmBatch.formatExpiresIn(oldest, config.expiration, daysPerPeriod)
     local warningAge = RmFreshSettings:getWarningThresholdByIndex(container.fillTypeIndex)
@@ -2425,7 +2431,7 @@ function RmFreshManager:getInventoryList(farmId, sortBy)
         -- Calculate time until expiry (threshold - current age)
         local threshold = RmFreshSettings:getExpiration(entry.fillTypeName)
         local expiresIn = threshold and (threshold - entry.oldestAge) or 0
-        entry.expiresIn = math.max(0, expiresIn)  -- Store for sorting
+        entry.expiresIn = math.max(0, expiresIn) -- Store for sorting
         entry.ageDisplay = string.format(g_i18n:getText("fresh_expires_months"), entry.expiresIn)
         entry.amountDisplay = string.format("%.0f L", entry.totalAmount)
         -- Add expiring amount display (shows how much is at/above warning threshold)
@@ -2489,7 +2495,8 @@ function RmFreshManager:getLossLogRecent(farmId, count)
                 hour = hour,
                 fillTypeName = entry.fillTypeName,
                 fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(entry.fillTypeName),
-                fillTypeTitle = g_fillTypeManager:getFillTypeTitleByIndex(g_fillTypeManager:getFillTypeIndexByName(entry.fillTypeName)) or entry.fillTypeName,
+                fillTypeTitle = g_fillTypeManager:getFillTypeTitleByIndex(g_fillTypeManager:getFillTypeIndexByName(entry
+                .fillTypeName)) or entry.fillTypeName,
                 amount = entry.amount,
                 amountDisplay = string.format("%.0f L", entry.amount),
                 value = entryValue,

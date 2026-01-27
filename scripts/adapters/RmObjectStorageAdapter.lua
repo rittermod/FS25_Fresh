@@ -177,7 +177,7 @@ function RmObjectStorageAdapter.doLoadRegistration(placeable, entityId)
                 local containerId, wasReconciled = RmFreshManager:registerContainer(
                     RmObjectStorageAdapter.ENTITY_TYPE,
                     identityMatch,
-                    abstractObject,  -- AbstractObject is the runtime entity for stored items
+                    abstractObject, -- AbstractObject is the runtime entity for stored items
                     { adapter = RmObjectStorageAdapter, farmId = farmId }
                 )
 
@@ -204,7 +204,7 @@ function RmObjectStorageAdapter.doLoadRegistration(placeable, entityId)
     Log:trace("<<< doLoadRegistration: %d registered", registeredCount)
 end
 
---- Rescan all object storage placeables for newly-perishable objects (RIT-139)
+--- Rescan all object storage placeables for newly-perishable objects
 --- Called when settings change makes a fillType perishable
 ---@return number count Number of new containers registered
 function RmObjectStorageAdapter.rescanForPerishables()
@@ -471,7 +471,7 @@ function RmObjectStorageAdapter:addObjectToObjectStorageHook(superFunc, object, 
     local storedContainerId, _ = RmFreshManager:registerContainer(
         RmObjectStorageAdapter.ENTITY_TYPE,
         identityMatch,
-        abstractObject,  -- AbstractObject is the runtime entity for stored items
+        abstractObject, -- AbstractObject is the runtime entity for stored items
         { adapter = RmObjectStorageAdapter, farmId = farmId }
     )
 
@@ -787,12 +787,12 @@ function RmObjectStorageAdapter.buildIdentityFromAbstractObject(placeable, abstr
         local pa = abstractObject.palletAttributes
         fillTypeValue = pa.fillType
         fillLevel = pa.fillLevel or 0
-        farmId = pa.ownerFarmId  -- Note: pallets use "ownerFarmId" not "farmId"
+        farmId = pa.ownerFarmId -- Note: pallets use "ownerFarmId" not "farmId"
         Log:trace("    vehicle: fillType=%s, fillLevel=%.0f, farmId=%s",
             tostring(fillTypeValue), fillLevel, tostring(farmId))
     else
         -- Fallback for unknown structures
-        Log:trace("    DEBUG: unknown structure className=%s", className)
+        Log:trace("    unknown structure className=%s", className)
         fillTypeValue = abstractObject.fillType
         fillLevel = abstractObject.fillLevel or 0
         farmId = abstractObject.farmId
@@ -1004,7 +1004,7 @@ end
 ---@param superFunc function Original updateInfo function
 ---@param infoTable table Info table to modify
 function RmObjectStorageAdapter:updateInfo(superFunc, infoTable)
-    local startIndex = #infoTable  -- Track BEFORE super populates entries
+    local startIndex = #infoTable -- Track BEFORE super populates entries
     superFunc(self, infoTable)
 
     local spec = self[RmObjectStorageAdapter.SPEC_TABLE_NAME]
@@ -1220,7 +1220,7 @@ function RmObjectStorageAdapter.sortObjectInfosByAge(placeable)
             table.sort(objectInfo.objects, function(a, b)
                 local ageA = RmObjectStorageAdapter.getOldestBatchAge(ourSpec, a)
                 local ageB = RmObjectStorageAdapter.getOldestBatchAge(ourSpec, b)
-                return ageA > ageB  -- Oldest first
+                return ageA > ageB -- Oldest first
             end)
             sortedCount = sortedCount + 1
         end
@@ -1243,12 +1243,12 @@ function RmObjectStorageAdapter.getOldestBatchAge(ourSpec, abstractObject)
 
     local containerId = ourSpec.abstractObjectContainers[abstractObject]
     if not containerId then
-        return -1  -- Not tracked by Fresh
+        return -1 -- Not tracked by Fresh
     end
 
     local container = RmFreshManager:getContainer(containerId)
     if not container or not container.batches or #container.batches == 0 then
-        return -1  -- No batches
+        return -1 -- No batches
     end
 
     -- First batch = oldest (FIFO order)
