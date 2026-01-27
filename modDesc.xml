@@ -38,6 +38,7 @@ Changelog:
 0.7.1.0 (Alpha):
 - Fixed TMR mixer output tracking - FORAGE amount now correctly tracks all ingredients
 - Fixed pig feed (PIGFOOD) losing age when deposited into pigsty
+- Fixed containers not aging after enabling expiration for a previously disabled product
 
 0.7.0.0 (Alpha):
 - Added support for ALL fillTypes - basegame, DLCs, and maps/mods now configurable

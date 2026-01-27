@@ -303,6 +303,11 @@ function RmFreshSettings:onSettingsChanged()
         broadcast = true
     end
 
+    -- Rescan world for newly-perishable containers (RIT-139)
+    if g_server and RmFreshManager then
+        RmFreshManager:rescanForNewPerishables()
+    end
+
     local globalCount = self:tableCount(self.userOverrides.global)
     local ftCount = self:tableCount(self.userOverrides.fillTypes)
     Log:debug("SETTINGS_CHANGED: %d global, %d fillTypes (broadcast=%s)",

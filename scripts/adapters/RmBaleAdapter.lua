@@ -313,6 +313,39 @@ function RmBaleAdapter.install()
     Log:info("BALE_ADAPTER: Hooks installed")
 end
 
+--- Rescan all bales for newly-perishable fill types (RIT-139)
+--- Called when settings change makes a fillType perishable
+---@return number count Number of new containers registered
+function RmBaleAdapter.rescanForPerishables()
+    if not g_baleManager or not g_baleManager.bales then return 0 end
+
+    Log:trace(">>> RmBaleAdapter.rescanForPerishables()")
+    local count = 0
+
+    for _, bale in ipairs(g_baleManager.bales) do
+        -- Check if already registered (has spec with containerId)
+        local spec = bale[RmBaleAdapter.SPEC_TABLE_NAME]
+        if not spec or not spec.containerId then
+            -- Not registered - check if now perishable
+            local fillType = bale.fillType
+            if fillType and RmFreshSettings:isPerishableByIndex(fillType) then
+                local entityId = bale.uniqueId
+                if entityId and entityId ~= "" then
+                    local fermenting = RmBaleAdapter:isFermenting(bale)
+                    RmBaleAdapter.doRegistration(bale, entityId, fermenting)
+                    count = count + 1
+
+                    Log:debug("RESCAN_BALE: uniqueId=%s fillType=%d fermenting=%s",
+                        entityId, fillType, tostring(fermenting))
+                end
+            end
+        end
+    end
+
+    Log:trace("<<< RmBaleAdapter.rescanForPerishables = %d", count)
+    return count
+end
+
 -- =============================================================================
 -- LIFECYCLE HOOKS
 -- =============================================================================

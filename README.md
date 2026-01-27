@@ -104,6 +104,7 @@ Fresh tracks your products using a batch system - each harvest or production run
 ### 0.7.1.0 (Alpha - 2026-01-27)
 - Fixed TMR mixer output tracking - FORAGE amount now correctly tracks all ingredients
 - Fixed pig feed (PIGFOOD) losing age when deposited into pigsty - mixture ingredients now preserve source age
+- Fixed containers not starting to age after enabling expiration for a previously disabled product
 
 ### 0.7.0.0 (Alpha - 2026-01-24)
 - Added support for ALL fillTypes - basegame, DLCs, and maps/mods now configurable

@@ -204,6 +204,62 @@ function RmObjectStorageAdapter.doLoadRegistration(placeable, entityId)
     Log:trace("<<< doLoadRegistration: %d registered", registeredCount)
 end
 
+--- Rescan all object storage placeables for newly-perishable objects (RIT-139)
+--- Called when settings change makes a fillType perishable
+---@return number count Number of new containers registered
+function RmObjectStorageAdapter.rescanForPerishables()
+    if not g_currentMission or not g_currentMission.placeableSystem then return 0 end
+
+    Log:trace(">>> RmObjectStorageAdapter.rescanForPerishables()")
+    local count = 0
+
+    for _, placeable in ipairs(g_currentMission.placeableSystem.placeables) do
+        local spec = placeable[RmObjectStorageAdapter.SPEC_TABLE_NAME]
+        if spec and spec.containerIds then
+            local specOS = placeable.spec_objectStorage
+            if specOS and specOS.storedObjects then
+                for i, abstractObject in ipairs(specOS.storedObjects) do
+                    -- Skip if this slot already registered
+                    if spec.containerIds[i] == nil then
+                        local identityMatch = RmObjectStorageAdapter.buildIdentityFromAbstractObject(
+                            placeable, abstractObject
+                        )
+                        if identityMatch then
+                            local fillTypeName = identityMatch.storage.fillTypeName
+                            local fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(fillTypeName)
+                            if fillTypeIndex and RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
+                                local farmId = placeable.getOwnerFarmId and placeable:getOwnerFarmId() or 0
+                                local containerId = RmFreshManager:registerContainer(
+                                    RmObjectStorageAdapter.ENTITY_TYPE,
+                                    identityMatch, abstractObject,
+                                    { adapter = RmObjectStorageAdapter, farmId = farmId }
+                                )
+                                if containerId then
+                                    spec.abstractObjectContainers[abstractObject] = containerId
+                                    spec.containerIds[i] = containerId
+                                    -- Initial batch at age=0 (no savegame data for newly-perishable)
+                                    local amount = identityMatch.storage.amount or 0
+                                    if amount > 0 then
+                                        RmFreshManager:addBatch(containerId, amount, 0)
+                                    end
+                                    count = count + 1
+
+                                    Log:debug("RESCAN_OBJECTSTORAGE: [%d] %s %.0fL -> %s name=%s",
+                                        i, fillTypeName, amount, containerId,
+                                        placeable:getName() or "unknown")
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    Log:trace("<<< RmObjectStorageAdapter.rescanForPerishables = %d", count)
+    return count
+end
+
 -- =============================================================================
 -- DEFERRED REGISTRATION (for purchased placeables)
 -- =============================================================================

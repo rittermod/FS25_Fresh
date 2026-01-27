@@ -199,6 +199,46 @@ function RmHusbandryFoodAdapter.doRegistration(placeable, entityId)
     Log:trace("<<< doRegistration registered=%d containers", registered)
 end
 
+--- Rescan all husbandry food placeables for newly-perishable food (RIT-139)
+--- Called when settings change makes a fillType perishable
+---@return number count Number of new containers registered
+function RmHusbandryFoodAdapter.rescanForPerishables()
+    if not g_currentMission or not g_currentMission.placeableSystem then return 0 end
+
+    Log:trace(">>> RmHusbandryFoodAdapter.rescanForPerishables()")
+    local count = 0
+
+    for _, placeable in ipairs(g_currentMission.placeableSystem.placeables) do
+        local spec = placeable[RmHusbandryFoodAdapter.SPEC_TABLE_NAME]
+        if spec and spec.containerIds then
+            local hfSpec = placeable.spec_husbandryFood
+            if hfSpec and hfSpec.fillLevels then
+                for fillTypeIndex, fillLevel in pairs(hfSpec.fillLevels) do
+                    local fillTypeName = g_fillTypeManager:getFillTypeNameByIndex(fillTypeIndex)
+                    -- Not already registered + now perishable + has fill + not a mixture
+                    if fillTypeName
+                       and spec.containerIds[fillTypeName] == nil
+                       and fillLevel > 0
+                       and RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
+
+                        local mixture = g_currentMission.animalFoodSystem:getMixtureByFillType(fillTypeIndex)
+                        if mixture == nil then
+                            RmHusbandryFoodAdapter.registerFoodContainer(placeable, spec, fillTypeIndex, fillLevel)
+                            count = count + 1
+
+                            Log:debug("RESCAN_HUSBANDRY: fillType=%s name=%s",
+                                fillTypeName, placeable:getName() or "unknown")
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    Log:trace("<<< RmHusbandryFoodAdapter.rescanForPerishables = %d", count)
+    return count
+end
+
 --- Defer registration until uniqueId is available (for purchased placeables)
 --- Pattern: Mirrors RmPlaceableAdapter.deferRegistration exactly
 ---@param placeable table Placeable entity
