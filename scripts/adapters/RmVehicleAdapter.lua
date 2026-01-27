@@ -163,6 +163,10 @@ end
 
 function RmVehicleAdapter.registerOverwrittenFunctions(vehicleType)
     SpecializationUtil.registerOverwrittenFunction(vehicleType, "showInfo", RmVehicleAdapter.showInfo)
+    -- Transfer age preservation: must use registerOverwrittenFunction (not late-bound
+    -- Utils.overwrittenFunction) because late hooks don't reach already-loaded vehicles.
+    -- Safe no-op for vehicle types without Dischargeable (skips if function absent).
+    SpecializationUtil.registerOverwrittenFunction(vehicleType, "dischargeToObject", RmTransferCoordinator.dischargeToObject)
 end
 
 -- =============================================================================
