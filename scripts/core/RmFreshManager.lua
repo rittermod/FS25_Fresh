@@ -1067,15 +1067,26 @@ end
 function RmFreshManager:onFillChanged(containerId, fillUnitIndex, delta, fillType)
     if g_server == nil then return end -- Server only
 
-    -- Skip non-perishable fills
+    -- RIT-179: Check fillType mismatch BEFORE non-perishable early return.
+    -- When a registered container's fillUnit now holds a different, non-perishable
+    -- fillType, the container is stale and must be unregistered.
+    local container = self.containers[containerId]
+    if container and container.fillTypeIndex and container.fillTypeIndex ~= fillType
+        and not RmFreshSettings:isPerishableByIndex(fillType) then
+        Log:debug("FILL_TYPE_CHANGE_NON_PERISHABLE: container=%s old=%d new=%d (unregistering stale container)",
+            containerId, container.fillTypeIndex, fillType)
+        self:unregisterContainer(containerId)
+        return
+    end
+
+    -- Skip non-perishable fills (same fillType or no container)
     if not RmFreshSettings:isPerishableByIndex(fillType) then
         Log:trace("FILL_CHANGED_SKIP: container=%s fillType=%d (not perishable)",
             containerId, fillType)
         return
     end
 
-    -- Validate fillType matches container's fillTypeIndex
-    local container = self.containers[containerId]
+    -- Validate fillType matches container's fillTypeIndex (perishable→perishable transitions)
     if container and container.fillTypeIndex and container.fillTypeIndex ~= fillType then
         if delta > 0 then
             -- Fill type changed with new fill: update fillType, preserve batches

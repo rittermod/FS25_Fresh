@@ -298,6 +298,12 @@ function RmVehicleAdapter.rescanForPerishables()
             if fillUnits then
                 for fillUnitIndex, fillUnit in ipairs(fillUnits) do
                     local fillType = fillUnit.fillType
+                    -- RIT-179: Clear stale adapter ref if Manager no longer has this container
+                    local existingId = spec.containerIds[fillUnitIndex]
+                    if existingId ~= nil and RmFreshManager.containers[existingId] == nil then
+                        Log:debug("RESCAN_STALE_REF: fu=%d containerId=%s (clearing)", fillUnitIndex, existingId)
+                        spec.containerIds[fillUnitIndex] = nil
+                    end
                     if spec.containerIds[fillUnitIndex] == nil
                        and fillType ~= nil
                        and RmFreshSettings:isPerishableByIndex(fillType)
@@ -367,6 +373,13 @@ function RmVehicleAdapter:onFillUnitFillLevelChanged(fillUnitIndex, fillLevelDel
     if spec == nil then return end
 
     local containerId = spec.containerIds and spec.containerIds[fillUnitIndex]
+
+    -- RIT-179: Clear stale adapter ref if Manager no longer has this container
+    if containerId ~= nil and RmFreshManager.containers[containerId] == nil then
+        Log:debug("VEHICLE_STALE_REF: fu=%d containerId=%s (clearing)", fillUnitIndex, containerId)
+        spec.containerIds[fillUnitIndex] = nil
+        containerId = nil
+    end
 
     -- Dynamic registration: if no container but fill is perishable and being added
     if containerId == nil and fillLevelDelta > 0 and RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
