@@ -1046,10 +1046,11 @@ function RmFreshManager:onFillChanged(containerId, fillUnitIndex, delta, fillTyp
     local container = self.containers[containerId]
     if container and container.fillTypeIndex and container.fillTypeIndex ~= fillType then
         if delta > 0 then
-            -- Fill type changed with new fill: clear old batches, update fillType
-            Log:debug("FILL_TYPE_CHANGE: container=%s old=%d new=%d (clearing %d batches)",
+            -- Fill type changed with new fill: update fillType, preserve batches
+            -- (FS25 empties old type via FIFO before loading new type in normal trailers;
+            -- MixerWagon transitions type without emptying, so batches must be preserved)
+            Log:debug("FILL_TYPE_CHANGE: container=%s old=%d new=%d (preserving %d batches)",
                 containerId, container.fillTypeIndex, fillType, #(container.batches or {}))
-            container.batches = {}
             container.fillTypeIndex = fillType
             -- Also update identityMatch for display and save/load
             if container.identityMatch and container.identityMatch.storage then
