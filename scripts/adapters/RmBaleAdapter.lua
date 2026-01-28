@@ -654,6 +654,11 @@ function RmBaleAdapter.showInfoHook(bale, box)
     else
         Log:trace("BALE_SHOW_INFO: %s no display info from Manager", containerId)
     end
+
+    -- Draw age distribution display (if enabled)
+    if RmFreshAgeDisplay and RmFreshAgeDisplay.drawForBale then
+        RmFreshAgeDisplay.drawForBale(bale)
+    end
 end
 
 -- =============================================================================

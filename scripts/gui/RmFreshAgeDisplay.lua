@@ -18,6 +18,10 @@ RmFreshAgeDisplay.box = nil
 --- showInfo is data-population phase, not render phase - can't call showNextFrame there
 RmFreshAgeDisplay.pendingVehicle = nil
 
+--- Pending bale for drawable (set in showInfoHook, drawn in draw())
+--- Same two-phase pattern as vehicles: showInfo is update phase, draw() is render phase
+RmFreshAgeDisplay.pendingBale = nil
+
 --- Install hooks for HUD display
 --- Called from main.lua onLoadMapFinished()
 function RmFreshAgeDisplay.install()
@@ -57,6 +61,7 @@ function RmFreshAgeDisplay.uninstall()
     end
 
     RmFreshAgeDisplay.pendingVehicle = nil
+    RmFreshAgeDisplay.pendingBale = nil
     Log:debug("FRESH_AGE_DISPLAY: Uninstalled")
 end
 
@@ -106,6 +111,24 @@ function RmFreshAgeDisplay.onPlaceableDrawHook(placeable)
 end
 
 -- =============================================================================
+-- BALE DISPLAY
+-- Two-phase: showInfoHook stores bale, draw() populates box
+-- =============================================================================
+
+--- Store bale for drawing (called from RmBaleAdapter.showInfoHook)
+--- showInfo is data-population phase - can't call showNextFrame there
+---@param bale table The bale entity
+function RmFreshAgeDisplay.drawForBale(bale)
+    -- Check if feature is enabled
+    if not RmFreshSettings:getGlobal("showAgeDisplay") then
+        return
+    end
+
+    -- Store for draw() phase
+    RmFreshAgeDisplay.pendingBale = bale
+end
+
+-- =============================================================================
 -- VEHICLE DISPLAY
 -- Two-phase: showInfo stores vehicle, draw() populates box
 -- =============================================================================
@@ -130,16 +153,17 @@ function RmFreshAgeDisplay.drawForVehicle(vehicle, box)
 end
 
 --- Drawable interface: Called each frame during render phase
---- Populates box for pending vehicle (if any)
+--- Populates box for pending vehicle or bale (if any)
 function RmFreshAgeDisplay:draw()
-    -- Check for pending vehicle
+    -- Grab and clear all pending targets (always clear to prevent stale state)
     local vehicle = RmFreshAgeDisplay.pendingVehicle
-    if vehicle == nil then
+    local bale = RmFreshAgeDisplay.pendingBale
+    RmFreshAgeDisplay.pendingVehicle = nil
+    RmFreshAgeDisplay.pendingBale = nil
+
+    if vehicle == nil and bale == nil then
         return
     end
-
-    -- Clear pending (only process once per showInfo call)
-    RmFreshAgeDisplay.pendingVehicle = nil
 
     -- Check if feature is enabled
     if not RmFreshSettings:getGlobal("showAgeDisplay") then
@@ -152,9 +176,15 @@ function RmFreshAgeDisplay:draw()
         return
     end
 
-    -- Collect containers from vehicle and all attached implements
-    local allContainers = RmFreshAgeDisplay.collectVehicleContainers(vehicle)
-    if #allContainers == 0 then
+    -- Collect containers based on entity type
+    local allContainers
+    if vehicle ~= nil then
+        allContainers = RmFreshAgeDisplay.collectVehicleContainers(vehicle)
+    else
+        allContainers = RmFreshManager:getContainersByRuntimeEntity(bale)
+    end
+
+    if allContainers == nil or #allContainers == 0 then
         return
     end
 
