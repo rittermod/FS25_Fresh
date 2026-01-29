@@ -75,7 +75,9 @@ Fresh Menu (Shift Destro+F):
 Funzionalità:
 - Supporta prodotti del gioco base, DLC e mappe/mod
 - Configura la durata di conservazione per qualsiasi fillType nelle Impostazioni
+- Soglia di avviso configurabile (6h/12h/24h/48h/72h)
 - Barre di distribuzione dell'età (colori: blu=fresco, verde=buono, arancione=avviso, rosso=critico)
+- Quantità in scadenza e tempo rimanente per tipo di prodotto
 - Oltre 100 prodotti con durate predefinite realistiche
 - 4 tipi di balle con gestione della fermentazione
 - Supporto per veicoli, balle, sili, produzioni e stalle
@@ -91,49 +93,29 @@ Documentazione: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
 
+0.8.0.0 (Alpha):
+- Rielaborati gli avvisi di scadenza per utilizzare il tempo rimanente nel gioco
+- Aggiunta soglia di avviso configurabile (6h/12h/24h/48h/72h)
+- Migliorata la visualizzazione della scadenza – tutti i tipi di magazzino mostrano quantità e tempo rimanente
+- Aggiunta visualizzazione parziale della scadenza per i veicoli
+- Migliorati i punti di interruzione del tempo (ore/giorni/mesi)
+
+0.7.2.0 (Alpha):
+- Aggiunta HUD di distribuzione dell'età per le balle
+
 0.7.1.0 (Alpha):
 - Corretto il tracciamento dell'output del mixer TMR – la quantità di FORAGGIO ora tiene correttamente conto di tutti gli ingredienti
+- Corretto il mangime per maiali (PIGFOOD) che perdeva l'età quando depositato nella porcilaia
+- Corretti i contenitori che non invecchiavano dopo aver abilitato la scadenza per un prodotto precedentemente disabilitato
+- Corretta la visualizzazione della freschezza errata del veicolo dopo il riempimento con un prodotto impostato su "non scadere"
+- Corretto falso errore nel log durante la registrazione del tasto Fresh Menu nel contesto veicolo
 
 0.7.0.0 (Alpha):
 - Aggiunto supporto per TUTTI i fillType – gioco base, DLC e mappe/mod ora configurabili
 - Migliorato l'ordinamento delle Impostazioni – i prodotti con categorie appaiono per primi per una navigazione più semplice
 - Aggiunti tooltip nelle Impostazioni che mostrano dettagli del fillType (nome interno, classificazione)
 
-0.6.1.0 (Alpha):
-- Corretta la visualizzazione della distribuzione dell'età su veicoli/placeable vuoti (problema di precisione floating point)
-
-0.6.0.0 (Alpha):
-- Aggiunta HUD di distribuzione dell'età: barre colorate di freschezza vicino a placeable e veicoli
-- Aggiunto interruttore nelle Impostazioni per abilitare/disabilitare la visualizzazione della distribuzione dell'età
-- Corretta la visualizzazione della freschezza per fillType
-- Corretta la visualizzazione della scadenza solo per fillType deperibili
-
-0.5.0.0 (Early Access):
-- Aggiunto Fresh Menu (Shift Destro+F) con inventario, statistiche e impostazioni
-- Aggiunte durate di conservazione configurabili per prodotto
-- Aggiunto tracciamento delle perdite con notifiche giornaliere
-- Migliorata la gestione dei trasferimenti (età dei lotti preservata)
-- Ricostruita l'architettura principale per maggiore stabilità
-
-0.4.0.0 (Alpha 5):
-- Aggiunto tracciamento dei magazzini placeable (sili, produzioni, stalle)
-- Aggiunto tracciamento del cibo nelle stalle
-- Aggiunta visualizzazione del conteggio in scadenza per i placeable
-- Aggiunta sincronizzazione multiplayer per i magazzini placeable
-
-0.3.0.0 (Alpha 4):
-- Aggiunto tracciamento dei veicoli di massa (rimorchi, cisterne, mietitrebbie)
-- Esteso dalle pallet a tutti i veicoli con capacità di carico
-
-0.2.0.0 (Alpha 2):
-- Aggiunta deperibilità delle balle con 4 tipi di foraggio
-- Aggiunto invecchiamento delle balle nei fienili/rimesse
-- Aggiunta gestione delle balle in fermentazione
-
-0.1.0.0 (Alpha 1):
-- Prima versione alpha
-- Aggiunto sistema di prodotti deperibili per 100 tipi di prodotto
-- Aggiunto supporto multiplayer e persistenza nei salvataggi
+Changelog completo su https://github.com/rittermod/FS25_Fresh
         ]]></it>
     </description>
 

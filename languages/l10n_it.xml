@@ -18,8 +18,9 @@
         <text name="fresh_dailyLossNotification" text="Perse %.0f unità a causa della scadenza dei prodotti"/>
 
         <!-- Storage HUD (used by both placeable storage and husbandry feed) -->
-        <text name="fresh_storage_expiring" text="(%d in scadenza)"/>
-        <text name="fresh_storage_expiring_volume" text="(%s in scadenza)"/>
+        <text name="fresh_storage_expiring" text="-%d tra %s"/>
+        <text name="fresh_storage_expiring_volume" text="-%s tra %s"/>
+        <text name="fresh_vehicle_expiring_volume" text="-%s"/>
 
         <!-- Age Distribution HUD -->
         <text name="fresh_age_display_title" text="Freschezza"/>
@@ -56,6 +57,13 @@
         <text name="fresh_settings_showWarnings_tooltip" text="Mostra notifiche nella finestra informazioni quando un prodotto sta per scadere."/>
         <text name="fresh_settings_showAgeDisplay" text="Mostra barra età"/>
         <text name="fresh_settings_showAgeDisplay_tooltip" text="Mostra le barre di distribuzione dell'età quando vicino ai magazzini."/>
+        <text name="fresh_settings_warningHours" text="Soglia di avviso"/>
+        <text name="fresh_settings_warningHours_tooltip" text="Mostra un avviso quando un prodotto scade entro questo tempo. I prodotti con durata più breve potrebbero risultare sempre in scadenza."/>
+        <text name="fresh_warning_6h" text="6 ore"/>
+        <text name="fresh_warning_12h" text="12 ore"/>
+        <text name="fresh_warning_24h" text="24 ore"/>
+        <text name="fresh_warning_48h" text="48 ore"/>
+        <text name="fresh_warning_72h" text="72 ore"/>
         <text name="fresh_settings_fillTypes" text="Tempi di scadenza"/>
 
         <!-- Settings reset button -->
