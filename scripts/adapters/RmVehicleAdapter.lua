@@ -216,29 +216,62 @@ function RmVehicleAdapter:onLoadFinished(savegame)
     RmVehicleAdapter.doRegistration(self, entityId)
 end
 
---- Defer registration to next frame for purchased vehicles
+--- Polling timeout for deferred registration: 10 seconds (600 frames at 60fps)
+local DEFER_TIMEOUT_MS = 10000
+
+--- Defer registration until uniqueId is available (for purchased vehicles)
 --- uniqueId is assigned after onLoadFinished for shop purchases
+---@param vehicle table Vehicle entity
 function RmVehicleAdapter.deferRegistration(vehicle)
+    Log:trace(">>> deferRegistration(vehicle=%s)", vehicle:getName() or "unknown")
+
     local spec = vehicle[RmVehicleAdapter.SPEC_TABLE_NAME]
-    if spec.deferredRegistration then return end  -- Already scheduled
+    if spec.deferredRegistration then
+        Log:trace("<<< deferRegistration (already scheduled)")
+        return
+    end
 
     spec.deferredRegistration = true
-    Log:trace("VEHICLE_DEFER: name=%s (uniqueId not yet assigned)", vehicle:getName() or "unknown")
+    Log:debug("VEHICLE_DEFER: %s (uniqueId not yet assigned)", vehicle:getName() or "unknown")
 
-    -- Schedule registration check for next frame
+    local startTime = g_currentMission.time
+
     g_currentMission:addUpdateable({
         vehicle = vehicle,
-        update = function(self, dt)
+        update = function(self, _dt)
+            -- Guard: mission teardown (avoid accessing nil g_currentMission)
+            if g_currentMission == nil then
+                return
+            end
+
             local v = self.vehicle
+
+            -- Success: uniqueId now available
             if v.uniqueId and v.uniqueId ~= "" then
+                Log:trace("    deferred: uniqueId now available after %dms", g_currentMission.time - startTime)
                 RmVehicleAdapter.doRegistration(v, v.uniqueId)
                 g_currentMission:removeUpdateable(self)
-            elseif v.isDeleted then
-                -- Vehicle was deleted before uniqueId assigned (cancelled purchase)
+                return
+            end
+
+            -- Cancelled: vehicle deleted before uniqueId assigned
+            if v.isDeleted then
+                Log:trace("    deferred: vehicle deleted, cancelling")
                 g_currentMission:removeUpdateable(self)
+                return
+            end
+
+            -- Timeout: polling exhausted
+            if (g_currentMission.time - startTime) > DEFER_TIMEOUT_MS then
+                Log:warning("VEHICLE_NO_UNIQUEID: %s failed to get uniqueId after %dms",
+                    v:getName() or "unknown", DEFER_TIMEOUT_MS)
+                g_currentMission:removeUpdateable(self)
+                return
             end
         end
     })
+
+    Log:trace("<<< deferRegistration (scheduled, timeout=%dms)", DEFER_TIMEOUT_MS)
 end
 
 --- Perform actual container registration
