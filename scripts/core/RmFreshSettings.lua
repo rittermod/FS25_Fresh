@@ -366,7 +366,7 @@ function RmFreshSettings:resetOverride(fillTypeName)
 end
 
 --- Apply multiple fillType changes with a single onSettingsChanged() call
---- Used by settings frame to batch UI interactions on frame close (RIT-177)
+--- Used by settings frame to batch UI interactions on frame close
 ---@param changes table { fillTypeName = { action = string, value = number|nil } }
 function RmFreshSettings:applyBatchChanges(changes)
     if not changes or not next(changes) then return end

@@ -77,7 +77,7 @@ RmSettingsFrame.displayedInstance = nil
 --- Set true during refreshData/refreshFillTypeSelectors to avoid cascade updates
 RmSettingsFrame.isRefreshing = false
 
---- Pending fillType changes accumulated during user interaction (RIT-177)
+--- Pending fillType changes accumulated during user interaction
 --- Flushed on frame close. Key: fillTypeName, Value: { action, value }
 RmSettingsFrame.pendingFillTypeChanges = {}
 
@@ -221,7 +221,7 @@ function RmSettingsFrame:onFrameOpen()
 end
 
 function RmSettingsFrame:onFrameClose()
-    -- RIT-177: Flush pending fillType changes before closing
+    -- Flush pending fillType changes before closing
     if next(RmSettingsFrame.pendingFillTypeChanges) then
         local count = 0
         for _ in pairs(RmSettingsFrame.pendingFillTypeChanges) do count = count + 1 end
@@ -617,7 +617,7 @@ function RmSettingsFrame:onFillTypeOptionChangedByName(fillTypeName, state)
         return
     end
 
-    -- RIT-177: Defer change to frame close instead of applying immediately
+    -- Defer change to frame close instead of applying immediately
     local action = option.expires == false and "setDoNotExpire" or "setExpiration"
     RmSettingsFrame.pendingFillTypeChanges[fillTypeName] = {
         action = action,

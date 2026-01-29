@@ -38,12 +38,13 @@ Documentation: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
 
-0.8.0.0 (Alpha):
+0.8.0.0 (Beta):
 - Reworked expiry warnings to use in-game time remaining
 - Added configurable warning threshold (6h/12h/24h/48h/72h)
 - Improved expiry display - all storage types show amount and time remaining
 - Added partial expiry display for vehicles
 - Improved time display breakpoints (hours/days/months)
+- Added Italian localization - contributed by @FirenzeIT
 
 0.7.2.0 (Alpha):
 - Added age distribution HUD for bales
@@ -93,12 +94,13 @@ Documentazione: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
 
-0.8.0.0 (Alpha):
+0.8.0.0 (Beta):
 - Rielaborati gli avvisi di scadenza per utilizzare il tempo rimanente nel gioco
 - Aggiunta soglia di avviso configurabile (6h/12h/24h/48h/72h)
 - Migliorata la visualizzazione della scadenza – tutti i tipi di magazzino mostrano quantità e tempo rimanente
 - Aggiunta visualizzazione parziale della scadenza per i veicoli
 - Migliorati i punti di interruzione del tempo (ore/giorni/mesi)
+- Aggiunta localizzazione italiana - contributo di @FirenzeIT
 
 0.7.2.0 (Alpha):
 - Aggiunta HUD di distribuzione dell'età per le balle
@@ -116,7 +118,7 @@ Changelog:
 - Aggiunti tooltip nelle Impostazioni che mostrano dettagli del fillType (nome interno, classificazione)
 
 Changelog completo su https://github.com/rittermod/FS25_Fresh
-        ]]></it>
+        ]]>        </it>
     </description>
 
     <iconFilename>icon_fresh.dds</iconFilename>

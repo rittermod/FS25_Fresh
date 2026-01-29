@@ -1,7 +1,7 @@
 -- RmFreshNotificationEvent.lua
 -- Purpose: Deliver loss notification message from server to clients
 -- Author: Ritter
--- Story: 29-4 - Daily Notification System
+-- Daily Notification System
 
 ---@class RmFreshNotificationEvent
 ---Simple event to deliver loss notification message to client

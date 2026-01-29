@@ -32,6 +32,7 @@ Fresh tracks your products using a batch system - each harvest or production run
 ### Settings & Customization
 - Configure shelf life for any product (basegame, DLCs, maps/mods)
 - Enable/disable expiration globally or per-product
+- Configurable warning threshold (6h/12h/24h/48h/72h) - choose when expiry warnings appear
 - Toggle age distribution display on/off
 - Per-savegame settings
 - Multiplayer: host/admin controls settings for all players
@@ -52,10 +53,10 @@ Fresh tracks your products using a batch system - each harvest or production run
 - Placeables: silos, productions, husbandries, object storage
 
 ### Visual Feedback
-- Age distribution bars when near placeables/vehicles (color-coded: blue=fresh, green=good, orange=warning, red=critical)
-- Expiry countdown on vehicles and bales ("Expires in: X days")
-- Expiring amounts shown per fill type for placeables
-- Warning highlight when products near expiration
+- Age distribution bars when near placeables, vehicles, and bales (color-coded: blue=fresh, green=good, orange=warning, red=critical)
+- Expiry countdown on vehicles and bales ("Expires in: X hours/days")
+- Expiring amount and time remaining shown per fill type on placeables and husbandries (e.g., "-1,000 l in 24h")
+- Warning highlight when products near expiration (configurable threshold)
 - Notification when products expire and are removed
 
 ### Inventory Behavior
@@ -100,6 +101,18 @@ Fresh tracks your products using a batch system - each harvest or production run
 - **Platform**: PC (Windows/macOS)
 
 ## Changelog
+
+### 0.8.0.0 (Beta - 2026-01-29)
+- Reworked expiry warnings to use in-game time remaining - a 24h warning now means 24 hours regardless of product type or days-per-month setting
+- Added configurable warning threshold in Settings (6h/12h/24h/48h/72h) - choose when expiry warnings appear
+- Improved expiry display consistency - all storage types now show expiring amount and time remaining (e.g., "-1,000 l in 24h")
+- Added partial expiry display for vehicles - shows expiring volume when only some contents are near expiry
+- Improved time display - remaining time now uses intuitive breakpoints (hours/days/months)
+- Unified status colors across HUD and menu to match FS25 palette
+- Added Italian localization - contributed by @FirenzeIT
+
+### 0.7.2.0 (Alpha - 2026-01-28)
+- Added age distribution HUD for bales - colored freshness bar now appears when looking at bales
 
 ### 0.7.1.0 (Alpha - 2026-01-27)
 - Fixed TMR mixer output tracking - FORAGE amount now correctly tracks all ingredients
