@@ -77,6 +77,10 @@ RmSettingsFrame.displayedInstance = nil
 --- Set true during refreshData/refreshFillTypeSelectors to avoid cascade updates
 RmSettingsFrame.isRefreshing = false
 
+--- Pending fillType changes accumulated during user interaction (RIT-177)
+--- Flushed on frame close. Key: fillTypeName, Value: { action, value }
+RmSettingsFrame.pendingFillTypeChanges = {}
+
 -- =============================================================================
 -- CONSTRUCTOR
 -- =============================================================================
@@ -217,6 +221,29 @@ function RmSettingsFrame:onFrameOpen()
 end
 
 function RmSettingsFrame:onFrameClose()
+    -- RIT-177: Flush pending fillType changes before closing
+    if next(RmSettingsFrame.pendingFillTypeChanges) then
+        local count = 0
+        for _ in pairs(RmSettingsFrame.pendingFillTypeChanges) do count = count + 1 end
+        Log:debug("SETTINGS_FLUSH: applying %d pending fillType changes on frame close", count)
+
+        if g_server then
+            RmFreshSettings:applyBatchChanges(RmSettingsFrame.pendingFillTypeChanges)
+        else
+            -- Client: send individual events to server
+            for fillTypeName, change in pairs(RmSettingsFrame.pendingFillTypeChanges) do
+                if RmSettingsChangeRequestEvent then
+                    g_client:getServerConnection():sendEvent(
+                        RmSettingsChangeRequestEvent.new(change.action, fillTypeName, change.value)
+                    )
+                end
+            end
+        end
+
+        RmSettingsFrame.pendingFillTypeChanges = {}
+        Log:trace("    flush complete (server=%s)", tostring(g_server ~= nil))
+    end
+
     RmSettingsFrame:superClass().onFrameClose(self)
     Log:trace("RmSettingsFrame:onFrameClose() (self=%s)", tostring(self))
 
@@ -590,24 +617,14 @@ function RmSettingsFrame:onFillTypeOptionChangedByName(fillTypeName, state)
         return
     end
 
-    if g_server then
-        -- Server: apply directly
-        if option.expires == false then
-            RmFreshSettings:setDoNotExpire(fillTypeName)
-        else
-            RmFreshSettings:setExpiration(fillTypeName, option.period)
-        end
-    else
-        -- Client: send request to server
-        if RmSettingsChangeRequestEvent then
-            local action = option.expires == false and "setDoNotExpire" or "setExpiration"
-            local value = option.period -- nil for setDoNotExpire is handled by event
-            g_client:getServerConnection():sendEvent(
-                RmSettingsChangeRequestEvent.new(action, fillTypeName, value)
-            )
-        end
-    end
+    -- RIT-177: Defer change to frame close instead of applying immediately
+    local action = option.expires == false and "setDoNotExpire" or "setExpiration"
+    RmSettingsFrame.pendingFillTypeChanges[fillTypeName] = {
+        action = action,
+        value = option.period,  -- nil for setDoNotExpire
+    }
 
+    Log:trace("    SETTINGS_PENDING: %s -> %s (deferred to frame close)", fillTypeName, action)
     Log:trace("<<< onFillTypeOptionChangedByName")
 end
 

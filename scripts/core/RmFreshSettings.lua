@@ -58,6 +58,10 @@ RmFreshSettings.userOverrides = {
 --- Runtime cache - index-keyed for fast lookups (rebuilt on settings change)
 RmFreshSettings.perishableByIndex = {}
 
+--- Batch mode flag: when true, onSettingsChanged() is suppressed
+--- Used by applyBatchChanges() to apply multiple overrides with one notify
+RmFreshSettings.suppressNotify = false
+
 -- =============================================================================
 -- UTILITY FUNCTIONS
 -- =============================================================================
@@ -271,6 +275,11 @@ end
 --- Rebuilds index cache and broadcasts to connected clients
 --- IMPORTANT: Do NOT call from setUserOverrides() - that's the sync receiver
 function RmFreshSettings:onSettingsChanged()
+    if self.suppressNotify then
+        Log:trace("    onSettingsChanged suppressed (batch mode)")
+        return
+    end
+
     Log:trace(">>> onSettingsChanged()")
 
     -- Rebuild index cache (replaces RmFreshConfig:initialize())
@@ -354,6 +363,32 @@ function RmFreshSettings:resetOverride(fillTypeName)
         -- Notify dependents and sync MP
         self:onSettingsChanged()
     end
+end
+
+--- Apply multiple fillType changes with a single onSettingsChanged() call
+--- Used by settings frame to batch UI interactions on frame close (RIT-177)
+---@param changes table { fillTypeName = { action = string, value = number|nil } }
+function RmFreshSettings:applyBatchChanges(changes)
+    if not changes or not next(changes) then return end
+
+    local count = 0
+    for _ in pairs(changes) do count = count + 1 end
+    Log:trace(">>> applyBatchChanges(count=%d)", count)
+
+    self.suppressNotify = true
+    for fillTypeName, change in pairs(changes) do
+        if change.action == "setDoNotExpire" then
+            self:setDoNotExpire(fillTypeName)
+        elseif change.action == "setExpiration" then
+            self:setExpiration(fillTypeName, change.value)
+        end
+    end
+    self.suppressNotify = false
+
+    self:onSettingsChanged()
+
+    Log:debug("SETTINGS_BATCH: applied %d fillType changes", count)
+    Log:trace("<<< applyBatchChanges")
 end
 
 --- Clear all user overrides (both fillTypes AND global settings)
