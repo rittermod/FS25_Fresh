@@ -597,7 +597,7 @@ end
 ---@param state number The new option index
 function RmSettingsFrame:onFillTypeOptionChangedByName(fillTypeName, state)
     -- DIAGNOSTIC: Log which frame instance the callback belongs to (captured in closure)
-    Log:info("DIAG_CALLBACK: frame=%s (closure), fillType=%s, state=%d, displayed=%s",
+    Log:trace("DIAG_CALLBACK: frame=%s (closure), fillType=%s, state=%d, displayed=%s",
         tostring(self), fillTypeName, state, tostring(RmSettingsFrame.displayedInstance))
 
     -- Fix B: Skip if this is a programmatic refresh (not user interaction)
