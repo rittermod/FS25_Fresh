@@ -549,21 +549,33 @@ function RmHusbandryFoodAdapter:updateInfo(superFunc, infoTable)
         return
     end
 
-    -- Build expiring amounts per fillType
-    local expiringByFillType = {}
+    -- Build expiring amounts and soonest expiry per fillType
+    local daysPerPeriod = (g_currentMission and g_currentMission.environment
+        and g_currentMission.environment.daysPerPeriod) or 1
+    local warningHours = RmFreshSettings:getWarningHours()
+    local expiringByFillType = {}  -- fillTypeIndex → { amount, soonestHours }
     local totalExpiring = 0
 
     for fillTypeName, containerId in pairs(spec.containerIds) do
         local fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(fillTypeName)
         if fillTypeIndex then
             local batches = RmFreshManager:getBatches(containerId)
-            local thresholds = RmFreshSettings:getThresholdByIndex(fillTypeIndex)
+            local config = RmFreshSettings:getThresholdByIndex(fillTypeIndex)
 
             for _, batch in ipairs(batches or {}) do
-                if RmBatch.isNearExpiration(batch, thresholds.warning, thresholds.expiration) then
-                    expiringByFillType[fillTypeIndex] =
-                        (expiringByFillType[fillTypeIndex] or 0) + batch.amount
+                if batch.amount >= RmBatch.MIN_AMOUNT
+                    and RmBatch.isNearExpiration(batch, warningHours, config.expiration, daysPerPeriod) then
+                    local entry = expiringByFillType[fillTypeIndex]
+                    if not entry then
+                        entry = { amount = 0, soonestHours = math.huge }
+                        expiringByFillType[fillTypeIndex] = entry
+                    end
+                    entry.amount = entry.amount + batch.amount
                     totalExpiring = totalExpiring + batch.amount
+                    local remainingHours = (config.expiration - batch.ageInPeriods) * daysPerPeriod * 24
+                    if remainingHours < entry.soonestHours then
+                        entry.soonestHours = remainingHours
+                    end
                 end
             end
         end
@@ -576,11 +588,13 @@ function RmHusbandryFoodAdapter:updateInfo(superFunc, infoTable)
     end
 
     -- Modify existing entries (after startCount) OR add new ones
-    for fillTypeIndex, expiringAmount in pairs(expiringByFillType) do
-        if expiringAmount > 0 then
+    for fillTypeIndex, expData in pairs(expiringByFillType) do
+        if expData.amount > 0 then
             local fillTypeTitle = g_fillTypeManager:getFillTypeTitleByIndex(fillTypeIndex)
-            local formattedVolume = g_i18n:formatVolume(expiringAmount)
-            local suffix = string.format(g_i18n:getText("fresh_storage_expiring_volume"), formattedVolume)
+            local formattedVolume = g_i18n:formatVolume(expData.amount)
+            local timeStr = RmBatch.formatRemainingShort(expData.soonestHours)
+            local suffix = string.format(g_i18n:getText("fresh_storage_expiring_volume"),
+                formattedVolume, timeStr)
 
             -- Try to find and modify existing entry
             local found = false

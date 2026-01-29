@@ -8,13 +8,14 @@ local Log = RmLogging.getLogger("Fresh")
 RmFreshInfoBox = {}
 local RmFreshInfoBox_mt = Class(RmFreshInfoBox, InfoDisplayBox)
 
---- Age distribution colors - FS25 predefined colors
+--- Age distribution colors - FS25 predefined color values
+--- Also used by RmOverviewFrame for consistent visual language
 RmFreshInfoBox.COLORS = {
-    FRESH    = {0.0227, 0.5346, 0.8519, 1},    -- Blue (75-100% remaining)
-    GOOD     = {0.3372, 0.5583, 0.0003, 1},    -- Green (50-75% remaining)
-    WARNING  = {0.98, 0.42, 0.007, 1},         -- Orange (25-50% remaining)
-    CRITICAL = {0.8069, 0.0097, 0.0097, 1},    -- Red (0-25% remaining)
-    BAR_BG   = {0.0, 0.0, 0.0, 0.3},           -- Subtle bar background
+    FRESH    = {0.0742, 0.4341, 0.6939, 1},     -- colorBlue (75-100% remaining)
+    GOOD     = {0.33716, 0.55834, 0.0003, 1},   -- fs25_colorGreen (50-75% remaining)
+    WARNING  = {0.8, 0.4, 0, 1},                -- colorOrange (25-50% remaining)
+    CRITICAL = {0.8069, 0.0097, 0.0097, 1},     -- colorRed (0-25% remaining)
+    BAR_BG   = {0.0, 0.0, 0.0, 0.3},            -- Subtle bar background
 }
 
 ---Create new RmFreshInfoBox

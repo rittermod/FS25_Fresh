@@ -19,15 +19,12 @@ RmFreshSettings.MOD_DEFAULTS_PATH = "data/defaultSettings.xml"
 RmFreshSettings.MIN_EXPIRATION = 1.0  -- 1 month minimum (periods)
 RmFreshSettings.MAX_EXPIRATION = 60.0 -- 5 years maximum (periods)
 
---- Warning threshold multiplier (calculated at runtime, not stored per-fillType)
---- Future: Could become a global setting if users want to configure it
-RmFreshSettings.DEFAULT_WARNING = 0.75 -- 75% of expiration period
-
 --- Global setting defaults
 RmFreshSettings.GLOBAL_DEFAULTS = {
     enableExpiration = true,
     showWarnings = true,
     showAgeDisplay = true,
+    warningHours = 24,  -- Warn when expiring within N hours
 }
 
 --- Merge threshold for batch compaction (0.01 periods = ~7 in-game hours)
@@ -35,8 +32,7 @@ RmFreshSettings.MERGE_THRESHOLD = 0.01
 
 --- Default thresholds for unknown fill types (used when fillType not configured)
 RmFreshSettings.DEFAULT_THRESHOLDS = {
-    expiration = 1.0,
-    warning = 0.75
+    expiration = 1.0
 }
 
 -- =============================================================================
@@ -182,18 +178,6 @@ function RmFreshSettings:getExpiration(fillTypeName)
     return nil
 end
 
---- Get warning threshold age for a fillType
---- Returns expiration * DEFAULT_WARNING, or nil if doesn't expire
----@param fillTypeName string The fillType name
----@return number|nil Warning age threshold in periods, or nil if doesn't expire
-function RmFreshSettings:getWarningThreshold(fillTypeName)
-    local expiration = self:getExpiration(fillTypeName)
-    if expiration == nil then
-        return nil
-    end
-    return expiration * self.DEFAULT_WARNING
-end
-
 --- Check if a fillType is perishable (has expiration set)
 ---@param fillTypeName string The fillType name
 ---@return boolean True if fillType has expiration configured
@@ -242,7 +226,6 @@ function RmFreshSettings:rebuildIndexCache()
             if fillTypeIndex ~= nil then
                 self.perishableByIndex[fillTypeIndex] = {
                     expiration = expiration,
-                    warning = self.DEFAULT_WARNING
                 }
                 count = count + 1
                 Log:trace("INDEX_CACHE: %s (idx=%d) -> exp=%.2f", fillTypeName, fillTypeIndex, expiration)
@@ -267,12 +250,10 @@ function RmFreshSettings:getThresholdByIndex(fillTypeIndex)
     return self.perishableByIndex[fillTypeIndex] or self.DEFAULT_THRESHOLDS
 end
 
---- Get the AGE when warning should show for a fill type (index-based)
----@param fillTypeIndex number Fill type index
----@return number Warning age threshold in periods
-function RmFreshSettings:getWarningThresholdByIndex(fillTypeIndex)
-    local config = self:getThresholdByIndex(fillTypeIndex)
-    return config.expiration * self.DEFAULT_WARNING
+--- Get the warning hours setting (hours before expiration to show warning)
+---@return number Warning hours threshold
+function RmFreshSettings:getWarningHours()
+    return self:getGlobal("warningHours") or 24
 end
 
 --- Check if global expiration is enabled

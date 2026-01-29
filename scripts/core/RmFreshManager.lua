@@ -1871,11 +1871,11 @@ function RmFreshManager:getDisplayInfo(containerId)
         1
 
     local text = RmBatch.formatExpiresIn(oldest, config.expiration, daysPerPeriod)
-    local warningAge = RmFreshSettings:getWarningThresholdByIndex(container.fillTypeIndex)
+    local warningHours = RmFreshSettings:getWarningHours()
 
     return {
         text = text,
-        isWarning = oldest.ageInPeriods >= warningAge,
+        isWarning = RmBatch.isNearExpiration(oldest, warningHours, config.expiration, daysPerPeriod),
         isExpiring = oldest.ageInPeriods >= config.expiration,
     }
 end
@@ -2351,6 +2351,10 @@ function RmFreshManager:getInventorySummary(farmId)
         return summary
     end
 
+    local daysPerPeriod = (g_currentMission and g_currentMission.environment
+        and g_currentMission.environment.daysPerPeriod) or 1
+    local warningHours = RmFreshSettings:getWarningHours()
+
     local containerCount = 0
     for containerId, container in pairs(self.containers) do
         -- Only include containers belonging to this farm
@@ -2365,23 +2369,19 @@ function RmFreshManager:getInventorySummary(farmId)
 
                 -- Initialize fillType entry if needed
                 if not summary[fillTypeName] then
-                    -- Get warning threshold (75% of expiration time)
-                    local threshold = RmFreshSettings:getExpiration(fillTypeName)
-                    local warningThreshold = threshold and (threshold * 0.75) or nil
-
                     summary[fillTypeName] = {
                         fillTypeName = fillTypeName,
                         fillTypeIndex = container.fillTypeIndex,
                         totalAmount = 0,
-                        expiringAmount = 0, -- Amount at/above warning threshold
+                        expiringAmount = 0, -- Amount within warning hours
                         oldestAge = 0,
                         containerCount = 0,
                         isWarning = false,
-                        warningThreshold = warningThreshold, -- Store for batch checks
                     }
                 end
 
                 local entry = summary[fillTypeName]
+                local threshold = RmFreshSettings:getExpiration(fillTypeName)
 
                 -- Sum amounts from all batches, tracking expiring amounts
                 for _, batch in ipairs(container.batches) do
@@ -2390,9 +2390,13 @@ function RmFreshManager:getInventorySummary(farmId)
                     if batch.ageInPeriods > entry.oldestAge then
                         entry.oldestAge = batch.ageInPeriods
                     end
-                    -- Track expiring amount (batches at/above warning threshold)
-                    if entry.warningThreshold and batch.ageInPeriods >= entry.warningThreshold then
-                        entry.expiringAmount = entry.expiringAmount + batch.amount
+                    -- Track expiring amount (batches within warning hours, epsilon guard)
+                    if threshold and batch.amount >= RmBatch.MIN_AMOUNT then
+                        local remainingPeriods = threshold - batch.ageInPeriods
+                        local remainingHrs = remainingPeriods * daysPerPeriod * 24
+                        if remainingHrs <= warningHours then
+                            entry.expiringAmount = entry.expiringAmount + batch.amount
+                        end
                     end
                 end
 
@@ -2424,6 +2428,7 @@ end
 function RmFreshManager:getInventoryList(farmId, sortBy)
     local summary = self:getInventorySummary(farmId)
     local list = {}
+    local daysPerPeriod = (g_currentMission and g_currentMission.environment and g_currentMission.environment.daysPerPeriod) or 1
 
     for _, entry in pairs(summary) do
         -- Add display-friendly fields
@@ -2432,7 +2437,7 @@ function RmFreshManager:getInventoryList(farmId, sortBy)
         local threshold = RmFreshSettings:getExpiration(entry.fillTypeName)
         local expiresIn = threshold and (threshold - entry.oldestAge) or 0
         entry.expiresIn = math.max(0, expiresIn) -- Store for sorting
-        entry.ageDisplay = string.format(g_i18n:getText("fresh_expires_months"), entry.expiresIn)
+        entry.ageDisplay = RmBatch.formatExpiresIn({ageInPeriods = entry.oldestAge}, threshold or 1.0, daysPerPeriod)
         entry.amountDisplay = string.format("%.0f L", entry.totalAmount)
         -- Add expiring amount display (shows how much is at/above warning threshold)
         if entry.expiringAmount > 0 then

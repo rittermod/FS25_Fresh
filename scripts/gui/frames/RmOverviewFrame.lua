@@ -25,10 +25,10 @@ RmOverviewFrame.EXPIRY_OPTIONS = {
     { hours = 72, label = "fresh_expires_72h" },
 }
 
--- Status colors
-RmOverviewFrame.COLOR_WARNING = { 1, 0.6, 0, 1 }    -- Orange for expiring soon
-RmOverviewFrame.COLOR_OK = { 0.3, 0.8, 0.3, 1 }     -- Green for healthy
-RmOverviewFrame.COLOR_CRITICAL = { 1, 0.3, 0.3, 1 } -- Red for very soon
+-- Status colors (shared with HUD age bar via RmFreshInfoBox.COLORS)
+RmOverviewFrame.COLOR_WARNING  = RmFreshInfoBox.COLORS.WARNING   -- colorOrange
+RmOverviewFrame.COLOR_OK       = RmFreshInfoBox.COLORS.GOOD      -- fs25_colorGreen
+RmOverviewFrame.COLOR_CRITICAL = RmFreshInfoBox.COLORS.CRITICAL  -- colorRed
 
 -- Visible row threshold for scrollbar visibility
 RmOverviewFrame.VISIBLE_ROWS = 14  -- 700px height / 48px per row
@@ -450,7 +450,9 @@ function RmOverviewFrame:populateExpiringCell(index, cell)
     if timeLeftElement then
         local hours = entry.expiresInHours or 0
         local timeText
-        if hours < 1 then
+        if hours <= 0 then
+            timeText = g_i18n:getText("fresh_expired")
+        elseif hours < 1 then
             timeText = g_i18n:getText("fresh_expires_soon")
         else
             timeText = string.format(g_i18n:getText("fresh_expires_hours"), math.floor(hours))

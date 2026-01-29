@@ -9,6 +9,10 @@ RmBatch = {}
 -- Get logger (RmLogging loaded before this module in main.lua)
 local Log = RmLogging.getLogger("Fresh")
 
+--- Minimum batch amount to count in display/warning calculations
+--- Consistent with consumeFIFO cleanup threshold (prevents float overreporting)
+RmBatch.MIN_AMOUNT = 0.001
+
 --- Create a new batch
 ---@param amount number Quantity in this batch
 ---@param ageInPeriods number Initial age (default 0)
@@ -37,27 +41,36 @@ function RmBatch.isExpired(batch, threshold)
 end
 
 --- Check if batch is near expiration (for warnings)
+--- Uses absolute hours remaining instead of percentage
+--- Expired batches (negative remaining) return true — expired is a subset of "near expiration"
 ---@param batch table PerishableBatch
----@param warningPercent number Warning threshold percent (default 0.75)
----@param expirationThreshold number Expiration threshold (default 1.0)
+---@param warningHours number Hours threshold (e.g., 24)
+---@param expirationThreshold number Expiration threshold in periods
+---@param daysPerPeriod number Days per in-game month
 ---@return boolean
-function RmBatch.isNearExpiration(batch, warningPercent, expirationThreshold)
-    local threshold = (expirationThreshold or 1.0) * (warningPercent or 0.75)
-    return batch.ageInPeriods >= threshold
+function RmBatch.isNearExpiration(batch, warningHours, expirationThreshold, daysPerPeriod)
+    local remainingPeriods = (expirationThreshold or 1.0) - batch.ageInPeriods
+    local remainingHours = remainingPeriods * (daysPerPeriod or 1) * 24
+    return remainingHours <= (warningHours or 24)
 end
 
 --- Format batch age for display (Phase 1: simple "X days" format)
 --- Used by console commands for debugging - shows raw age
 ---@param batch table PerishableBatch
 ---@return string Age in days (e.g., "0 days", "15 days", "45 days")
-function RmBatch.formatAge(batch)
-    local ageDays = math.floor(batch.ageInPeriods * 30) -- 30 in-game days per period
-    return string.format("%d days", ageDays)
+function RmBatch.formatAge(batch, daysPerPeriod)
+    daysPerPeriod = daysPerPeriod or 1
+    local totalHours = batch.ageInPeriods * daysPerPeriod * 24
+    if totalHours < 48 then
+        return string.format("%dh", math.floor(totalHours))
+    else
+        return string.format("%dd", math.floor(totalHours / 24))
+    end
 end
 
 --- Format remaining time until expiration for display
 --- Uses daysPerPeriod to adapt display to game time settings
---- Shows hours when < 24h remaining, days when < 1 month, months otherwise
+--- Breakpoints: <48h → hours, <60d (1440h) → days, >=60d → months
 --- DEPENDENCY: Requires FS25 environment with g_i18n loaded and Fresh localization keys registered:
 ---   fresh_expired, fresh_expires_hour, fresh_expires_hours, fresh_expires_day,
 ---   fresh_expires_days, fresh_expires_month, fresh_expires_months
@@ -74,30 +87,43 @@ function RmBatch.formatExpiresIn(batch, threshold, daysPerPeriod)
 
     local remainingHours = remainingPeriods * daysPerPeriod * 24
 
-    if remainingHours < 24 then
-        -- Show hours (singular/plural)
+    if remainingHours < 48 then
+        -- Hours (< 2 days remaining)
         local hours = math.max(1, math.floor(remainingHours))
         if hours == 1 then
             return g_i18n:getText("fresh_expires_hour")
         else
             return string.format(g_i18n:getText("fresh_expires_hours"), hours)
         end
-    elseif remainingPeriods < 1.0 then
-        -- Show days (singular/plural)
-        local days = math.max(1, math.floor(remainingPeriods * daysPerPeriod))
+    elseif remainingHours < 1440 then
+        -- Days (< 60 days remaining)
+        local days = math.max(1, math.floor(remainingHours / 24))
         if days == 1 then
             return g_i18n:getText("fresh_expires_day")
         else
             return string.format(g_i18n:getText("fresh_expires_days"), days)
         end
     else
-        -- Show months (singular/plural)
-        local months = math.floor(remainingPeriods)
-        if months == 1 then
-            return g_i18n:getText("fresh_expires_month")
-        else
-            return string.format(g_i18n:getText("fresh_expires_months"), months)
-        end
+        -- Months (>= 60 days remaining)
+        local months = remainingPeriods
+        return string.format(g_i18n:getText("fresh_expires_months"), months)
+    end
+end
+
+--- Format remaining time as compact string for HUD suffixes
+--- Same breakpoints as formatExpiresIn but uses abbreviated units (h/d/m)
+--- No l10n needed — h/d/m are universal gaming abbreviations
+---@param remainingHours number Hours remaining until expiration
+---@return string Compact time string (e.g., "24h", "3d", "2.1m")
+function RmBatch.formatRemainingShort(remainingHours)
+    if remainingHours <= 0 then
+        return "0h"
+    elseif remainingHours < 48 then
+        return string.format("%dh", math.max(1, math.floor(remainingHours)))
+    elseif remainingHours < 1440 then
+        return string.format("%dd", math.floor(remainingHours / 24))
+    else
+        return string.format("%.1fm", remainingHours / (24 * 30))
     end
 end
 

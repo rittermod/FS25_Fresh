@@ -32,6 +32,17 @@
                 <Text profile="fs25_settingsMultiTextOptionTitle" text="$l10n_fresh_settings_showWarnings"/>
             </Bitmap>
 
+            <!-- Warning Threshold selector (related to Show Warnings above) -->
+            <Bitmap profile="fs25_multiTextOptionContainer" onCreate="onCreateSettingRow">
+                <MultiTextOption profile="fs25_settingsMultiTextOption" id="warningHoursSelector"
+                    onClick="onClickWarningHours">
+                    <Text profile="fs25_multiTextOptionTooltip" name="ignore"
+                        text="$l10n_fresh_settings_warningHours_tooltip"/>
+                </MultiTextOption>
+                <Text profile="fs25_settingsMultiTextOptionTitle"
+                    text="$l10n_fresh_settings_warningHours"/>
+            </Bitmap>
+
             <!-- Show Age Display toggle -->
             <Bitmap profile="fs25_multiTextOptionContainer" onCreate="onCreateSettingRow">
                 <BinaryOption profile="fs25_settingsBinaryOption" id="checkShowAgeDisplay" onClick="onClickShowAgeDisplay">

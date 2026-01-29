@@ -218,6 +218,8 @@ function RmFreshConsole:consoleCommandList(typeStr)
         return a.id < b.id
     end)
 
+    local daysPerPeriod = (g_currentMission and g_currentMission.environment and g_currentMission.environment.daysPerPeriod) or 1
+
     print("=== Perishable Containers ===")
     for i, container in ipairs(containers) do
         self.targets[i] = container.id
@@ -232,8 +234,17 @@ function RmFreshConsole:consoleCommandList(typeStr)
         local fillTypeName = container.identityMatch and container.identityMatch.storage
             and container.identityMatch.storage.fillTypeName or "?"
 
-        print(string.format("#%d: %s \"%s\" [%s] %s amount=%.0f batches=%d oldest=%s",
-            i, container.entityType, name, container.id, fillTypeName, totalAmount, batchCount, ageRaw))
+        -- Human-readable expiry time
+        local expiresText = ""
+        if oldest then
+            local threshold = RmFreshSettings:getExpiration(fillTypeName)
+            if threshold then
+                expiresText = " (" .. RmBatch.formatExpiresIn(oldest, threshold, daysPerPeriod) .. ")"
+            end
+        end
+
+        print(string.format("#%d: %s \"%s\" [%s] %s amount=%.0f batches=%d oldest=%sp%s",
+            i, container.entityType, name, container.id, fillTypeName, totalAmount, batchCount, ageRaw, expiresText))
     end
 
     return string.format("Listed %d containers", #containers)
@@ -293,11 +304,23 @@ function RmFreshConsole:consoleCommandInspect(indexStr)
     local total = RmBatch.getTotalAmount(batches)
     local oldest = RmBatch.getOldest(batches)
     local ageRaw = oldest and string.format("%.2f", oldest.ageInPeriods) or "0.00"
-    local ageStr = oldest and RmBatch.formatAge(oldest) or "0 days"
+    local daysPerPeriod = (g_currentMission and g_currentMission.environment and g_currentMission.environment.daysPerPeriod) or 1
+    local ageStr = oldest and RmBatch.formatAge(oldest, daysPerPeriod) or "0h"
+
+    -- Human-readable expires-in
+    local expiresStr = ""
+    if oldest then
+        local fillTypeName = container.identityMatch and container.identityMatch.storage
+            and container.identityMatch.storage.fillTypeName
+        local threshold = fillTypeName and RmFreshSettings:getExpiration(fillTypeName)
+        if threshold then
+            expiresStr = string.format(", expires in %s", RmBatch.formatExpiresIn(oldest, threshold, daysPerPeriod))
+        end
+    end
 
     print(string.format("\n  Batches: %d", #batches))
     print(string.format("  Total amount: %.0f", total))
-    print(string.format("  Oldest: %s (%s)", ageRaw, ageStr))
+    print(string.format("  Oldest: %sp, aged %s%s", ageRaw, ageStr, expiresStr))
 
     return ""
 end
@@ -334,13 +357,16 @@ function RmFreshConsole:consoleCommandBatches(indexStr)
     local fillTypeName = container.identityMatch and container.identityMatch.storage
         and container.identityMatch.storage.fillTypeName or "UNKNOWN"
     local name = self:getEntityName(container)
+    local daysPerPeriod = (g_currentMission and g_currentMission.environment and g_currentMission.environment.daysPerPeriod) or 1
+    local threshold = RmFreshSettings:getExpiration(fillTypeName)
 
     print(string.format("Container #%d \"%s\" (%s):", index, name, fillTypeName))
 
     for i, batch in ipairs(batches) do
         local ageRaw = string.format("%.2f", batch.ageInPeriods)
-        local ageStr = RmBatch.formatAge(batch)
-        print(string.format("  [%d] amount=%.0f, age=%s (%s)", i, batch.amount, ageRaw, ageStr))
+        local ageStr = RmBatch.formatAge(batch, daysPerPeriod)
+        local expiresStr = threshold and RmBatch.formatExpiresIn(batch, threshold, daysPerPeriod) or "?"
+        print(string.format("  [%d] amount=%.0f, age=%sp (%s, expires %s)", i, batch.amount, ageRaw, ageStr, expiresStr))
     end
 
     return ""

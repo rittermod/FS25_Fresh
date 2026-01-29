@@ -20,7 +20,7 @@ end
 --- Constructor with expiring count data for a single placeable
 --- Called on server to create event for broadcasting
 ---@param placeable table The placeable with object storage
----@param counts table Table of { [objectInfoIndex] = count } for non-zero entries
+---@param counts table { [objectInfoIndex] = { count, soonestHours } } for non-zero entries
 ---@return RmStorageExpiringInfoEvent New event instance with data
 function RmStorageExpiringInfoEvent.new(placeable, counts)
     local self = RmStorageExpiringInfoEvent.emptyNew()
@@ -47,10 +47,11 @@ function RmStorageExpiringInfoEvent:writeStream(streamId, connection)
     -- Write number of entries
     streamWriteUInt8(streamId, numEntries)
 
-    -- Write each entry: objectInfoIndex, count
-    for objectInfoIndex, count in pairs(self.counts) do
+    -- Write each entry: objectInfoIndex, count, soonestHours
+    for objectInfoIndex, data in pairs(self.counts) do
         streamWriteUInt8(streamId, objectInfoIndex)
-        streamWriteUInt8(streamId, count)
+        streamWriteUInt8(streamId, data.count)
+        streamWriteUInt16(streamId, math.max(0, math.floor(data.soonestHours)))
     end
 
     Log:trace("STORAGE_EXPIRING_EVENT_WRITE: placeableId=%d entries=%d", placeableId, numEntries)
@@ -71,7 +72,8 @@ function RmStorageExpiringInfoEvent:readStream(streamId, connection)
     for _ = 1, numEntries do
         local objectInfoIndex = streamReadUInt8(streamId)
         local count = streamReadUInt8(streamId)
-        counts[objectInfoIndex] = count
+        local soonestHours = streamReadUInt16(streamId)
+        counts[objectInfoIndex] = { count = count, soonestHours = soonestHours }
     end
 
     Log:trace("STORAGE_EXPIRING_EVENT_READ: placeableId=%d entries=%d", placeableId, numEntries)

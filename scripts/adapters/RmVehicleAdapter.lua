@@ -466,8 +466,11 @@ function RmVehicleAdapter:showInfo(superFunc, box)
     local spec = self[RmVehicleAdapter.SPEC_TABLE_NAME]
     if not spec or not spec.containerIds then return end
 
-    -- Group by fillTypeIndex, keeping container with oldest batch (expires soonest)
-    local byFillType = {} -- fillTypeIndex → { containerId, oldestAge }
+    -- Group by fillTypeIndex: track oldest batch, total amount, and expiring amount
+    local daysPerPeriod = (g_currentMission and g_currentMission.environment
+        and g_currentMission.environment.daysPerPeriod) or 1
+    local warningHours = RmFreshSettings:getWarningHours()
+    local byFillType = {} -- fillTypeIndex → { containerId, oldestAge, totalAmount, expiringAmount }
 
     for _, containerId in pairs(spec.containerIds) do
         local container = RmFreshManager:getContainer(containerId)
@@ -475,11 +478,26 @@ function RmVehicleAdapter:showInfo(superFunc, box)
             local ftIndex = container.fillTypeIndex
             local oldestAge = container.batches[1].ageInPeriods
 
-            if not byFillType[ftIndex] or oldestAge > byFillType[ftIndex].oldestAge then
+            if not byFillType[ftIndex] then
                 byFillType[ftIndex] = {
                     containerId = containerId,
                     oldestAge = oldestAge,
+                    totalAmount = 0,
+                    expiringAmount = 0,
                 }
+            elseif oldestAge > byFillType[ftIndex].oldestAge then
+                byFillType[ftIndex].containerId = containerId
+                byFillType[ftIndex].oldestAge = oldestAge
+            end
+
+            local entry = byFillType[ftIndex]
+            local config = RmFreshSettings:getThresholdByIndex(ftIndex)
+            for _, batch in ipairs(container.batches) do
+                entry.totalAmount = entry.totalAmount + batch.amount
+                if batch.amount >= RmBatch.MIN_AMOUNT
+                    and RmBatch.isNearExpiration(batch, warningHours, config.expiration, daysPerPeriod) then
+                    entry.expiringAmount = entry.expiringAmount + batch.amount
+                end
             end
         end
     end
@@ -502,7 +520,13 @@ function RmVehicleAdapter:showInfo(superFunc, box)
                 local displayName = fillType and fillType.title or "?"
                 label = label .. " (" .. displayName .. ")"
             end
-            box:addLine(label, info.text)
+            -- Append expiring amount when partial (not all content expiring)
+            local text = info.text
+            if data.expiringAmount > 0 and data.expiringAmount < data.totalAmount * 0.99 then
+                local formattedVolume = g_i18n:formatVolume(data.expiringAmount)
+                text = text .. " " .. string.format(g_i18n:getText("fresh_vehicle_expiring_volume"), formattedVolume)
+            end
+            box:addLine(label, text)
             if info.isWarning then
                 hasWarning = true
             end

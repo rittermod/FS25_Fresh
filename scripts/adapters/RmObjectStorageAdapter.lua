@@ -897,8 +897,9 @@ function RmObjectStorageAdapter:onWriteStream(streamId, _connection)
     streamWriteUInt8(streamId, numObjectInfos)
 
     for i = 1, numObjectInfos do
-        local expiringCount = RmObjectStorageAdapter.countExpiringInObjectInfo(specOS.objectInfos[i], self)
+        local expiringCount, soonestHours = RmObjectStorageAdapter.countExpiringInObjectInfo(specOS.objectInfos[i], self)
         streamWriteUInt8(streamId, expiringCount)
+        streamWriteUInt16(streamId, math.max(0, math.floor(soonestHours)))
     end
 
     Log:trace("OBJECTSTORAGE_WRITE_STREAM: sent %d containerIds, %d expiring counts", count, numObjectInfos)
@@ -929,11 +930,14 @@ function RmObjectStorageAdapter:onReadStream(streamId, _connection)
         end
     end
 
-    -- Phase 2: Receive expiring counts for HUD display
+    -- Phase 2: Receive expiring counts and soonest hours for HUD display
     local numObjectInfos = streamReadUInt8(streamId)
     local counts = {}
     for i = 1, numObjectInfos do
-        counts[i] = streamReadUInt8(streamId)
+        counts[i] = {
+            count = streamReadUInt8(streamId),
+            soonestHours = streamReadUInt16(streamId),
+        }
     end
     RmObjectStorageAdapter.clientExpiringCounts[self] = counts
 
@@ -944,18 +948,24 @@ end
 -- HUD EXPIRING DISPLAY
 -- =============================================================================
 
---- Count items with near-expiry batches in an objectInfo
+--- Count items with near-expiry batches in an objectInfo and find soonest expiry
 --- Server-only: uses abstractObjectContainers to find containers
 ---@param objectInfo table The objectInfo from spec_objectStorage.objectInfos
 ---@param placeable table The storage placeable
 ---@return number Count of items with expiring batches
+---@return number Soonest expiry in hours (0 if none expiring)
 function RmObjectStorageAdapter.countExpiringInObjectInfo(objectInfo, placeable)
-    if placeable == nil then return 0 end
+    if placeable == nil then return 0, 0 end
     local spec = placeable[RmObjectStorageAdapter.SPEC_TABLE_NAME]
-    if not spec or not spec.abstractObjectContainers then return 0 end
-    if not objectInfo or not objectInfo.objects then return 0 end
+    if not spec or not spec.abstractObjectContainers then return 0, 0 end
+    if not objectInfo or not objectInfo.objects then return 0, 0 end
+
+    local daysPerPeriod = (g_currentMission and g_currentMission.environment
+        and g_currentMission.environment.daysPerPeriod) or 1
+    local warningHours = RmFreshSettings:getWarningHours()
 
     local count = 0
+    local soonestHours = math.huge
     for _, abstractObject in ipairs(objectInfo.objects) do
         local containerId = spec.abstractObjectContainers[abstractObject]
         if containerId then
@@ -963,26 +973,31 @@ function RmObjectStorageAdapter.countExpiringInObjectInfo(objectInfo, placeable)
             if container and container.batches and #container.batches > 0 then
                 local fillTypeIndex = container.fillTypeIndex
                 if fillTypeIndex then
-                    local warningThreshold = RmFreshSettings:getWarningThresholdByIndex(fillTypeIndex)
+                    local config = RmFreshSettings:getThresholdByIndex(fillTypeIndex)
                     -- Check first batch (oldest in FIFO order)
-                    if container.batches[1].ageInPeriods >= warningThreshold then
+                    if RmBatch.isNearExpiration(container.batches[1], warningHours, config.expiration, daysPerPeriod) then
                         count = count + 1
+                        local remainingHours = (config.expiration - container.batches[1].ageInPeriods) * daysPerPeriod * 24
+                        if remainingHours < soonestHours then
+                            soonestHours = remainingHours
+                        end
                     end
                 end
             end
         end
     end
 
-    return count
+    return count, count > 0 and soonestHours or 0
 end
 
---- Get expiring count for an objectInfo (MP-aware)
+--- Get expiring count and soonest hours for an objectInfo (MP-aware)
 --- Server: calculates from batch data
 --- Client: uses synced cache
 ---@param objectInfo table The objectInfo from spec_objectStorage.objectInfos
 ---@param placeable table The storage placeable
 ---@param objectInfoIndex number 1-based index in spec.objectInfos
 ---@return number Count of items with expiring batches
+---@return number Soonest expiry in hours (0 if none expiring)
 function RmObjectStorageAdapter.getExpiringCount(objectInfo, placeable, objectInfoIndex)
     -- Server/Host: calculate from actual batch data
     if g_server ~= nil then
@@ -990,12 +1005,15 @@ function RmObjectStorageAdapter.getExpiringCount(objectInfo, placeable, objectIn
     end
 
     -- Client: use synced cache
-    local placeableCounts = RmObjectStorageAdapter.clientExpiringCounts[placeable]
-    if placeableCounts ~= nil then
-        return placeableCounts[objectInfoIndex] or 0
+    local placeableData = RmObjectStorageAdapter.clientExpiringCounts[placeable]
+    if placeableData ~= nil then
+        local entry = placeableData[objectInfoIndex]
+        if entry ~= nil then
+            return entry.count or 0, entry.soonestHours or 0
+        end
     end
 
-    return 0
+    return 0, 0
 end
 
 --- Show freshness status in placeable HUD info
@@ -1017,7 +1035,7 @@ function RmObjectStorageAdapter:updateInfo(superFunc, infoTable)
 
     for i = 1, math.min(#specOS.objectInfos, maxEntries) do
         local objectInfo = specOS.objectInfos[i]
-        local expiringCount = RmObjectStorageAdapter.getExpiringCount(objectInfo, self, i)
+        local expiringCount, soonestHours = RmObjectStorageAdapter.getExpiringCount(objectInfo, self, i)
 
         if expiringCount > 0 then
             -- Entry index: startIndex + 1 (capacity line) + i (objectInfo position)
@@ -1025,13 +1043,15 @@ function RmObjectStorageAdapter:updateInfo(superFunc, infoTable)
             local entry = infoTable[entryIndex]
 
             if entry then
-                -- Append expiring count suffix using translation key
-                local expiringText = string.format(g_i18n:getText("fresh_storage_expiring"), expiringCount)
+                -- Append expiring count + time suffix
+                local timeStr = RmBatch.formatRemainingShort(soonestHours)
+                local expiringText = string.format(g_i18n:getText("fresh_storage_expiring"),
+                    expiringCount, timeStr)
                 entry.text = entry.text .. " " .. expiringText
                 -- Yellow highlighting for warning
                 entry.accentuate = true
 
-                Log:trace("HUD_EXPIRING: objectInfo[%d] = %d expiring", i, expiringCount)
+                Log:trace("HUD_EXPIRING: objectInfo[%d] = %d expiring, soonest=%s", i, expiringCount, timeStr)
             end
         end
     end
@@ -1268,12 +1288,12 @@ function RmObjectStorageAdapter.broadcastExpiringCounts(placeable)
     local specOS = placeable.spec_objectStorage
     if not specOS or not specOS.objectInfos then return end
 
-    -- Calculate expiring count per objectInfo
+    -- Calculate expiring count and soonest hours per objectInfo
     local counts = {}
     for i, objectInfo in ipairs(specOS.objectInfos) do
-        local count = RmObjectStorageAdapter.countExpiringInObjectInfo(objectInfo, placeable)
+        local count, soonestHours = RmObjectStorageAdapter.countExpiringInObjectInfo(objectInfo, placeable)
         if count > 0 then
-            counts[i] = count
+            counts[i] = { count = count, soonestHours = soonestHours }
         end
     end
 

@@ -33,6 +33,15 @@ RmSettingsFrame.EXPIRATION_OPTIONS = {
     { period = 60.0,   label = "fresh_expire_5_years" },
 }
 
+--- Warning hours options for MultiTextOption selector
+RmSettingsFrame.WARNING_HOURS_OPTIONS = {
+    { hours = 6,  label = "fresh_warning_6h" },
+    { hours = 12, label = "fresh_warning_12h" },
+    { hours = 24, label = "fresh_warning_24h" },
+    { hours = 48, label = "fresh_warning_48h" },
+    { hours = 72, label = "fresh_warning_72h" },
+}
+
 --- Map period values to option indices for quick lookup
 RmSettingsFrame.PERIOD_TO_INDEX = {} -- Built in buildPeriodToIndexMap()
 
@@ -128,6 +137,15 @@ function RmSettingsFrame:onGuiSetupFinished()
     Log:debug("SETTINGS_UI: boxLayout=%s", tostring(self.boxLayout))
     Log:debug("SETTINGS_UI: checkEnableExpiration=%s", tostring(self.checkEnableExpiration))
     Log:debug("SETTINGS_UI: checkShowWarnings=%s", tostring(self.checkShowWarnings))
+
+    -- Setup warning hours selector
+    if self.warningHoursSelector then
+        local texts = {}
+        for _, opt in ipairs(RmSettingsFrame.WARNING_HOURS_OPTIONS) do
+            table.insert(texts, g_i18n:getText(opt.label))
+        end
+        self.warningHoursSelector:setTexts(texts)
+    end
 
     -- Initialize menu button info (Back + Reset)
     self:initializeMenuButtons()
@@ -243,6 +261,13 @@ function RmSettingsFrame:refreshData()
         Log:trace("    checkShowAgeDisplay state=%d", state)
     else
         Log:warning("SETTINGS_UI: checkShowAgeDisplay not found")
+    end
+
+    if self.warningHoursSelector then
+        local currentHours = RmFreshSettings:getWarningHours()
+        local state = self:findWarningHoursState(currentHours)
+        self.warningHoursSelector:setState(state)
+        Log:trace("    warningHoursSelector state=%d", state)
     end
     RmSettingsFrame.isRefreshing = false
 
@@ -670,6 +695,9 @@ function RmSettingsFrame:onClickShowWarnings(state, _element)
         end
     end
 
+    -- Update warningHoursSelector disabled state
+    self:updateReadonlyState()
+
     Log:trace("<<< onClickShowWarnings")
 end
 
@@ -699,6 +727,43 @@ function RmSettingsFrame:onClickShowAgeDisplay(state, _element)
     end
 
     Log:trace("<<< onClickShowAgeDisplay")
+end
+
+function RmSettingsFrame:findWarningHoursState(hours)
+    for i, opt in ipairs(RmSettingsFrame.WARNING_HOURS_OPTIONS) do
+        if opt.hours == hours then
+            return i
+        end
+    end
+    return 3  -- Default to 24h (index 3)
+end
+
+function RmSettingsFrame:onClickWarningHours(state, _element)
+    Log:trace(">>> onClickWarningHours(state=%s)", tostring(state))
+
+    if RmSettingsFrame.isRefreshing then
+        Log:trace("    skipped (isRefreshing)")
+        return
+    end
+
+    if not self:isAdmin() then
+        return
+    end
+
+    local opt = RmSettingsFrame.WARNING_HOURS_OPTIONS[state]
+    if not opt then return end
+
+    if g_server then
+        RmFreshSettings:setGlobal("warningHours", opt.hours)
+    else
+        if RmSettingsChangeRequestEvent then
+            g_client:getServerConnection():sendEvent(
+                RmSettingsChangeRequestEvent.new("setGlobal", "warningHours", opt.hours)
+            )
+        end
+    end
+
+    Log:trace("<<< onClickWarningHours")
 end
 
 function RmSettingsFrame:onResetDefaults()
@@ -767,6 +832,10 @@ function RmSettingsFrame:updateReadonlyState()
     end
     if self.checkShowAgeDisplay then
         self.checkShowAgeDisplay:setDisabled(disabled)
+    end
+    if self.warningHoursSelector then
+        local showWarnings = RmFreshSettings:getGlobal("showWarnings") ~= false
+        self.warningHoursSelector:setDisabled(disabled or not showWarnings)
     end
 
     -- Disable all fillType selectors (using shared table)
