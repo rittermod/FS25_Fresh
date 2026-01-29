@@ -12,7 +12,7 @@ local modDirectory = g_currentModDirectory
 
 source(modDirectory .. "scripts/rmlib/RmLogging.lua")
 Log = RmLogging.getLogger("Fresh")
-Log:setLevel(RmLogging.LOG_LEVEL.DEBUG)
+Log:setLevel(RmLogging.LOG_LEVEL.INFO)
 
 -- =============================================================================
 -- CORE MODULES
