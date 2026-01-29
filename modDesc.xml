@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <modDesc descVersion="105">
     <author>Ritter</author>
-    <version>0.7.1.0</version>
+    <version>0.8.0.0</version>
     <title>
         <en>Fresh</en>
+        <it>Fresco</it>
     </title>
     <description>
         <en><![CDATA[
@@ -19,7 +20,9 @@ Fresh Menu (Right Shift+F):
 Features:
 - Supports basegame, DLCs, and maps/mods products
 - Configure shelf life for any fillType in Settings
+- Configurable warning threshold (6h/12h/24h/48h/72h)
 - Age distribution bars (color-coded: blue=fresh, green=good, orange=warning, red=critical)
+- Expiring amount and time remaining per fill type
 - 100+ products with realistic default shelf lives
 - 4 bale types with fermentation handling
 - Vehicles, bales, silos, productions, husbandries supported
@@ -35,6 +38,16 @@ Documentation: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
 
+0.8.0.0 (Alpha):
+- Reworked expiry warnings to use in-game time remaining
+- Added configurable warning threshold (6h/12h/24h/48h/72h)
+- Improved expiry display - all storage types show amount and time remaining
+- Added partial expiry display for vehicles
+- Improved time display breakpoints (hours/days/months)
+
+0.7.2.0 (Alpha):
+- Added age distribution HUD for bales
+
 0.7.1.0 (Alpha):
 - Fixed TMR mixer output tracking - FORAGE amount now correctly tracks all ingredients
 - Fixed pig feed (PIGFOOD) losing age when deposited into pigsty
@@ -47,42 +60,81 @@ Changelog:
 - Improved Settings sorting - products with types appear first for easier navigation
 - Added tooltips in Settings showing fillType details (internal name, type classification)
 
+Full changelog at https://github.com/rittermod/FS25_Fresh
+        ]]>        </en>
+        <it><![CDATA[
+Fresco aggiunge una durata di conservazione ai tuoi prodotti e alle tue balle: i raccolti invecchiano nel tempo e si deteriorano se non venduti o utilizzati!
+
+I tuoi raccolti, i prodotti lavorati e il foraggio imballato ora hanno una durata realistica. Le verdure fresche si deteriorano rapidamente, mentre i prodotti in scatola durano molto più a lungo. Le balle di erba si rovinano in pochi giorni, mentre l'insilato rimane fresco per mesi. Personalizza la durata di conservazione tramite il Fresh Menu!
+
+Fresh Menu (Shift Destro+F):
+- Panoramica inventario: visualizza tutti i deperibili con le età più alte
+- Statistiche perdite: tieni traccia di ciò che hai perso
+- Impostazioni: personalizza la durata di conservazione per qualsiasi prodotto
+
+Funzionalità:
+- Supporta prodotti del gioco base, DLC e mappe/mod
+- Configura la durata di conservazione per qualsiasi fillType nelle Impostazioni
+- Barre di distribuzione dell'età (colori: blu=fresco, verde=buono, arancione=avviso, rosso=critico)
+- Oltre 100 prodotti con durate predefinite realistiche
+- 4 tipi di balle con gestione della fermentazione
+- Supporto per veicoli, balle, sili, produzioni e stalle
+- Gli elementi più vecchi vengono prelevati per primi dal magazzino
+- Notifiche giornaliere delle perdite
+- Supporto multiplayer (server-authoritative)
+- Le età vengono salvate nel salvataggio di gioco
+
+Note:
+- Accesso anticipato – feedback benvenuto
+
+Documentazione: https://github.com/rittermod/FS25_Fresh
+
+Changelog:
+
+0.7.1.0 (Alpha):
+- Corretto il tracciamento dell'output del mixer TMR – la quantità di FORAGGIO ora tiene correttamente conto di tutti gli ingredienti
+
+0.7.0.0 (Alpha):
+- Aggiunto supporto per TUTTI i fillType – gioco base, DLC e mappe/mod ora configurabili
+- Migliorato l'ordinamento delle Impostazioni – i prodotti con categorie appaiono per primi per una navigazione più semplice
+- Aggiunti tooltip nelle Impostazioni che mostrano dettagli del fillType (nome interno, classificazione)
+
 0.6.1.0 (Alpha):
-- Fixed age distribution showing on empty vehicles/placeables (floating point precision issue)
+- Corretta la visualizzazione della distribuzione dell'età su veicoli/placeable vuoti (problema di precisione floating point)
 
 0.6.0.0 (Alpha):
-- Added age distribution HUD: colored freshness bars when near placeables and vehicles
-- Added toggle in Settings to enable/disable age distribution display
-- Fixed freshness display to show per fillType
-- Fixed expiration info only showing for perishable fillTypes
+- Aggiunta HUD di distribuzione dell'età: barre colorate di freschezza vicino a placeable e veicoli
+- Aggiunto interruttore nelle Impostazioni per abilitare/disabilitare la visualizzazione della distribuzione dell'età
+- Corretta la visualizzazione della freschezza per fillType
+- Corretta la visualizzazione della scadenza solo per fillType deperibili
 
 0.5.0.0 (Early Access):
-- Added Fresh Menu (Right Shift+F) with inventory, statistics, and settings
-- Added configurable shelf lives per product
-- Added loss tracking with daily notifications
-- Improved transfer handling (batch ages preserved)
-- Rebuilt core architecture for stability
+- Aggiunto Fresh Menu (Shift Destro+F) con inventario, statistiche e impostazioni
+- Aggiunte durate di conservazione configurabili per prodotto
+- Aggiunto tracciamento delle perdite con notifiche giornaliere
+- Migliorata la gestione dei trasferimenti (età dei lotti preservata)
+- Ricostruita l'architettura principale per maggiore stabilità
 
 0.4.0.0 (Alpha 5):
-- Added placeable storage tracking (silos, productions, husbandry)
-- Added husbandry feed tracking
-- Added expiring count display for placeables
-- Added multiplayer sync for placeable storage
+- Aggiunto tracciamento dei magazzini placeable (sili, produzioni, stalle)
+- Aggiunto tracciamento del cibo nelle stalle
+- Aggiunta visualizzazione del conteggio in scadenza per i placeable
+- Aggiunta sincronizzazione multiplayer per i magazzini placeable
 
 0.3.0.0 (Alpha 4):
-- Added bulk vehicle tracking (trailers, tankers, combines)
-- Expanded from pallets to all vehicles with fill capacity
+- Aggiunto tracciamento dei veicoli di massa (rimorchi, cisterne, mietitrebbie)
+- Esteso dalle pallet a tutti i veicoli con capacità di carico
 
 0.2.0.0 (Alpha 2):
-- Added bale perishability with 4 forage types
-- Added bale storage aging (barns/sheds)
-- Added fermenting bale handling
+- Aggiunta deperibilità delle balle con 4 tipi di foraggio
+- Aggiunto invecchiamento delle balle nei fienili/rimesse
+- Aggiunta gestione delle balle in fermentazione
 
 0.1.0.0 (Alpha 1):
-- Initial alpha release
-- Added perishable goods system for 100 product types
-- Added multiplayer support and savegame persistence
-        ]]>        </en>
+- Prima versione alpha
+- Aggiunto sistema di prodotti deperibili per 100 tipi di prodotto
+- Aggiunto supporto multiplayer e persistenza nei salvataggi
+        ]]></it>
     </description>
 
     <iconFilename>icon_fresh.dds</iconFilename>

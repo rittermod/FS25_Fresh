@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<l10n>
+    <texts>
+        <!-- Expires in display -->
+        <text name="fresh_expires_in" text="Scade tra"/>
+        <text name="fresh_expires_hour" text="1 ora"/>
+        <text name="fresh_expires_hours" text="%d ore"/>
+        <text name="fresh_expires_day" text="1 giorno"/>
+        <text name="fresh_expires_days" text="%d giorni"/>
+        <text name="fresh_expires_month" text="1 mese"/>
+        <text name="fresh_expires_months" text="%.1f mesi"/>
+
+        <!-- Status messages -->
+        <text name="fresh_expired" text="Scaduto"/>
+        <text name="fresh_near_expiration" text="In scadenza"/>
+
+        <!-- Daily loss notification (summary at day change) -->
+        <text name="fresh_dailyLossNotification" text="Perse %.0f unità a causa della scadenza dei prodotti"/>
+
+        <!-- Storage HUD (used by both placeable storage and husbandry feed) -->
+        <text name="fresh_storage_expiring" text="(%d in scadenza)"/>
+        <text name="fresh_storage_expiring_volume" text="(%s in scadenza)"/>
+
+        <!-- Age Distribution HUD -->
+        <text name="fresh_age_display_title" text="Freschezza"/>
+
+        <!-- Fresh Menu keybind -->
+        <text name="input_RM_FRESH_MENU" text="Menu Freschezza"/>
+
+        <!-- Overview tab -->
+        <text name="fresh_overview_title" text="Panoramica Freschezza (anteprima)"/>
+
+        <!-- Settings tab -->
+        <text name="fresh_settings_title" text="Impostazioni Freschezza (anteprima)"/>
+
+        <!-- Settings expiration duration options -->
+        <text name="fresh_expire_never" text="Non scadere"/>
+        <text name="fresh_expire_1_month" text="1 mese"/>
+        <text name="fresh_expire_2_months" text="2 mesi"/>
+        <text name="fresh_expire_3_months" text="3 mesi"/>
+        <text name="fresh_expire_4_months" text="4 mesi"/>
+        <text name="fresh_expire_5_months" text="5 mesi"/>
+        <text name="fresh_expire_6_months" text="6 mesi"/>
+        <text name="fresh_expire_9_months" text="9 mesi"/>
+        <text name="fresh_expire_1_year" text="1 anno"/>
+        <text name="fresh_expire_1_5_years" text="1,5 anni"/>
+        <text name="fresh_expire_2_years" text="2 anni"/>
+        <text name="fresh_expire_3_years" text="3 anni"/>
+        <text name="fresh_expire_5_years" text="5 anni"/>
+
+        <!-- Settings global section -->
+        <text name="fresh_settings_global" text="Impostazioni globali"/>
+        <text name="fresh_settings_enableExpiration" text="Abilita scadenza"/>
+        <text name="fresh_settings_enableExpiration_tooltip" text="Se abilitato, i prodotti deperibili invecchieranno nel tempo e alla fine scadranno se non venduti o utilizzati."/>
+        <text name="fresh_settings_showWarnings" text="Mostra avvisi"/>
+        <text name="fresh_settings_showWarnings_tooltip" text="Mostra notifiche nella finestra informazioni quando un prodotto sta per scadere."/>
+        <text name="fresh_settings_showAgeDisplay" text="Mostra barra età"/>
+        <text name="fresh_settings_showAgeDisplay_tooltip" text="Mostra le barre di distribuzione dell'età quando vicino ai magazzini."/>
+        <text name="fresh_settings_fillTypes" text="Tempi di scadenza"/>
+
+        <!-- Settings reset button -->
+        <text name="fresh_settings_resetDefaults" text="Ripristina predefiniti"/>
+        <text name="fresh_settings_resetConfirm" text="Ripristinare tutte le impostazioni ai valori predefiniti del mod? Questa operazione non può essere annullata."/>
+        <text name="fresh_settings_reset" text="Impostazioni ripristinate ai valori predefiniti del mod"/>
+
+        <!-- Status Frame / Inventory Overview -->
+        <text name="fresh_inventory_title" text="Panoramica inventario (anteprima)"/>
+        <text name="fresh_inventory_summary" text="Totale: %d tipi di prodotto in %d contenitori"/>
+        <text name="fresh_inventory_empty" text="Nessun prodotto deperibile attualmente monitorato"/>
+        <text name="fresh_no_farm" text="Nessuna fattoria selezionata. Unisciti a una fattoria per visualizzare l'inventario."/>
+        <text name="fresh_column_type" text="Prodotto"/>
+        <text name="fresh_column_amount" text="Quantità"/>
+        <text name="fresh_column_expiring" text="In scadenza"/>
+        <text name="fresh_column_age" text="Prossima scadenza"/>
+        <text name="fresh_column_status" text="Stato"/>
+        <text name="fresh_status_ok" text="OK"/>
+        <text name="fresh_status_expiring" text="In scadenza"/>
+        <text name="fresh_sort_label" text="Ordina per"/>
+        <text name="fresh_sort_by_type" text="Tipo"/>
+        <text name="fresh_sort_by_expiring" text="Quantità in scadenza"/>
+        <text name="fresh_sort_by_age" text="Prossima scadenza"/>
+
+        <!-- Expiring Soon table -->
+        <text name="fresh_expires_within" text="Scade entro"/>
+        <text name="fresh_expires_24h" text="24 ore"/>
+        <text name="fresh_expires_48h" text="48 ore"/>
+        <text name="fresh_expires_72h" text="72 ore"/>
+        <text name="fresh_column_storage" text="Magazzino"/>
+        <text name="fresh_column_timeleft" text="Prossima scadenza"/>
+        <text name="fresh_expiring_empty" text="Niente in scadenza a breve"/>
+        <text name="fresh_expiring_summary" text="%d elementi (%.0f L totali)"/>
+        <text name="fresh_expires_soon" text="&lt; 1 ora"/>
+
+        <!-- Statistics Frame -->
+        <text name="fresh_stats_title" text="Statistiche perdite"/>
+        <text name="fresh_stats_today" text="Perdite oggi"/>
+        <text name="fresh_stats_month" text="Perdite questo mese"/>
+        <text name="fresh_stats_12months" text="Perdite negli ultimi 12 mesi"/>
+        <text name="fresh_stats_total" text="Perdite totali"/>
+        <text name="fresh_stats_breakdown" text="Perdite prodotti negli ultimi 12 mesi"/>
+        <text name="fresh_stats_recent" text="Perdite recenti"/>
+        <text name="fresh_stats_breakdown_empty" text="Nessuna perdita registrata"/>
+        <text name="fresh_stats_log_empty" text="Nessuna perdita recente"/>
+        <text name="fresh_column_product" text="Prodotto"/>
+        <text name="fresh_column_amount_lost" text="Quantità"/>
+        <text name="fresh_column_value" text="Valore"/>
+        <text name="fresh_column_datetime" text="Data/Ora"/>
+    </texts>
+</l10n>
