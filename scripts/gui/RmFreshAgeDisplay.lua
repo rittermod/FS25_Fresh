@@ -273,29 +273,26 @@ function RmFreshAgeDisplay.buildRows(containers)
     for fillTypeName, data in pairs(byFillType) do
         local fillTypeIndex = data.fillTypeIndex
 
-        -- Get expiration threshold
-        local expirationThreshold = 1.0
-        if fillTypeIndex then
+        -- Skip non-perishable fill types (RIT-192)
+        if fillTypeIndex and RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
+            -- Get expiration threshold
             local config = RmFreshSettings:getThresholdByIndex(fillTypeIndex)
-            expirationThreshold = config.expiration or 1.0
-        end
+            local expirationThreshold = config.expiration or 1.0
 
-        -- Calculate age distribution from merged batches
-        local buckets, total = RmFreshAgeDisplay.getAgeDistribution(data.batches, expirationThreshold, C)
+            -- Calculate age distribution from merged batches
+            local buckets, total = RmFreshAgeDisplay.getAgeDistribution(data.batches, expirationThreshold, C)
 
-        if total > 0 then
-            -- Get display name
-            local displayName = fillTypeName
-            if fillTypeIndex then
-                displayName = g_fillTypeManager:getFillTypeTitleByIndex(fillTypeIndex) or fillTypeName
+            if total > 0 then
+                -- Get display name
+                local displayName = g_fillTypeManager:getFillTypeTitleByIndex(fillTypeIndex) or fillTypeName
+
+                table.insert(rows, {
+                    fillTypeIndex = fillTypeIndex,
+                    fillTypeName = displayName,
+                    buckets = buckets,
+                    total = total,
+                })
             end
-
-            table.insert(rows, {
-                fillTypeIndex = fillTypeIndex,
-                fillTypeName = displayName,
-                buckets = buckets,
-                total = total,
-            })
         end
     end
 
