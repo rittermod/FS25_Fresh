@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <modDesc descVersion="105">
     <author>Ritter</author>
-    <version>0.8.0.0</version>
+    <version>0.8.1.0</version>
     <title>
         <en>Fresh</en>
         <it>Fresco</it>
@@ -37,6 +37,9 @@ Notes:
 Documentation: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
+
+0.8.1.0 (Beta):
+- Fixed products changed to "never expire" still showing as expiring in overview, HUD, and age display
 
 0.8.0.0 (Beta):
 - Reworked expiry warnings to use in-game time remaining
@@ -93,6 +96,9 @@ Note:
 Documentazione: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
+
+0.8.1.0 (Beta):
+- Risolto il problema dei prodotti impostati su "non scade mai" che continuavano a comparire come in scadenza nella panoramica, HUD e visualizzazione età
 
 0.8.0.0 (Beta):
 - Rielaborati gli avvisi di scadenza per utilizzare il tempo rimanente nel gioco

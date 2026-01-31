@@ -1013,7 +1013,7 @@ function RmPlaceableAdapter:updateInfo(superFunc, infoTable)
 
     for fillTypeName, containerId in pairs(spec.containerIds) do
         local fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(fillTypeName)
-        if fillTypeIndex then
+        if fillTypeIndex and RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
             local batches = RmFreshManager:getBatches(containerId)
             local config = RmFreshSettings:getThresholdByIndex(fillTypeIndex)
 

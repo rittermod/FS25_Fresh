@@ -102,6 +102,9 @@ Fresh tracks your products using a batch system - each harvest or production run
 
 ## Changelog
 
+### 0.8.1.0 (Beta - 2026-01-31)
+- Fixed products changed to "never expire" still showing as expiring in overview, HUD, and age display
+
 ### 0.8.0.0 (Beta - 2026-01-29)
 - Reworked expiry warnings to use in-game time remaining - a 24h warning now means 24 hours regardless of product type or days-per-month setting
 - Added configurable warning threshold in Settings (6h/12h/24h/48h/72h) - choose when expiry warnings appear

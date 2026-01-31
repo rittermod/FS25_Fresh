@@ -2274,7 +2274,8 @@ function RmFreshManager:getExpiringWithin(hours, farmId)
             local fillTypeName = container.identityMatch and container.identityMatch.storage
                 and container.identityMatch.storage.fillTypeName or nil
 
-            if fillTypeName and container.fillTypeIndex then
+            if fillTypeName and container.fillTypeIndex
+                and RmFreshSettings:isPerishableByIndex(container.fillTypeIndex) then
                 local config = RmFreshSettings:getThresholdByIndex(container.fillTypeIndex)
                 local expirationThreshold = config.expiration
 
@@ -2363,7 +2364,8 @@ function RmFreshManager:getInventorySummary(farmId)
                 and container.identityMatch.storage
                 and container.identityMatch.storage.fillTypeName
 
-            if fillTypeName and #container.batches > 0 then
+            if fillTypeName and #container.batches > 0
+                and RmFreshSettings:isPerishableByIndex(container.fillTypeIndex) then
                 Log:trace("INVENTORY_PROCESS: %s fillType=%s batches=%d",
                     containerId, fillTypeName, #container.batches)
 

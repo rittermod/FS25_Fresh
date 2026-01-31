@@ -972,7 +972,7 @@ function RmObjectStorageAdapter.countExpiringInObjectInfo(objectInfo, placeable)
             local container = RmFreshManager:getContainer(containerId)
             if container and container.batches and #container.batches > 0 then
                 local fillTypeIndex = container.fillTypeIndex
-                if fillTypeIndex then
+                if fillTypeIndex and RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
                     local config = RmFreshSettings:getThresholdByIndex(fillTypeIndex)
                     -- Check first batch (oldest in FIFO order)
                     if RmBatch.isNearExpiration(container.batches[1], warningHours, config.expiration, daysPerPeriod) then

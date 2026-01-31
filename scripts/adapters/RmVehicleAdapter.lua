@@ -524,12 +524,14 @@ function RmVehicleAdapter:showInfo(superFunc, box)
             end
 
             local entry = byFillType[ftIndex]
-            local config = RmFreshSettings:getThresholdByIndex(ftIndex)
-            for _, batch in ipairs(container.batches) do
-                entry.totalAmount = entry.totalAmount + batch.amount
-                if batch.amount >= RmBatch.MIN_AMOUNT
-                    and RmBatch.isNearExpiration(batch, warningHours, config.expiration, daysPerPeriod) then
-                    entry.expiringAmount = entry.expiringAmount + batch.amount
+            if RmFreshSettings:isPerishableByIndex(ftIndex) then
+                local config = RmFreshSettings:getThresholdByIndex(ftIndex)
+                for _, batch in ipairs(container.batches) do
+                    entry.totalAmount = entry.totalAmount + batch.amount
+                    if batch.amount >= RmBatch.MIN_AMOUNT
+                        and RmBatch.isNearExpiration(batch, warningHours, config.expiration, daysPerPeriod) then
+                        entry.expiringAmount = entry.expiringAmount + batch.amount
+                    end
                 end
             end
         end
