@@ -125,6 +125,10 @@
         <text name="fresh_expiring_summary" text="%d items (%.0f L total)"/>
         <text name="fresh_expires_soon" text="&lt; 1 hour"/>
 
+        <!-- Shelf Life Frame -->
+        <text name="fresh_shelflife_title" text="Shelf Life"/>
+        <text name="fresh_shelflife_empty" text="No perishable products configured"/>
+
         <!-- Statistics Frame -->
         <text name="fresh_stats_title" text="Loss Statistics"/>
         <text name="fresh_stats_today" text="Lost Today"/>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<GUI name="RmShelfLifeFrame">
+    <GuiElement profile="fs25_menuContainer">
+        <!-- Header -->
+        <GuiElement profile="fs25_menuHeaderPanel">
+            <Bitmap profile="fs25_menuHeaderIconBg">
+                <Bitmap profile="fs25_menuHeaderIcon" imageSliceId="gui.icon_ingameMenu_calendar"/>
+            </Bitmap>
+            <Text profile="fs25_menuHeaderTitle" text="$l10n_fresh_shelflife_title"/>
+        </GuiElement>
+
+        <!-- Single scrolling list of perishable fill types -->
+        <ScrollingLayout profile="fs25_settingsLayout" id="shelfLifeLayout">
+            <!-- Row template: cloned per perishable fillType, then unlinked -->
+            <Bitmap profile="fs25_multiTextOptionContainer" id="rowTemplate" onCreate="onCreateSettingRow">
+                <Text profile="rmFreshSettingsReadonlyValue" name="shelfLifeValue" text=""/>
+                <Bitmap profile="rmFreshFillTypeIcon" position="10px -7px" size="30px 30px" name="fillTypeIcon"/>
+                <Text profile="fs25_settingsMultiTextOptionTitle" position="50px 0px" text="Template"/>
+            </Bitmap>
+        </ScrollingLayout>
+
+        <!-- Empty state (shown when no perishable fill types) -->
+        <Text profile="rmFreshSettingsInfoText" id="emptyState" text="$l10n_fresh_shelflife_empty" visible="false" position="20px -80px" size="800px 40px"/>
+    </GuiElement>
+
+    <!-- Docked slider (same pattern as settings page) -->
+    <ThreePartBitmap profile="fs25_sliderDockedBg">
+        <ThreePartBitmap profile="fs25_sliderDockedBox">
+            <Slider profile="fs25_sliderDocked" id="shelfLifeSlider" dataElementId="shelfLifeLayout"/>
+        </ThreePartBitmap>
+    </ThreePartBitmap>
+</GUI>

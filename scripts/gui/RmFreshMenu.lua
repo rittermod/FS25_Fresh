@@ -29,6 +29,7 @@ function RmFreshMenu.setupGui()
     -- 2. Load frames (must be before menu XML for FrameReference resolution)
     RmOverviewFrame.setupGui()
     RmStatsFrame.setupGui()
+    RmShelfLifeFrame.setupGui()
     RmSettingsFrame.setupGui()
 
     -- 3. Create menu instance
@@ -55,17 +56,21 @@ function RmFreshMenu:setupMenuPages()
 
     -- Register Overview page (first tab - default on menu open)
     self:registerPage(self.overviewFrame, 1, predicate)
-    self:addPageTab(self.overviewFrame, nil, nil, "gui.icon_ingameMenu_calendar")
+    self:addPageTab(self.overviewFrame, nil, nil, "gui.icon_ingameMenu_statistics")
 
     -- Register Statistics page (second tab)
     self:registerPage(self.statsFrame, 2, predicate)
     self:addPageTab(self.statsFrame, nil, nil, "gui.icon_ingameMenu_finances")
 
-    -- Register Settings page (third tab)
-    self:registerPage(self.settingsFrame, 3, predicate)
+    -- Register Shelf Life page (third tab)
+    self:registerPage(self.shelfLifeFrame, 3, predicate)
+    self:addPageTab(self.shelfLifeFrame, nil, nil, "gui.icon_ingameMenu_calendar")
+
+    -- Register Settings page (fourth tab)
+    self:registerPage(self.settingsFrame, 4, predicate)
     self:addPageTab(self.settingsFrame, nil, nil, "gui.icon_options_generalSettings2")
 
-    Log:debug("Menu pages: overview (idx=1), statistics (idx=2), settings (idx=3)")
+    Log:debug("Menu pages: overview (idx=1), statistics (idx=2), shelfLife (idx=3), settings (idx=4)")
 end
 
 function RmFreshMenu:setupMenuButtonInfo()
