@@ -34,7 +34,6 @@ RmOverviewFrame.COLOR_CRITICAL = RmFreshInfoBox.COLORS.CRITICAL  -- colorRed
 RmOverviewFrame.VISIBLE_ROWS = 14  -- 700px height / 48px per row
 
 function RmOverviewFrame.new()
-    Log:trace("RmOverviewFrame.new()")
     local self = RmOverviewFrame:superClass().new(nil, RmOverviewFrame_mt)
     self.name = "RmOverviewFrame"
     -- Left table state
@@ -58,7 +57,6 @@ function RmOverviewFrame.setupGui()
 end
 
 function RmOverviewFrame:onGuiSetupFinished()
-    Log:trace("RmOverviewFrame:onGuiSetupFinished()")
     RmOverviewFrame:superClass().onGuiSetupFinished(self)
 
     -- Setup LEFT list data source and delegate
@@ -132,13 +130,11 @@ end
 
 function RmOverviewFrame:onFrameOpen()
     RmOverviewFrame:superClass().onFrameOpen(self)
-    Log:trace("RmOverviewFrame:onFrameOpen()")
     self:refreshData()
 end
 
 function RmOverviewFrame:onFrameClose()
     RmOverviewFrame:superClass().onFrameClose(self)
-    Log:trace("RmOverviewFrame:onFrameClose()")
 end
 
 -- =============================================================================
@@ -146,8 +142,6 @@ end
 -- =============================================================================
 
 function RmOverviewFrame:refreshData()
-    Log:trace(">>> RmOverviewFrame:refreshData()")
-
     -- Get current player's farm (CRITICAL for MP isolation)
     local farmId = g_currentMission:getFarmId()
     Log:debug("OVERVIEW_REFRESH: farmId=%d sortBy=%s expiryHours=%d",
@@ -155,7 +149,6 @@ function RmOverviewFrame:refreshData()
 
     -- Refresh LEFT table (Inventory by Type)
     self.inventoryData = RmFreshManager:getInventoryList(farmId, self.sortBy)
-    Log:trace("    inventory items loaded: %d", #self.inventoryData)
 
     if self.inventoryList then
         self.inventoryList:reloadData()
@@ -165,8 +158,6 @@ function RmOverviewFrame:refreshData()
     local expiringResult = RmFreshManager:getExpiringWithin(self.expiryHours, farmId)
     self.expiringData = expiringResult.containers or {}
     self.expiringTotalAmount = expiringResult.totalAmount or 0
-    Log:trace("    expiring items loaded: %d (total %.0f L)",
-        #self.expiringData, self.expiringTotalAmount)
 
     if self.expiringList then
         self.expiringList:reloadData()
@@ -179,7 +170,8 @@ function RmOverviewFrame:refreshData()
     self:updateExpiringEmptyState()
     self:updateScrollbarVisibility()
 
-    Log:trace("<<< RmOverviewFrame:refreshData()")
+    Log:debug("OVERVIEW_REFRESH: %d inventory items, %d expiring (%.0f L)",
+        #self.inventoryData, #self.expiringData, self.expiringTotalAmount)
 end
 
 -- =============================================================================
@@ -295,7 +287,6 @@ end
 -- =============================================================================
 
 function RmOverviewFrame:onSortChanged(state, _element)
-    Log:trace(">>> RmOverviewFrame:onSortChanged(state=%d)", state)
     local option = RmOverviewFrame.SORT_OPTIONS[state]
     if option then
         self.sortBy = option.id
@@ -304,11 +295,9 @@ function RmOverviewFrame:onSortChanged(state, _element)
         Log:debug("OVERVIEW_SORT: changed to %s (saved)", self.sortBy)
         self:refreshData()
     end
-    Log:trace("<<< RmOverviewFrame:onSortChanged()")
 end
 
 function RmOverviewFrame:onExpiryFilterChanged(state, _element)
-    Log:trace(">>> RmOverviewFrame:onExpiryFilterChanged(state=%d)", state)
     local option = RmOverviewFrame.EXPIRY_OPTIONS[state]
     if option then
         self.expiryHours = option.hours
@@ -317,7 +306,6 @@ function RmOverviewFrame:onExpiryFilterChanged(state, _element)
         Log:debug("OVERVIEW_EXPIRY: changed to %d hours (saved)", self.expiryHours)
         self:refreshData()
     end
-    Log:trace("<<< RmOverviewFrame:onExpiryFilterChanged()")
 end
 
 -- =============================================================================

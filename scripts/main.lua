@@ -12,7 +12,7 @@ local modDirectory = g_currentModDirectory
 
 source(modDirectory .. "scripts/rmlib/RmLogging.lua")
 Log = RmLogging.getLogger("Fresh")
-Log:setLevel(RmLogging.LOG_LEVEL.INFO)
+Log:setLevel(RmLogging.LOG_LEVEL.TRACE)
 
 -- =============================================================================
 -- CORE MODULES
@@ -382,6 +382,9 @@ local function init()
         TypeManager.validateTypes,
         validateObjectStorageTypes
     )
+
+    -- Install fill type source tracking hooks (must run before loadMapData)
+    RmFreshSettings.installFillTypeSourceHooks()
 
     -- Register lifecycle hooks
     registerHooks()

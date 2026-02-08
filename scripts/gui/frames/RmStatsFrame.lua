@@ -17,7 +17,6 @@ RmStatsFrame.MAX_LOG_ENTRIES = 50
 RmStatsFrame.VISIBLE_ROWS = 12  -- 620px height / 48px per row
 
 function RmStatsFrame.new()
-    Log:trace("RmStatsFrame.new()")
     local self = RmStatsFrame:superClass().new(nil, RmStatsFrame_mt)
     self.name = "RmStatsFrame"
     self.statsSummary = {}
@@ -38,7 +37,6 @@ function RmStatsFrame.setupGui()
 end
 
 function RmStatsFrame:onGuiSetupFinished()
-    Log:trace("RmStatsFrame:onGuiSetupFinished()")
     RmStatsFrame:superClass().onGuiSetupFinished(self)
 
     -- Setup breakdown list data source and delegate
@@ -56,13 +54,11 @@ end
 
 function RmStatsFrame:onFrameOpen()
     RmStatsFrame:superClass().onFrameOpen(self)
-    Log:trace("RmStatsFrame:onFrameOpen()")
     self:refreshData()
 end
 
 function RmStatsFrame:onFrameClose()
     RmStatsFrame:superClass().onFrameClose(self)
-    Log:trace("RmStatsFrame:onFrameClose()")
 end
 
 -- =============================================================================
@@ -70,18 +66,15 @@ end
 -- =============================================================================
 
 function RmStatsFrame:refreshData()
-    Log:trace(">>> RmStatsFrame:refreshData()")
-
     -- Get current player's farm (CRITICAL for MP isolation)
     local farmId = g_currentMission:getFarmId()
-    Log:debug("STATS_REFRESH: farmId=%d", farmId or 0)
+    Log:debug("STATS_REFRESH: farmId=%d, breakdown=%d, recent=%d",
+        farmId or 0, #(self.breakdownData or {}), 0)
 
     -- Get statistics from Manager (farm-filtered)
     self.statsSummary = RmFreshManager:getLossStatsSummary(farmId)
     self.breakdownData = self.statsSummary.breakdown or {}
     self.recentData = RmFreshManager:getLossLogRecent(farmId, self.MAX_LOG_ENTRIES)
-
-    Log:trace("    breakdown items: %d, recent items: %d", #self.breakdownData, #self.recentData)
 
     -- Update summary cards
     self:updateSummaryCards()
@@ -98,7 +91,7 @@ function RmStatsFrame:refreshData()
     self:updateEmptyStates()
     self:updateScrollbarVisibility()
 
-    Log:trace("<<< RmStatsFrame:refreshData()")
+    Log:debug("STATS_REFRESH: %d breakdown items, %d recent entries", #self.breakdownData, #self.recentData)
 end
 
 function RmStatsFrame:updateSummaryCards()

@@ -39,10 +39,6 @@ end
 ---@param streamId number Network stream ID
 ---@param _connection table Network connection (unused)
 function RmSettingsChangeRequestEvent:writeStream(streamId, _connection)
-    Log:trace(">>> RmSettingsChangeRequestEvent:writeStream()")
-    Log:trace("    operation=%s, key=%s, value=%s",
-        self.operation, tostring(self.key), tostring(self.value))
-
     streamWriteString(streamId, self.operation)
     streamWriteString(streamId, self.key or "")
 
@@ -50,26 +46,25 @@ function RmSettingsChangeRequestEvent:writeStream(streamId, _connection)
     if self.operation == "setExpiration" then
         streamWriteFloat32(streamId, self.value or 0)
     elseif self.operation == "setGlobal" then
-        -- Global settings can be boolean
+        -- Global settings can be boolean, string, or number
         if type(self.value) == "boolean" then
             streamWriteUInt8(streamId, 1)  -- Type marker: boolean
             streamWriteBool(streamId, self.value)
+        elseif type(self.value) == "string" then
+            streamWriteUInt8(streamId, 3)  -- Type marker: string
+            streamWriteString(streamId, self.value)
         else
             streamWriteUInt8(streamId, 2)  -- Type marker: number
             streamWriteFloat32(streamId, self.value or 0)
         end
     end
     -- setDoNotExpire and resetAll don't need additional value data
-
-    Log:trace("<<< writeStream")
 end
 
 --- Deserialize request from network
 ---@param streamId number Network stream ID
 ---@param connection table Network connection
 function RmSettingsChangeRequestEvent:readStream(streamId, connection)
-    Log:trace(">>> RmSettingsChangeRequestEvent:readStream()")
-
     self.operation = streamReadString(streamId)
     self.key = streamReadString(streamId)
     if self.key == "" then self.key = nil end
@@ -81,14 +76,12 @@ function RmSettingsChangeRequestEvent:readStream(streamId, connection)
         local valueType = streamReadUInt8(streamId)
         if valueType == 1 then
             self.value = streamReadBool(streamId)
+        elseif valueType == 3 then
+            self.value = streamReadString(streamId)
         else
             self.value = streamReadFloat32(streamId)
         end
     end
-
-    Log:trace("    operation=%s, key=%s, value=%s",
-        self.operation, tostring(self.key), tostring(self.value))
-    Log:trace("<<< readStream")
 
     self:run(connection)
 end
@@ -100,13 +93,8 @@ end
 --- Execute request on server
 ---@param connection table Network connection from client
 function RmSettingsChangeRequestEvent:run(connection)
-    Log:trace(">>> RmSettingsChangeRequestEvent:run()")
-
     -- Safety check: must be on server
-    if g_server == nil then
-        Log:trace("    skipped (not server)")
-        return
-    end
+    if g_server == nil then return end
 
     -- Validate admin permissions
     local user = g_currentMission.userManager:getUserByConnection(connection)
@@ -135,6 +123,22 @@ function RmSettingsChangeRequestEvent:run(connection)
 
     elseif self.operation == "setGlobal" then
         if self.key then
+            -- Validate preset values to prevent arbitrary strings being persisted
+            if self.key == "preset" then
+                local valid = false
+                for _, name in ipairs(RmFreshSettings.PRESET_NAMES) do
+                    if name == self.value then valid = true; break end
+                end
+                if not valid then
+                    Log:warning("SETTINGS_REQUEST: Rejected invalid preset '%s' from=%s",
+                        tostring(self.value), userName)
+                    return
+                end
+                -- Clear redundant overrides so preset multiplier takes effect
+                if self.value ~= "custom" then
+                    RmFreshSettings:clearRedundantOverrides()
+                end
+            end
             RmFreshSettings:setGlobal(self.key, self.value)
             success = true
             Log:debug("SETTINGS_REQUEST: setGlobal(%s, %s) from=%s",
@@ -151,6 +155,4 @@ function RmSettingsChangeRequestEvent:run(connection)
 
     -- Note: onSettingsChanged() in RmFreshSettings handles broadcast to all clients
     -- No need to send explicit response - clients get the sync event
-
-    Log:trace("<<< run completed, operation=%s, success=%s", self.operation, tostring(success))
 end

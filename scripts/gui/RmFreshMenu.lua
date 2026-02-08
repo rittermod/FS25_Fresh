@@ -16,7 +16,6 @@ local modDirectory = g_currentModDirectory
 -- No need to call registerControls() - this is handled by g_gui:loadGui()
 
 function RmFreshMenu.new(target, custom_mt)
-    Log:trace("RmFreshMenu.new()")
     local self = TabbedMenu.new(target, custom_mt or RmFreshMenu_mt)
     self.isOpen = false
     self.menuToggleActionEventId = nil -- For toggle-to-close feature
@@ -47,13 +46,11 @@ function RmFreshMenu.setupGui()
 end
 
 function RmFreshMenu:onGuiSetupFinished()
-    Log:trace("RmFreshMenu:onGuiSetupFinished()")
     RmFreshMenu:superClass().onGuiSetupFinished(self)
     self:setupMenuPages()
 end
 
 function RmFreshMenu:setupMenuPages()
-    Log:trace(">>> RmFreshMenu:setupMenuPages()")
     local predicate = function() return g_currentMission ~= nil end
 
     -- Register Overview page (first tab - default on menu open)
@@ -69,7 +66,6 @@ function RmFreshMenu:setupMenuPages()
     self:addPageTab(self.settingsFrame, nil, nil, "gui.icon_options_generalSettings2")
 
     Log:debug("Menu pages: overview (idx=1), statistics (idx=2), settings (idx=3)")
-    Log:trace("<<< RmFreshMenu:setupMenuPages()")
 end
 
 function RmFreshMenu:setupMenuButtonInfo()
@@ -134,7 +130,6 @@ end
 
 --- Callback for toggle action while menu is open
 function RmFreshMenu:onToggleAction()
-    Log:trace("RmFreshMenu:onToggleAction() - closing menu via keybinding")
     self:exitMenu()
 end
 
@@ -145,8 +140,6 @@ function RmFreshMenu.open()
 end
 
 function RmFreshMenu.toggle()
-    Log:trace("RmFreshMenu.toggle() isOpen=%s", tostring(g_freshMenu and g_freshMenu.isOpen))
-
     if g_freshMenu and g_freshMenu.isOpen then
         g_freshMenu:exitMenu()
     else

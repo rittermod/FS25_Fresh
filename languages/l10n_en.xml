@@ -49,6 +49,29 @@
         <text name="fresh_expire_3_years" text="3 years"/>
         <text name="fresh_expire_5_years" text="5 years"/>
 
+        <!-- Sub-category tabs -->
+        <text name="fresh_tab_settings" text="Settings"/>
+        <text name="fresh_tab_expiration" text="Expiration"/>
+        <text name="fresh_tab_dlcmod" text="DLCs &amp; Mods"/>
+
+        <!-- Difficulty Preset -->
+        <text name="fresh_settings_preset" text="Difficulty"/>
+        <text name="fresh_settings_preset_tooltip" text="Adjusts all shelf lives. Very Easy quadruples, Easy doubles, Hard halves. Custom allows individual control."/>
+        <text name="fresh_preset_veryEasy" text="Very Easy (x4)"/>
+        <text name="fresh_preset_easy" text="Easy (x2)"/>
+        <text name="fresh_preset_normal" text="Normal"/>
+        <text name="fresh_preset_hard" text="Hard (x0.5)"/>
+        <text name="fresh_preset_custom" text="Custom"/>
+
+        <!-- Period format strings (for readonly preset value display) -->
+        <text name="fresh_period_months" text="%d months"/>
+        <text name="fresh_period_months_decimal" text="%.1f months"/>
+        <text name="fresh_period_years" text="%d years"/>
+        <text name="fresh_period_years_decimal" text="%.1f years"/>
+
+        <!-- DLC/Mod fillTypes section -->
+        <text name="fresh_settings_fillTypes_dlcmod" text="Expiration Times (DLCs &amp; Mods)"/>
+
         <!-- Settings global section -->
         <text name="fresh_settings_global" text="Global Settings"/>
         <text name="fresh_settings_enableExpiration" text="Enable Expiration"/>
@@ -65,6 +88,9 @@
         <text name="fresh_warning_48h" text="48 hours"/>
         <text name="fresh_warning_72h" text="72 hours"/>
         <text name="fresh_settings_fillTypes" text="Expiration Times"/>
+
+        <!-- Empty state message for preset-controlled tabs -->
+        <text name="fresh_settings_presetActive" text="All products are managed by the selected preset. Switch to Custom to edit individually."/>
 
         <!-- Settings reset button -->
         <text name="fresh_settings_resetDefaults" text="Reset to Defaults"/>

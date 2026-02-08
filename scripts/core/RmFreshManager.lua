@@ -829,6 +829,7 @@ function RmFreshManager:onLoad(savegameDir)
     -- Load user settings FIRST (before container data)
     local settingsPath = savegameDir .. "/rm_FreshSettings.xml"
     local settingsData = RmFreshIO:loadSettings(settingsPath)
+    RmFreshIO:migrateSettingsData(settingsData)
     RmFreshSettings:setUserOverrides(settingsData)
 
     local data = RmFreshIO:load(savegameDir)

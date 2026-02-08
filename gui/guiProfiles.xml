@@ -8,6 +8,26 @@
         <imageSelectedColor value="1 1 1 1"/>
     </Profile>
 
+    <!-- Informational message text for empty-state in settings tabs -->
+    <Profile name="rmFreshSettingsInfoText" extends="baseReference" with="anchorTopLeft">
+        <textSize value="16px"/>
+        <textBold value="false"/>
+        <textColor value="0.6 0.6 0.6 1"/>
+        <textAlignment value="left"/>
+        <position value="10px 0px"/>
+    </Profile>
+
+    <!-- Readonly value text for preset-controlled fillTypes in settings -->
+    <!-- Positioned to align with where MultiTextOption shows its value -->
+    <Profile name="rmFreshSettingsReadonlyValue" extends="baseReference" with="anchorMiddleRight">
+        <textSize value="18px"/>
+        <textBold value="false"/>
+        <textColor value="0.7 0.7 0.7 1"/>
+        <textAlignment value="right"/>
+        <textDisabledColor value="$preset_colorDisabled"/>
+        <position value="-30px 0px"/>
+    </Profile>
+
     <!-- Sort selector row with dark background -->
     <Profile name="rmFreshSortRow" extends="baseReference" with="anchorTopLeft">
         <imageColor value="$preset_fs25_colorMainGrey"/>

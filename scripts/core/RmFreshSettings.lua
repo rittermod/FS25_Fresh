@@ -25,6 +25,7 @@ RmFreshSettings.GLOBAL_DEFAULTS = {
     showWarnings = true,
     showAgeDisplay = true,
     warningHours = 24,  -- Warn when expiring within N hours
+    preset = "normal",  -- Difficulty preset (veryEasy/easy/normal/hard/custom)
 }
 
 --- Merge threshold for batch compaction (0.01 periods = ~7 in-game hours)
@@ -34,6 +35,10 @@ RmFreshSettings.MERGE_THRESHOLD = 0.01
 RmFreshSettings.DEFAULT_THRESHOLDS = {
     expiration = 1.0
 }
+
+--- Preset difficulty multipliers applied to mod defaults
+RmFreshSettings.PRESET_MULTIPLIERS = { veryEasy = 4.0, easy = 2.0, normal = 1.0, hard = 0.5 }
+RmFreshSettings.PRESET_NAMES = { "veryEasy", "easy", "normal", "hard", "custom" }
 
 -- =============================================================================
 -- STATE STRUCTURES (initialized in initialize())
@@ -61,6 +66,128 @@ RmFreshSettings.perishableByIndex = {}
 --- Batch mode flag: when true, onSettingsChanged() is suppressed
 --- Used by applyBatchChanges() to apply multiple overrides with one notify
 RmFreshSettings.suppressNotify = false
+
+--- Fill type source tracking (populated by hooks during map load)
+--- fillTypeName → { source = "basegame"|"dlc"|"mod"|"map", modName = string|nil }
+RmFreshSettings.fillTypeSourceMap = {}
+
+--- Internal flag: true while inside FillTypeManager:loadModFillTypes()
+RmFreshSettings._isLoadingModFillTypes = false
+
+-- =============================================================================
+-- FILL TYPE SOURCE TRACKING
+-- =============================================================================
+
+--- Install hooks on FillTypeManager to track fill type origins.
+--- MUST be called at script source time (before loadMapData runs).
+function RmFreshSettings.installFillTypeSourceHooks()
+    -- Hook 1: Flag when inside loadModFillTypes
+    FillTypeManager.loadModFillTypes = Utils.overwrittenFunction(
+        FillTypeManager.loadModFillTypes,
+        function(manager, superFunc)
+            RmFreshSettings._isLoadingModFillTypes = true
+            superFunc(manager)
+            RmFreshSettings._isLoadingModFillTypes = false
+        end
+    )
+
+    -- Hook 2: Classify new fill types after each loadFillTypes call
+    FillTypeManager.loadFillTypes = Utils.overwrittenFunction(
+        FillTypeManager.loadFillTypes,
+        function(manager, superFunc, xmlFile, baseDirectory, isBaseType, customEnv, finalizeType)
+            -- Reset source map on first call (basegame load)
+            if isBaseType then
+                RmFreshSettings.fillTypeSourceMap = {}
+            end
+
+            -- Snapshot existing fill type names
+            local existingNames = {}
+            for _, ft in ipairs(manager.fillTypes) do
+                existingNames[ft.name] = true
+            end
+
+            -- Call original
+            local result = superFunc(manager, xmlFile, baseDirectory, isBaseType, customEnv, finalizeType)
+
+            -- Determine source category
+            local source
+            if isBaseType then
+                source = "basegame"
+            elseif RmFreshSettings._isLoadingModFillTypes then
+                if customEnv and g_modManager then
+                    local mod = g_modManager:getModByName(customEnv)
+                    if mod and mod.isDLC then
+                        source = "dlc"
+                    else
+                        source = "mod"
+                    end
+                else
+                    source = "mod"
+                end
+            else
+                -- Called from loadMapData (not loadModFillTypes)
+                -- customEnv = missionInfo.customEnvironment (nil for basegame maps, mod name for mod/DLC maps)
+                if customEnv and g_modManager then
+                    local mod = g_modManager:getModByName(customEnv)
+                    if mod and mod.isDLC then
+                        source = "dlc"
+                    else
+                        source = "map"
+                    end
+                else
+                    source = "map"
+                end
+            end
+
+            -- Record source for newly added fill types only
+            local newCount = 0
+            for _, ft in ipairs(manager.fillTypes) do
+                if not existingNames[ft.name] and not RmFreshSettings.fillTypeSourceMap[ft.name] then
+                    RmFreshSettings.fillTypeSourceMap[ft.name] = {
+                        source = source,
+                        modName = customEnv,
+                    }
+                    newCount = newCount + 1
+                end
+            end
+
+            if newCount > 0 then
+                Log:debug("FILLTYPE_SOURCE: %d new fillTypes -> source=%s (customEnv=%s)",
+                    newCount, source, tostring(customEnv))
+            end
+
+            return result
+        end
+    )
+
+    Log:debug("Fill type source tracking hooks installed")
+end
+
+--- Get the source origin of a fill type
+---@param fillTypeName string The fill type name
+---@return string source "basegame"|"dlc"|"mod"|"map"|"unknown"
+---@return string|nil modName The mod/DLC name if applicable
+function RmFreshSettings:getFillTypeSource(fillTypeName)
+    local entry = self.fillTypeSourceMap[fillTypeName]
+    if entry then
+        return entry.source, entry.modName
+    end
+
+    -- Fallback: hudOverlayFilename heuristic for fill types missed by hooks
+    if g_fillTypeManager then
+        local fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(fillTypeName)
+        if fillTypeIndex then
+            local fillType = g_fillTypeManager:getFillTypeByIndex(fillTypeIndex)
+            if fillType and fillType.hudOverlayFilename then
+                if string.startsWith(fillType.hudOverlayFilename, "dataS/") then
+                    return "basegame", nil
+                end
+            end
+        end
+    end
+
+    return "unknown", nil
+end
 
 -- =============================================================================
 -- UTILITY FUNCTIONS
@@ -151,29 +278,42 @@ end
 -- QUERY FUNCTIONS
 -- =============================================================================
 
---- Get expiration period for a fillType (3-layer merge: user → mod → nil)
+--- Get expiration period for a fillType (3-layer merge: user → preset×mod → nil)
 --- Returns nil for fillTypes that don't expire
+--- User override ALWAYS wins (safety: prevents inventory loss on mod update)
 ---@param fillTypeName string The fillType name (e.g., "WHEAT")
 ---@return number|nil Expiration period in months, or nil if doesn't expire
 function RmFreshSettings:getExpiration(fillTypeName)
-    -- Layer 1: Check user override (highest priority)
+    -- Layer 1: User override ALWAYS wins (safety: prevents inventory loss on mod update)
     local userOverride = self.userOverrides.fillTypes[fillTypeName]
     if userOverride ~= nil then
         if userOverride.expires == false then
-            return nil -- User explicitly set "do not expire"
+            Log:trace("EXPIRATION: %s -> nil (user override expires=false)", fillTypeName)
+            return nil
         end
         if userOverride.period ~= nil then
+            Log:trace("EXPIRATION: %s -> %.2f (user override)", fillTypeName, userOverride.period)
             return userOverride.period
         end
     end
 
-    -- Layer 2: Check mod default
+    -- Layer 2: Mod default (with optional preset multiplier)
     local modDefault = self.modDefaults[fillTypeName]
     if modDefault ~= nil then
         if modDefault.expires == false then
-            return nil -- Mod default is "do not expire"
+            Log:trace("EXPIRATION: %s -> nil (mod default expires=false)", fillTypeName)
+            return nil
         end
         if modDefault.period ~= nil then
+            local preset = self:getGlobal("preset") or "custom"
+            if preset ~= "custom" then
+                local multiplier = self.PRESET_MULTIPLIERS[preset] or 1.0
+                local result = math.min(modDefault.period * multiplier, self.MAX_EXPIRATION)
+                Log:trace("EXPIRATION: %s -> %.2f (preset=%s, default=%.2f, x%.1f)",
+                    fillTypeName, result, preset, modDefault.period, multiplier)
+                return result
+            end
+            Log:trace("EXPIRATION: %s -> %.2f (mod default, custom mode)", fillTypeName, modDefault.period)
             return modDefault.period
         end
     end
@@ -396,21 +536,9 @@ function RmFreshSettings:resetAllOverrides()
     local ftCount = self:tableCount(self.userOverrides.fillTypes)
     local globalCount = self:tableCount(self.userOverrides.global)
 
-    -- Log what we're about to clear (for debugging)
-    Log:debug("SETTINGS_RESET: Before clear - BREAD override=%s, BUTTER override=%s",
-        tostring(self.userOverrides.fillTypes["BREAD"] and self.userOverrides.fillTypes["BREAD"].period),
-        tostring(self.userOverrides.fillTypes["BUTTER"] and self.userOverrides.fillTypes["BUTTER"].expires))
-    Log:debug("SETTINGS_RESET: modDefaults BREAD=%s, BUTTER=%s",
-        tostring(self.modDefaults["BREAD"] and self.modDefaults["BREAD"].period),
-        tostring(self.modDefaults["BUTTER"] and self.modDefaults["BUTTER"].period))
-
     -- Clear BOTH fillTypes AND global overrides
     self.userOverrides.fillTypes = {}
     self.userOverrides.global = {}
-
-    Log:debug("SETTINGS_RESET: After clear - BREAD override=%s, getExpiration(BREAD)=%s",
-        tostring(self.userOverrides.fillTypes["BREAD"]),
-        tostring(self:getExpiration("BREAD")))
 
     Log:debug("SETTINGS_RESET: Cleared %d fillType and %d global overrides", ftCount, globalCount)
 
@@ -418,6 +546,32 @@ function RmFreshSettings:resetAllOverrides()
     if ftCount > 0 or globalCount > 0 then
         self:onSettingsChanged()
     end
+end
+
+--- Clear fillType overrides that are redundant (match mod default exactly)
+--- Called when switching to a preset so the preset multiplier can take effect
+--- Keeps overrides where the user intentionally changed the value from the default
+function RmFreshSettings:clearRedundantOverrides()
+    local removed = 0
+    for name, override in pairs(self.userOverrides.fillTypes) do
+        local modDefault = self.modDefaults[name]
+        if modDefault ~= nil then
+            local redundant = false
+            if override.expires == false and modDefault.expires == false then
+                redundant = true
+            elseif override.period and modDefault.period and override.period == modDefault.period then
+                redundant = true
+            end
+            if redundant then
+                self.userOverrides.fillTypes[name] = nil
+                removed = removed + 1
+            end
+        end
+    end
+    if removed > 0 then
+        Log:debug("SETTINGS_PRESET: Cleared %d redundant fillType overrides (matching mod defaults)", removed)
+    end
+    return removed
 end
 
 -- =============================================================================
@@ -455,6 +609,8 @@ end
 --- Get user overrides for IO save or MP sync
 ---@return table { global = {}, fillTypes = {} }
 function RmFreshSettings:getUserOverrides()
+    -- Clean redundant overrides before returning (keeps save file lean)
+    self:clearRedundantOverrides()
     return self.userOverrides
 end
 

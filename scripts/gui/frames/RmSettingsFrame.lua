@@ -1,6 +1,6 @@
 --[[
     RmSettingsFrame.lua
-    Fresh mod Settings tab frame with fillType expiration selectors
+    Settings frame with clone-based ScrollingLayout for fillType rows.
 ]]
 
 RmSettingsFrame = {}
@@ -8,12 +8,26 @@ local RmSettingsFrame_mt = Class(RmSettingsFrame, TabbedMenuFrameElement)
 
 local Log = RmLogging.getLogger("Fresh")
 
--- Store mod directory at source time
 local modDirectory = g_currentModDirectory
 
 -- =============================================================================
 -- CONSTANTS
 -- =============================================================================
+
+--- Sub-category page indices
+RmSettingsFrame.SUB_CATEGORY = { SETTINGS = 1, EXPIRATION = 2, DLCMOD = 3 }
+
+--- Preset option names (matches RmFreshSettings.PRESET_NAMES order)
+RmSettingsFrame.PRESET_OPTIONS = { "veryEasy", "easy", "normal", "hard", "custom" }
+
+--- Warning hours options for MultiTextOption selector
+RmSettingsFrame.WARNING_HOURS_OPTIONS = {
+    { hours = 6,  label = "fresh_warning_6h" },
+    { hours = 12, label = "fresh_warning_12h" },
+    { hours = 24, label = "fresh_warning_24h" },
+    { hours = 48, label = "fresh_warning_48h" },
+    { hours = 72, label = "fresh_warning_72h" },
+}
 
 --- Expiration period options for MultiTextOption selectors
 --- Index 1 = "Do not expire", subsequent indices = periods in months
@@ -33,86 +47,51 @@ RmSettingsFrame.EXPIRATION_OPTIONS = {
     { period = 60.0,   label = "fresh_expire_5_years" },
 }
 
---- Warning hours options for MultiTextOption selector
-RmSettingsFrame.WARNING_HOURS_OPTIONS = {
-    { hours = 6,  label = "fresh_warning_6h" },
-    { hours = 12, label = "fresh_warning_12h" },
-    { hours = 24, label = "fresh_warning_24h" },
-    { hours = 48, label = "fresh_warning_48h" },
-    { hours = 72, label = "fresh_warning_72h" },
-}
-
---- Map period values to option indices for quick lookup
-RmSettingsFrame.PERIOD_TO_INDEX = {} -- Built in buildPeriodToIndexMap()
-
---- MODULE-LEVEL storage for fillType selectors (shared across instances)
---- FS25 creates multiple frame instances but only the first one has the template.
---- Selectors are stored here so all instances can access them.
-RmSettingsFrame.fillTypeSelectorsShared = nil -- fillTypeName → MultiTextOptionElement
-
 --- Fallback categories to check when boolean type flags are all false
 --- (workaround for mods like LazyDistribution that overwrite fillTypes without preserving flags)
 RmSettingsFrame.TYPE_FALLBACK_CATEGORIES = {
-    -- Bulk product categories
-    "COMBINE",      -- harvestable crops (WHEAT, BARLEY, OAT, etc.)
-    "FARMSILO",     -- storable crops
-    "TRAINWAGON",   -- trainable bulk goods
-    -- Pallet/processed product categories
-    "PRODUCT",                   -- processed goods
-    "SELLINGSTATION_PRODUCTSFOOD", -- food products
-    -- Bale/windrow categories
-    "WINDROW",              -- grass/straw materials
-    "SELLINGSTATION_BALES", -- bale-able materials
+    "COMBINE",
+    "FARMSILO",
+    "TRAINWAGON",
+    "PRODUCT",
+    "SELLINGSTATION_PRODUCTSFOOD",
+    "WINDROW",
+    "SELLINGSTATION_BALES",
 }
 
---- Reference to the frame instance that built the rows (owns the GUI elements)
-RmSettingsFrame.builderInstance = nil
+--- Map period values to EXPIRATION_OPTIONS indices for quick lookup
+RmSettingsFrame.PERIOD_TO_INDEX = {}
+
+--- Data arrays for fillType rows (class-level, rebuilt each onFrameOpen)
+RmSettingsFrame.basegameFillTypes = nil
+RmSettingsFrame.dlcmodFillTypes = nil
+
+--- Suppression flag to prevent callbacks during programmatic refresh
+RmSettingsFrame.isRefreshing = false
 
 --- Reference to the currently DISPLAYED frame instance
 --- Updated in onFrameOpen, cleared in onFrameClose
 --- Used by sync events to refresh the visible UI
 RmSettingsFrame.displayedInstance = nil
 
---- Fix B: Suppression flag to prevent callbacks during programmatic refresh
---- Set true during refreshData/refreshFillTypeSelectors to avoid cascade updates
-RmSettingsFrame.isRefreshing = false
-
 --- Pending fillType changes accumulated during user interaction
 --- Flushed on frame close. Key: fillTypeName, Value: { action, value }
 RmSettingsFrame.pendingFillTypeChanges = {}
+
+--- Currently active sub-category tab index
+RmSettingsFrame.currentSubCategory = 1
 
 -- =============================================================================
 -- CONSTRUCTOR
 -- =============================================================================
 
 function RmSettingsFrame.new()
-    Log:trace("RmSettingsFrame.new()")
     local self = RmSettingsFrame:superClass().new(nil, RmSettingsFrame_mt)
     self.name = "RmSettingsFrame"
-    -- Initialize alternating row color state (used by onCreate callback)
     self.isEvenRow = true
+    self.sc2Populated = false
+    self.sc3Populated = false
     return self
-end
-
---- Build period-to-index lookup map for quick state lookup
-function RmSettingsFrame:buildPeriodToIndexMap()
-    RmSettingsFrame.PERIOD_TO_INDEX = {}
-    for i, opt in ipairs(RmSettingsFrame.EXPIRATION_OPTIONS) do
-        if opt.period then
-            RmSettingsFrame.PERIOD_TO_INDEX[opt.period] = i
-            Log:trace("PERIOD_TO_INDEX[%.1f] = %d", opt.period, i)
-        end
-    end
-    Log:debug("SETTINGS_UI: Built PERIOD_TO_INDEX with %d entries", self:tableCount(RmSettingsFrame.PERIOD_TO_INDEX))
-end
-
---- Count entries in a table (utility for debug)
----@param t table
----@return number
-function RmSettingsFrame:tableCount(t)
-    local count = 0
-    for _ in pairs(t or {}) do count = count + 1 end
-    return count
 end
 
 function RmSettingsFrame.setupGui()
@@ -121,28 +100,28 @@ function RmSettingsFrame.setupGui()
         Utils.getFilename("gui/settingsFrame.xml", modDirectory),
         "RmSettingsFrame",
         frame,
-        true -- true = this is a frame, not standalone
+        true
     )
     Log:debug("RmSettingsFrame.setupGui() complete")
 end
 
 -- =============================================================================
--- LIFECYCLE METHODS
+-- LIFECYCLE
 -- =============================================================================
 
 function RmSettingsFrame:onGuiSetupFinished()
-    Log:trace("RmSettingsFrame:onGuiSetupFinished()")
     RmSettingsFrame:superClass().onGuiSetupFinished(self)
 
-    -- Build period lookup map
-    self:buildPeriodToIndexMap()
+    -- Setup presetSelector texts
+    if self.presetSelector then
+        local presetTexts = {}
+        for _, presetName in ipairs(RmSettingsFrame.PRESET_OPTIONS) do
+            table.insert(presetTexts, g_i18n:getText("fresh_preset_" .. presetName))
+        end
+        self.presetSelector:setTexts(presetTexts)
+    end
 
-    -- Elements with 'id' attribute are automatically exposed as self.elementId
-    Log:debug("SETTINGS_UI: boxLayout=%s", tostring(self.boxLayout))
-    Log:debug("SETTINGS_UI: checkEnableExpiration=%s", tostring(self.checkEnableExpiration))
-    Log:debug("SETTINGS_UI: checkShowWarnings=%s", tostring(self.checkShowWarnings))
-
-    -- Setup warning hours selector
+    -- Setup warningHoursSelector texts
     if self.warningHoursSelector then
         local texts = {}
         for _, opt in ipairs(RmSettingsFrame.WARNING_HOURS_OPTIONS) do
@@ -151,22 +130,19 @@ function RmSettingsFrame:onGuiSetupFinished()
         self.warningHoursSelector:setTexts(texts)
     end
 
-    -- Initialize menu button info (Back + Reset)
-    self:initializeMenuButtons()
+    -- Build period-to-index lookup map
+    self:buildPeriodToIndexMap()
 
-    -- Build fillType selector rows dynamically
-    self:buildFillTypeRows()
+    -- Initialize menu buttons (back + reset to defaults)
+    self:initializeMenuButtons()
 end
 
 --- Initialize menu button info for bottom bar
---- Pattern from EasyDevControls: define buttons, set self.menuButtonInfo
 function RmSettingsFrame:initializeMenuButtons()
-    -- Back button (MENU_BACK) - no callback needed, TabbedMenu handles it
     self.backButtonInfo = {
         inputAction = InputAction.MENU_BACK
     }
 
-    -- Reset to Defaults button
     self.resetButtonInfo = {
         inputAction = InputAction.MENU_EXTRA_1,
         text = g_i18n:getText("fresh_settings_resetDefaults"),
@@ -175,49 +151,54 @@ function RmSettingsFrame:initializeMenuButtons()
         end
     }
 
-    -- Set initial menu button info
     self:updateMenuButtons()
 end
 
 --- Update menu buttons array based on current state
---- Called on frame open and when permissions change
+--- Reset button shown only for admins
 function RmSettingsFrame:updateMenuButtons()
     self.menuButtonInfo = {
         self.backButtonInfo
     }
 
-    -- Reset button disabled: fillType selectors don't visually update
-    -- after reset because FS25 creates multiple frame instances with separate GUI trees.
-    -- The selectors belong to the first instance but setState doesn't update the visible UI.
-    -- Uncomment when bug is fixed:
-    -- if self:isAdmin() then
-    --     table.insert(self.menuButtonInfo, self.resetButtonInfo)
-    -- end
+    if self:isAdmin() then
+        table.insert(self.menuButtonInfo, self.resetButtonInfo)
+    end
 end
 
 function RmSettingsFrame:onFrameOpen()
     RmSettingsFrame:superClass().onFrameOpen(self)
 
-    -- Track this as the currently displayed instance (for sync events)
     RmSettingsFrame.displayedInstance = self
+    RmSettingsFrame.pendingFillTypeChanges = {}
 
-    -- DIAGNOSTIC: Log instance info
-    local sharedCount = self:tableCount(RmSettingsFrame.fillTypeSelectorsShared)
-    Log:info("DIAG_OPEN: self=%s, builder=%s, boxLayout=%s, sharedSelectors=%d",
-        tostring(self),
-        tostring(RmSettingsFrame.builderInstance),
-        tostring(self.boxLayout),
-        sharedCount)
+    -- Build fillType data arrays (rebuilt each open to catch late DLC/mod fillTypes)
+    self:buildFillTypeData()
+    self.optionTexts = self:buildOptionTexts()
 
-    -- Populate UI with current settings
+    -- Initialize sub-category pages
+    self:initializeSubCategoryPages()
+
+    -- Populate cloned pages (first open only)
+    if not self.sc2Populated then
+        self:populateSc2()
+    end
+    if not self.sc3Populated then
+        self:populateSc3()
+    end
+
+    -- Load current settings values into all controls
     self:refreshData()
 
     -- Disable controls for non-admin clients
     self:updateReadonlyState()
 
-    -- Update menu buttons (show/hide Reset based on admin status)
+    -- Update menu buttons (show Reset for admins)
     self:updateMenuButtons()
     self:setMenuButtonInfoDirty()
+
+    -- Show first tab
+    self.subCategoryPaging:setState(RmSettingsFrame.SUB_CATEGORY.SETTINGS, true)
 end
 
 function RmSettingsFrame:onFrameClose()
@@ -225,12 +206,11 @@ function RmSettingsFrame:onFrameClose()
     if next(RmSettingsFrame.pendingFillTypeChanges) then
         local count = 0
         for _ in pairs(RmSettingsFrame.pendingFillTypeChanges) do count = count + 1 end
-        Log:debug("SETTINGS_FLUSH: applying %d pending fillType changes on frame close", count)
+        Log:debug("SETT FLUSH: applying %d pending fillType changes", count)
 
         if g_server then
             RmFreshSettings:applyBatchChanges(RmSettingsFrame.pendingFillTypeChanges)
         else
-            -- Client: send individual events to server
             for fillTypeName, change in pairs(RmSettingsFrame.pendingFillTypeChanges) do
                 if RmSettingsChangeRequestEvent then
                     g_client:getServerConnection():sendEvent(
@@ -239,78 +219,85 @@ function RmSettingsFrame:onFrameClose()
                 end
             end
         end
-
         RmSettingsFrame.pendingFillTypeChanges = {}
-        Log:trace("    flush complete (server=%s)", tostring(g_server ~= nil))
     end
 
     RmSettingsFrame:superClass().onFrameClose(self)
-    Log:trace("RmSettingsFrame:onFrameClose() (self=%s)", tostring(self))
 
-    -- Clear displayed instance when frame closes
     if RmSettingsFrame.displayedInstance == self then
         RmSettingsFrame.displayedInstance = nil
     end
 end
 
 -- =============================================================================
--- DATA REFRESH
+-- SUB-CATEGORY TABS
 -- =============================================================================
 
-function RmSettingsFrame:refreshData()
-    Log:trace(">>> RmSettingsFrame:refreshData()")
+--- Initialize sub-category tab pages (FS25 InGameMenuSettingsFrame pattern)
+function RmSettingsFrame:initializeSubCategoryPages()
+    local subCategories = {}
 
-    -- Update global checkboxes (BinaryOption uses setState: 1=off, 2=on)
-    -- Note: Set isRefreshing to block callbacks during global checkbox updates too
-    RmSettingsFrame.isRefreshing = true
-    if self.checkEnableExpiration then
-        local enableExpiration = RmFreshSettings:getGlobal("enableExpiration")
-        local state = (enableExpiration ~= false) and 2 or 1
-        self.checkEnableExpiration:setState(state) -- No 'true' - need visual update
-        Log:trace("    checkEnableExpiration state=%d", state)
-    else
-        Log:warning("SETTINGS_UI: checkEnableExpiration not found")
+    -- Hide DLC & Mods tab when no DLC/mod fillTypes exist
+    local hideDlcTab = #(RmSettingsFrame.dlcmodFillTypes or {}) == 0
+
+    for index, button in ipairs(self.subCategoryTabs) do
+        local visible = not (index == RmSettingsFrame.SUB_CATEGORY.DLCMOD and hideDlcTab)
+
+        -- Make tab background respond to selection state
+        button:getDescendantByName("background").getIsSelected = function()
+            return index == tonumber(self.subCategoryPaging.texts[self.subCategoryPaging:getState()])
+        end
+
+        -- Make tab button respond to selection state
+        function button.getIsSelected()
+            return index == tonumber(self.subCategoryPaging.texts[self.subCategoryPaging:getState()])
+        end
+
+        button:setVisible(visible)
+        if visible then
+            table.insert(subCategories, tostring(index))
+        end
     end
 
-    if self.checkShowWarnings then
-        local showWarnings = RmFreshSettings:getGlobal("showWarnings")
-        local state = (showWarnings ~= false) and 2 or 1
-        self.checkShowWarnings:setState(state) -- No 'true' - need visual update
-        Log:trace("    checkShowWarnings state=%d", state)
-    else
-        Log:warning("SETTINGS_UI: checkShowWarnings not found")
-    end
-
-    if self.checkShowAgeDisplay then
-        local showAgeDisplay = RmFreshSettings:getGlobal("showAgeDisplay")
-        local state = (showAgeDisplay ~= false) and 2 or 1
-        self.checkShowAgeDisplay:setState(state)
-        Log:trace("    checkShowAgeDisplay state=%d", state)
-    else
-        Log:warning("SETTINGS_UI: checkShowAgeDisplay not found")
-    end
-
-    if self.warningHoursSelector then
-        local currentHours = RmFreshSettings:getWarningHours()
-        local state = self:findWarningHoursState(currentHours)
-        self.warningHoursSelector:setState(state)
-        Log:trace("    warningHoursSelector state=%d", state)
-    end
-    RmSettingsFrame.isRefreshing = false
-
-    -- Update fillType selectors
-    self:refreshFillTypeSelectors()
-
-    Log:trace("<<< RmSettingsFrame:refreshData()")
+    -- Configure paging selector
+    self.subCategoryBox:invalidateLayout()
+    self.subCategoryPaging:setTexts(subCategories)
+    self.subCategoryPaging:setSize(self.subCategoryBox.maxFlowSize + 140 * g_pixelSizeScaledX)
 end
 
 -- =============================================================================
--- FILLTYPE ROW BUILDING
+-- FILLTYPE DATA BUILDING
 -- =============================================================================
 
+--- Build categorized fillType data arrays for fillType rows
+--- Called each onFrameOpen to catch late-registered DLC/mod fillTypes
+function RmSettingsFrame:buildFillTypeData()
+    local allFillTypes = self:getPerishableFillTypes()
+    RmSettingsFrame.basegameFillTypes = {}
+    RmSettingsFrame.dlcmodFillTypes = {}
+
+    for _, ft in ipairs(allFillTypes) do
+        if self:isBasegameFillType(ft.name) then
+            table.insert(RmSettingsFrame.basegameFillTypes, ft)
+        else
+            table.insert(RmSettingsFrame.dlcmodFillTypes, ft)
+        end
+    end
+
+    Log:debug("SETT DATA: Categorized %d fillTypes - %d basegame, %d DLC/mod",
+        #allFillTypes, #RmSettingsFrame.basegameFillTypes, #RmSettingsFrame.dlcmodFillTypes)
+end
+
+--- Detect fillType origin using source tracking hooks
+--- Falls back to hudOverlayFilename heuristic if hooks missed the fillType
+---@param fillTypeName string
+---@return boolean True if basegame fillType
+function RmSettingsFrame:isBasegameFillType(fillTypeName)
+    local source = RmFreshSettings:getFillTypeSource(fillTypeName)
+    return source == "basegame"
+end
+
 --- Check if fillType belongs to any fallback category indicating it's a real product
---- Used when boolean type flags (isBulkType, isPalletType, isBaleType) are all false
---- due to mod conflicts (e.g., LazyDistribution overwrites fillTypes without preserving flags)
 ---@param fillTypeIndex number The fillType index
 ---@return boolean True if fillType is in any fallback category
 function RmSettingsFrame:checkCategoryFallback(fillTypeIndex)
@@ -323,18 +310,14 @@ function RmSettingsFrame:checkCategoryFallback(fillTypeIndex)
 end
 
 --- Get list of ALL fillTypes sorted by type relevance, then expiration, then alphabetically
---- Sort order: 1) Has type + expires, 2) Has type + doesn't expire, 3) No type (bottom)
 ---@return table Array of { name = string, title = string, expires = boolean, hasType = boolean }
 function RmSettingsFrame:getPerishableFillTypes()
     local fillTypes = {}
 
-    -- Get ALL fillTypes from game (not just mod defaults)
     for fillTypeName, fillTypeData in pairs(RmFreshSettings.allFillTypes or {}) do
-        -- Skip UNKNOWN fillType
         if fillTypeName ~= "UNKNOWN" then
             local expiration = RmFreshSettings:getExpiration(fillTypeName)
 
-            -- Check if fillType has a type classification (Bulk/Pallet/Bale)
             local hasType = false
             local fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(fillTypeName)
             if fillTypeIndex then
@@ -342,35 +325,32 @@ function RmSettingsFrame:getPerishableFillTypes()
                 if fillType then
                     hasType = fillType.isBulkType or fillType.isPalletType or fillType.isBaleType or false
 
-                    -- If no type flags set, check category fallback
-                    -- (workaround for mods that overwrite fillTypes without preserving flags)
                     if not hasType then
                         hasType = self:checkCategoryFallback(fillTypeIndex)
                     end
                 end
             end
 
+            local source, modName = RmFreshSettings:getFillTypeSource(fillTypeName)
             table.insert(fillTypes, {
                 name = fillTypeName,
                 title = fillTypeData.title or fillTypeName,
                 expires = expiration ~= nil,
-                hasType = hasType
+                hasType = hasType,
+                source = source,
+                sourceMod = modName,
             })
         end
     end
 
     -- Sort: hasType first, then expires, then alphabetically
-    -- Priority: 1) hasType+expires, 2) hasType+!expires, 3) !hasType (bottom)
     table.sort(fillTypes, function(a, b)
-        -- First priority: hasType (true comes before false)
         if a.hasType ~= b.hasType then
             return a.hasType
         end
-        -- Second priority: expires (true comes before false)
         if a.expires ~= b.expires then
             return a.expires
         end
-        -- Third priority: alphabetically by title
         return a.title:lower() < b.title:lower()
     end)
 
@@ -387,18 +367,27 @@ function RmSettingsFrame:buildOptionTexts()
     return texts
 end
 
---- Build tooltip text for a fillType with distinguishing information
+--- Build tooltip text for a fillType row
 ---@param fillTypeName string The internal fillType name (e.g., "WHEAT")
----@param fillType table|nil The fillType object from g_fillTypeManager (may be nil)
+---@param fillType table|nil The fillType object from g_fillTypeManager
 ---@return string Tooltip text
 function RmSettingsFrame:buildFillTypeTooltip(fillTypeName, fillType)
     local parts = {}
-
-    -- Always show the internal name
     table.insert(parts, string.format("Fill type: %s", fillTypeName))
 
+    -- Show source origin
+    local source, modName = RmFreshSettings:getFillTypeSource(fillTypeName)
+    if source == "dlc" and modName then
+        table.insert(parts, string.format("Source: DLC (%s)", modName))
+    elseif source == "mod" and modName then
+        table.insert(parts, string.format("Source: Mod (%s)", modName))
+    elseif source == "map" then
+        table.insert(parts, "Source: Map")
+    elseif source == "basegame" then
+        table.insert(parts, "Source: Base game")
+    end
+
     if fillType then
-        -- Show type classification
         local typeInfo = {}
         if fillType.isBulkType then table.insert(typeInfo, "Bulk") end
         if fillType.isPalletType then table.insert(typeInfo, "Pallet") end
@@ -411,415 +400,384 @@ function RmSettingsFrame:buildFillTypeTooltip(fillTypeName, fillType)
     return table.concat(parts, " | ")
 end
 
+--- Build period-to-index lookup map from EXPIRATION_OPTIONS
+function RmSettingsFrame:buildPeriodToIndexMap()
+    RmSettingsFrame.PERIOD_TO_INDEX = {}
+    for i, opt in ipairs(RmSettingsFrame.EXPIRATION_OPTIONS) do
+        if opt.period then
+            RmSettingsFrame.PERIOD_TO_INDEX[opt.period] = i
+        end
+    end
+end
+
 --- Get the option index for a fillType's current expiration setting
 ---@param fillTypeName string The fillType name
 ---@return number Option index (1 = never, 2+ = periods)
 function RmSettingsFrame:getOptionIndexForFillType(fillTypeName)
     local expiration = RmFreshSettings:getExpiration(fillTypeName)
     if expiration == nil then
-        Log:trace("    getOptionIndexForFillType(%s): expiration=nil -> index=1", fillTypeName)
         return 1 -- "Do not expire"
     end
     -- Round to 1 decimal place to avoid floating point precision issues
-    -- (XML parsing may return 12.000000001 instead of 12.0)
     local roundedExpiration = math.floor(expiration * 10 + 0.5) / 10
     local index = RmSettingsFrame.PERIOD_TO_INDEX[roundedExpiration]
     if index == nil then
-        Log:debug("SETTINGS_UI: %s expiration=%.2f (rounded=%.1f) not in PERIOD_TO_INDEX -> index=1",
+        Log:debug("SETT: %s expiration=%.2f (rounded=%.1f) not in PERIOD_TO_INDEX -> index=1",
             fillTypeName, expiration, roundedExpiration)
         return 1
     end
-    Log:trace("    getOptionIndexForFillType(%s): expiration=%.2f -> index=%d", fillTypeName, expiration, index)
     return index
 end
 
---- Build fillType selector rows dynamically by cloning template
---- Called once during onGuiSetupFinished
---- NOTE: FS25 creates multiple frame instances but only the first one has the template.
---- Selectors are stored at module level (fillTypeSelectorsShared) so all instances can access them.
-function RmSettingsFrame:buildFillTypeRows()
-    Log:debug(">>> buildFillTypeRows() (self=%s, boxLayout=%s)", tostring(self), tostring(self.boxLayout))
-
-    -- Skip if already built (module-level check)
-    if RmSettingsFrame.fillTypeSelectorsShared ~= nil then
-        Log:debug("SETTINGS_UI: fillType rows already built, skipping (shared has %d selectors)",
-            self:tableCount(RmSettingsFrame.fillTypeSelectorsShared))
-        return
-    end
-
-    if self.boxLayout == nil then
-        Log:warning("SETTINGS_UI: boxLayout not found, cannot build fillType rows")
-        return
-    end
-
-    if self.fillTypeRowTemplate == nil then
-        Log:warning("SETTINGS_UI: fillTypeRowTemplate not found, cannot build fillType rows")
-        return
-    end
-
-    -- Initialize module-level storage
-    RmSettingsFrame.fillTypeSelectorsShared = {}
-    -- Store reference to this instance as the builder (owns the GUI elements)
-    RmSettingsFrame.builderInstance = self
-
-    local fillTypes = self:getPerishableFillTypes()
-    local optionTexts = self:buildOptionTexts()
-
-    Log:debug("SETTINGS_UI: Building %d fillType selector rows (builder=%s, boxLayout=%s)",
-        #fillTypes, tostring(self), tostring(self.boxLayout))
-
-    for _, ft in ipairs(fillTypes) do
-        self:createFillTypeRow(ft.name, ft.title, optionTexts)
-    end
-
-    -- Remove the template from the layout now that all rows are created
-    -- This prevents the hidden template from appearing as a ghost row
-    self.fillTypeRowTemplate:delete()
-    self.fillTypeRowTemplate = nil
-    Log:trace("    Template deleted after cloning")
-
-    Log:debug("<<< buildFillTypeRows() - created %d rows", #fillTypes)
-end
-
---- Create a single fillType selector row by cloning template
----@param fillTypeName string The fillType name (e.g., "WHEAT")
----@param fillTypeTitle string The display title (e.g., "Wheat")
----@param optionTexts table Array of option text labels
-function RmSettingsFrame:createFillTypeRow(fillTypeName, fillTypeTitle, optionTexts)
-    -- Clone the template row
-    local rowContainer = self.fillTypeRowTemplate:clone(self.boxLayout)
-    if rowContainer == nil then
-        Log:warning("SETTINGS_UI: Failed to clone fillTypeRowTemplate for %s", fillTypeName)
-        return
-    end
-
-    -- Make it visible (template is hidden)
-    rowContainer:setVisible(true)
-
-    -- Apply alternating row color
-    self:onCreateSettingRow(rowContainer)
-
-    -- Find the selector element within the cloned row
-    local selector = rowContainer:getDescendantByName("fillTypeSelector")
-    if selector == nil then
-        Log:warning("SETTINGS_UI: Could not find fillTypeSelector in cloned row for %s", fillTypeName)
-        return
-    end
-
-    -- Configure selector
-    selector:setTexts(optionTexts)
-
-    -- Wire callback - capture fillTypeName in closure (FS25 pattern from MoveHusbandryAnimals)
-    -- Note: The 'element' param in callback is the clicked button, not the selector
-    local frame = self
-    local ftName = fillTypeName
-    selector.onClickCallback = function(_element, state)
-        frame:onFillTypeOptionChangedByName(ftName, state)
-    end
-
-    -- Set initial state based on configured expiration
-    local optionIndex = self:getOptionIndexForFillType(fillTypeName)
-    selector:setState(optionIndex, true) -- true = skip callback
-    Log:trace("    %s initial state=%d", fillTypeName, optionIndex)
-
-    -- Find and set the title text
-    local titleText = rowContainer:getDescendantByName("fillTypeTitle")
-    if titleText then
-        titleText:setText(fillTypeTitle)
-    end
-
-    -- Find and set the fillType icon and build tooltip
-    local fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(fillTypeName)
-    local fillType = fillTypeIndex and g_fillTypeManager:getFillTypeByIndex(fillTypeIndex)
-
-    local iconElement = rowContainer:getDescendantByName("fillTypeIcon")
-    if iconElement ~= nil then
-        if fillType ~= nil and fillType.hudOverlayFilename ~= nil then
-            iconElement:setImageFilename(fillType.hudOverlayFilename)
-            iconElement:setVisible(true)
-        else
-            iconElement:setVisible(false)
-        end
-    end
-
-    -- Set tooltip with distinguishing information
-    local tooltipElement = rowContainer:getDescendantByName("fillTypeTooltip")
-    if tooltipElement ~= nil then
-        local tooltipText = self:buildFillTypeTooltip(fillTypeName, fillType)
-        tooltipElement:setText(tooltipText)
-    end
-
-    -- Note: clone(boxLayout) already adds the element to boxLayout - no addElement() needed
-
-    -- Store reference at MODULE level for refreshData (shared across all instances)
-    RmSettingsFrame.fillTypeSelectorsShared[fillTypeName] = selector
-
-    Log:trace("    Created row: %s (%s)", fillTypeName, fillTypeTitle)
-end
-
---- Refresh all fillType selector states from current settings
---- Uses module-level fillTypeSelectorsShared (works across all frame instances)
---- Fix B: Sets isRefreshing flag to suppress callbacks during programmatic update
-function RmSettingsFrame:refreshFillTypeSelectors()
-    local selectors = RmSettingsFrame.fillTypeSelectorsShared or {}
-
-    -- Diagnostic: Log userOverrides state at refresh time
-    local overrideCount = RmFreshSettings:tableCount(RmFreshSettings.userOverrides.fillTypes or {})
-    Log:debug("SETTINGS_UI: refreshFillTypeSelectors() - %d selectors, %d userOverrides (self=%s)",
-        self:tableCount(selectors), overrideCount, tostring(self))
-
-    RmSettingsFrame.isRefreshing = true -- Suppress callbacks during refresh
-
-    -- Get option texts once for all selectors (used to force visual update)
-    local optionTexts = self:buildOptionTexts()
-
-    for fillTypeName, selector in pairs(selectors) do
-        local optionIndex = self:getOptionIndexForFillType(fillTypeName)
-        local currentState = selector:getState()
-
-        -- DIAGNOSTIC: Log selector parent for WHEAT/BARLEY to understand GUI tree ownership
-        local hasOverride = RmFreshSettings.userOverrides.fillTypes[fillTypeName] ~= nil
-        if hasOverride or fillTypeName == "WHEAT" or fillTypeName == "BARLEY" then
-            Log:info("DIAG_REFRESH: %s selector=%s parent=%s state=%d->%d",
-                fillTypeName, tostring(selector), tostring(selector.parent), currentState, optionIndex)
-        end
-
-        -- Force visual update by resetting texts and state
-        -- This ensures the C++ visual tree is refreshed, not just the Lua state
-        selector:setTexts(optionTexts)
-        selector:setState(optionIndex)
-    end
-    RmSettingsFrame.isRefreshing = false
-end
-
---- Callback when a fillType expiration option is changed (by name, from closure)
----@param fillTypeName string The fillType name (captured in closure)
----@param state number The new option index
-function RmSettingsFrame:onFillTypeOptionChangedByName(fillTypeName, state)
-    -- DIAGNOSTIC: Log which frame instance the callback belongs to (captured in closure)
-    Log:trace("DIAG_CALLBACK: frame=%s (closure), fillType=%s, state=%d, displayed=%s",
-        tostring(self), fillTypeName, state, tostring(RmSettingsFrame.displayedInstance))
-
-    -- Fix B: Skip if this is a programmatic refresh (not user interaction)
-    if RmSettingsFrame.isRefreshing then
-        Log:trace("    skipped (isRefreshing)")
-        return
-    end
-
-    if not self:isAdmin() then
-        Log:trace("    skipped (not admin)")
-        return
-    end
-
-    local option = RmSettingsFrame.EXPIRATION_OPTIONS[state]
-    if option == nil then
-        Log:warning("SETTINGS_UI: Invalid option state %d", state)
-        return
-    end
-
-    -- Defer change to frame close instead of applying immediately
-    local action = option.expires == false and "setDoNotExpire" or "setExpiration"
-    RmSettingsFrame.pendingFillTypeChanges[fillTypeName] = {
-        action = action,
-        value = option.period,  -- nil for setDoNotExpire
-    }
-
-    Log:trace("    SETTINGS_PENDING: %s -> %s (deferred to frame close)", fillTypeName, action)
-    Log:trace("<<< onFillTypeOptionChangedByName")
-end
-
--- =============================================================================
--- LEGACY: buildFillTypeList (kept for tests T14)
--- =============================================================================
-
-function RmSettingsFrame:buildFillTypeList()
-    local fillTypes = {}
-
-    if g_fillTypeManager == nil then
-        return fillTypes
-    end
-
-    for _, fillType in pairs(g_fillTypeManager:getFillTypes()) do
-        if fillType.name ~= nil and fillType.name ~= "UNKNOWN" then
-            table.insert(fillTypes, {
-                name = fillType.name,
-                title = fillType.title or fillType.name
-            })
-        end
-    end
-
-    table.sort(fillTypes, function(a, b)
-        return a.title:lower() < b.title:lower()
-    end)
-
-    return fillTypes
-end
-
--- =============================================================================
--- CALLBACK HANDLERS
--- =============================================================================
-
-function RmSettingsFrame:onClickEnableExpiration(state, _element)
-    Log:trace(">>> onClickEnableExpiration(state=%s)", tostring(state))
-
-    -- Skip if this is a programmatic refresh (not user interaction)
-    if RmSettingsFrame.isRefreshing then
-        Log:trace("    skipped (isRefreshing)")
-        return
-    end
-
-    if not self:isAdmin() then
-        return
-    end
-
-    local enabled = (state == 2) -- BinaryOption: 1=off, 2=on
-
-    if g_server then
-        RmFreshSettings:setGlobal("enableExpiration", enabled)
-    else
-        if RmSettingsChangeRequestEvent then
-            g_client:getServerConnection():sendEvent(
-                RmSettingsChangeRequestEvent.new("setGlobal", "enableExpiration", enabled)
-            )
-        end
-    end
-
-    Log:trace("<<< onClickEnableExpiration")
-end
-
-function RmSettingsFrame:onClickShowWarnings(state, _element)
-    Log:trace(">>> onClickShowWarnings(state=%s)", tostring(state))
-
-    -- Skip if this is a programmatic refresh (not user interaction)
-    if RmSettingsFrame.isRefreshing then
-        Log:trace("    skipped (isRefreshing)")
-        return
-    end
-
-    if not self:isAdmin() then
-        return
-    end
-
-    local enabled = (state == 2)
-
-    if g_server then
-        RmFreshSettings:setGlobal("showWarnings", enabled)
-    else
-        if RmSettingsChangeRequestEvent then
-            g_client:getServerConnection():sendEvent(
-                RmSettingsChangeRequestEvent.new("setGlobal", "showWarnings", enabled)
-            )
-        end
-    end
-
-    -- Update warningHoursSelector disabled state
-    self:updateReadonlyState()
-
-    Log:trace("<<< onClickShowWarnings")
-end
-
-function RmSettingsFrame:onClickShowAgeDisplay(state, _element)
-    Log:trace(">>> onClickShowAgeDisplay(state=%s)", tostring(state))
-
-    -- Skip if this is a programmatic refresh (not user interaction)
-    if RmSettingsFrame.isRefreshing then
-        Log:trace("    skipped (isRefreshing)")
-        return
-    end
-
-    if not self:isAdmin() then
-        return
-    end
-
-    local enabled = (state == 2)
-
-    if g_server then
-        RmFreshSettings:setGlobal("showAgeDisplay", enabled)
-    else
-        if RmSettingsChangeRequestEvent then
-            g_client:getServerConnection():sendEvent(
-                RmSettingsChangeRequestEvent.new("setGlobal", "showAgeDisplay", enabled)
-            )
-        end
-    end
-
-    Log:trace("<<< onClickShowAgeDisplay")
-end
-
+--- Find the warning hours selector state for a given hours value
+---@param hours number Warning hours value
+---@return number Selector state index
 function RmSettingsFrame:findWarningHoursState(hours)
     for i, opt in ipairs(RmSettingsFrame.WARNING_HOURS_OPTIONS) do
         if opt.hours == hours then
             return i
         end
     end
-    return 3  -- Default to 24h (index 3)
+    return 3 -- Default to 24h (index 3)
 end
 
-function RmSettingsFrame:onClickWarningHours(state, _element)
-    Log:trace(">>> onClickWarningHours(state=%s)", tostring(state))
+-- =============================================================================
+-- PRESET CONTROL
+-- =============================================================================
 
-    if RmSettingsFrame.isRefreshing then
-        Log:trace("    skipped (isRefreshing)")
-        return
+--- Check if a fillType is fully controlled by the active preset
+--- (preset active AND has mod default AND no user override)
+---@param fillTypeName string
+---@return boolean
+function RmSettingsFrame:isPresetControlled(fillTypeName)
+    local preset = RmFreshSettings:getGlobal("preset") or "custom"
+    if preset == "custom" then return false end
+    local hasModDefault = RmFreshSettings.modDefaults[fillTypeName] ~= nil
+    local hasUserOverride = RmFreshSettings.userOverrides.fillTypes[fillTypeName] ~= nil
+    return hasModDefault and not hasUserOverride
+end
+
+-- =============================================================================
+-- DATA REFRESH
+-- =============================================================================
+
+--- Load current settings values into all UI controls
+--- Called on frame open and after sync events
+function RmSettingsFrame:refreshData()
+    RmSettingsFrame.isRefreshing = true
+
+    -- SC1: Global settings controls (BinaryOption: 1=off, 2=on)
+    if self.checkEnableExpiration then
+        local state = (RmFreshSettings:getGlobal("enableExpiration") ~= false) and 2 or 1
+        self.checkEnableExpiration:setState(state)
     end
-
-    if not self:isAdmin() then
-        return
+    if self.checkShowWarnings then
+        local state = (RmFreshSettings:getGlobal("showWarnings") ~= false) and 2 or 1
+        self.checkShowWarnings:setState(state)
     end
-
-    local opt = RmSettingsFrame.WARNING_HOURS_OPTIONS[state]
-    if not opt then return end
-
-    if g_server then
-        RmFreshSettings:setGlobal("warningHours", opt.hours)
-    else
-        if RmSettingsChangeRequestEvent then
-            g_client:getServerConnection():sendEvent(
-                RmSettingsChangeRequestEvent.new("setGlobal", "warningHours", opt.hours)
-            )
+    if self.checkShowAgeDisplay then
+        local state = (RmFreshSettings:getGlobal("showAgeDisplay") ~= false) and 2 or 1
+        self.checkShowAgeDisplay:setState(state)
+    end
+    if self.warningHoursSelector then
+        local currentHours = RmFreshSettings:getWarningHours()
+        self.warningHoursSelector:setState(self:findWarningHoursState(currentHours))
+    end
+    if self.presetSelector then
+        local currentPreset = RmFreshSettings:getGlobal("preset") or "custom"
+        for i, name in ipairs(RmSettingsFrame.PRESET_OPTIONS) do
+            if name == currentPreset then
+                self.presetSelector:setState(i)
+                break
+            end
         end
     end
 
-    Log:trace("<<< onClickWarningHours")
+    -- SC2/SC3: FillType row visibility and selector states
+    local sc2Visible = self:refreshFillTypeRows(self.sc2Rows)
+    local sc3Visible = self:refreshFillTypeRows(self.sc3Rows)
+
+    -- Toggle empty-state messages
+    if self.sc2NoRowsMsg then self.sc2NoRowsMsg:setVisible(sc2Visible == 0) end
+    if self.sc3NoRowsMsg then self.sc3NoRowsMsg:setVisible(sc3Visible == 0) end
+
+    -- Invalidate layouts so ScrollingLayout recalculates after row visibility changes
+    if self.sc2Layout then self.sc2Layout:invalidateLayout() end
+    if self.sc3Layout then self.sc3Layout:invalidateLayout() end
+
+    RmSettingsFrame.isRefreshing = false
 end
 
-function RmSettingsFrame:onResetDefaults()
-    Log:trace(">>> onResetDefaults()")
+--- Refresh fillType row visibility and selector states from current settings
+--- Hides entire rows that are preset-controlled, re-applies alternating colors for visible rows
+---@param rows table|nil Array of { row, multiOption, fillTypeName }
+---@return number Number of visible rows
+function RmSettingsFrame:refreshFillTypeRows(rows)
+    if not rows then return 0 end
 
-    if not self:isAdmin() then
-        return
-    end
+    local visibleIndex = 0
+    for _, rowData in ipairs(rows) do
+        if rowData and rowData.fillTypeName then
+            local isPreset = self:isPresetControlled(rowData.fillTypeName)
 
-    -- YesNoDialog.show(callback, target, text, title, yesText, noText)
-    YesNoDialog.show(
-        self.onResetConfirmed,
-        self,
-        g_i18n:getText("fresh_settings_resetConfirm"),
-        g_i18n:getText("ui_attention")
-    )
-end
+            if isPreset then
+                rowData.row:setVisible(false)
+            else
+                rowData.row:setVisible(true)
+                visibleIndex = visibleIndex + 1
 
-function RmSettingsFrame:onResetConfirmed(yes)
-    local selectors = RmSettingsFrame.fillTypeSelectorsShared or {}
-    Log:debug(">>> onResetConfirmed(yes=%s, self=%s, sharedSelectors=%d)",
-        tostring(yes), tostring(self), self:tableCount(selectors))
+                -- Update selector state
+                if rowData.multiOption then
+                    local optionIndex = self:getOptionIndexForFillType(rowData.fillTypeName)
+                    rowData.multiOption:setState(optionIndex)
+                end
 
-    if not yes then
-        return
-    end
-
-    if g_server then
-        RmFreshSettings:resetAllOverrides()
-        -- Refresh using SELF (per-instance selectors now work correctly)
-        self:refreshData()
-        Log:info("SETTINGS_UI: Reset to defaults complete")
-    else
-        if RmSettingsChangeRequestEvent then
-            g_client:getServerConnection():sendEvent(
-                RmSettingsChangeRequestEvent.new("resetAll", nil, nil)
-            )
+                -- Re-apply alternating row colors for visible rows only
+                local isEven = (visibleIndex % 2 == 0)
+                rowData.row:setImageColor(nil, table.unpack(
+                    InGameMenuSettingsFrame.COLOR_ALTERNATING[isEven]))
+            end
         end
     end
+
+    return visibleIndex
+end
+
+-- =============================================================================
+-- SC2 CLONE POPULATION
+-- =============================================================================
+
+--- Populate SC2 page by cloning one row per basegame fillType
+function RmSettingsFrame:populateSc2()
+    local layout = self.sc2Layout
+    local template = self.sc2RowTemplate
+
+    if not template or not layout then return end
+
+    local fillTypes = RmSettingsFrame.basegameFillTypes or {}
+    if #fillTypes == 0 then
+        self.sc2Populated = true
+        return
+    end
+
+    -- Save focus context as safety guard
+    local savedFocusData = FocusManager.currentFocusData
+
+    self.sc2Rows = {}
+
+    for index, ft in ipairs(fillTypes) do
+        local row = template:clone(layout)
+
+        -- Alternating row color (clone doesn't fire onCreate)
+        local isEven = (index % 2 == 0)
+        row:setImageColor(nil, table.unpack(
+            InGameMenuSettingsFrame.COLOR_ALTERNATING[isEven]))
+
+        -- Set MultiTextOption texts to expiration options
+        local multiOption = row.elements[1]
+        if multiOption and self.optionTexts then
+            multiOption:setTexts(self.optionTexts)
+
+            -- Wire onClick closure with captured fillTypeName
+            local fillTypeName = ft.name
+            multiOption.onClickCallback = function(_target, state)
+                self:onFillTypeOptionChangedByName(fillTypeName, state)
+            end
+        end
+
+        -- Set fillType icon
+        local fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(ft.name)
+        local fillType = fillTypeIndex and g_fillTypeManager:getFillTypeByIndex(fillTypeIndex)
+        local iconElement = row.elements[2]
+        if iconElement then
+            if fillType and fillType.hudOverlayFilename then
+                iconElement:setImageFilename(fillType.hudOverlayFilename)
+                iconElement:setVisible(true)
+            else
+                iconElement:setVisible(false)
+            end
+        end
+
+        -- Set title to fillType title
+        local titleText = row.elements[3]
+        if titleText then
+            titleText:setText(ft.title)
+        end
+
+        -- Set tooltip
+        local tooltipElement = row:getDescendantByName("fillTypeTooltip")
+        if tooltipElement then
+            tooltipElement:setText(self:buildFillTypeTooltip(ft.name, fillType))
+        end
+
+        self.sc2Rows[index] = { row = row, multiOption = multiOption, fillTypeName = ft.name }
+    end
+
+    -- Restore focus context
+    FocusManager.currentFocusData = savedFocusData
+
+    -- Unlink template from layout and focus system
+    if template.parent then
+        template:unlinkElement()
+        FocusManager:removeElement(template)
+    end
+
+    layout:invalidateLayout()
+    self.sc2Populated = true
+
+    Log:trace("SETT CLONE SC2: %d rows cloned, template unlinked", #fillTypes)
+end
+
+--- Populate SC3 page by cloning one row per DLC/mod fillType
+function RmSettingsFrame:populateSc3()
+    local layout = self.sc3Layout
+    local template = self.sc3RowTemplate
+
+    if not template or not layout then return end
+
+    local fillTypes = RmSettingsFrame.dlcmodFillTypes or {}
+    if #fillTypes == 0 then
+        self.sc3Populated = true
+        return
+    end
+
+    -- Save focus context as safety guard
+    local savedFocusData = FocusManager.currentFocusData
+
+    self.sc3Rows = {}
+
+    for index, ft in ipairs(fillTypes) do
+        local row = template:clone(layout)
+
+        -- Alternating row color (clone doesn't fire onCreate)
+        local isEven = (index % 2 == 0)
+        row:setImageColor(nil, table.unpack(
+            InGameMenuSettingsFrame.COLOR_ALTERNATING[isEven]))
+
+        -- Set MultiTextOption texts to expiration options
+        local multiOption = row.elements[1]
+        if multiOption and self.optionTexts then
+            multiOption:setTexts(self.optionTexts)
+
+            -- Wire onClick closure with captured fillTypeName
+            local fillTypeName = ft.name
+            multiOption.onClickCallback = function(_target, state)
+                self:onFillTypeOptionChangedByName(fillTypeName, state)
+            end
+        end
+
+        -- Set fillType icon
+        local fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(ft.name)
+        local fillType = fillTypeIndex and g_fillTypeManager:getFillTypeByIndex(fillTypeIndex)
+        local iconElement = row.elements[2]
+        if iconElement then
+            if fillType and fillType.hudOverlayFilename then
+                iconElement:setImageFilename(fillType.hudOverlayFilename)
+                iconElement:setVisible(true)
+            else
+                iconElement:setVisible(false)
+            end
+        end
+
+        -- Set title to fillType title
+        local titleText = row.elements[3]
+        if titleText then
+            titleText:setText(ft.title)
+        end
+
+        -- Set tooltip
+        local tooltipElement = row:getDescendantByName("fillTypeTooltip")
+        if tooltipElement then
+            tooltipElement:setText(self:buildFillTypeTooltip(ft.name, fillType))
+        end
+
+        self.sc3Rows[index] = { row = row, multiOption = multiOption, fillTypeName = ft.name }
+    end
+
+    -- Restore focus context
+    FocusManager.currentFocusData = savedFocusData
+
+    -- Unlink template from layout and focus system
+    if template.parent then
+        template:unlinkElement()
+        FocusManager:removeElement(template)
+    end
+
+    layout:invalidateLayout()
+    self.sc3Populated = true
+
+    Log:trace("SETT CLONE SC3: %d rows cloned, template unlinked", #fillTypes)
+end
+
+-- =============================================================================
+-- TAB CLICK HANDLERS
+-- =============================================================================
+
+function RmSettingsFrame:onClickSettingsTab()
+    self.subCategoryPaging:setState(RmSettingsFrame.SUB_CATEGORY.SETTINGS, true)
+end
+
+function RmSettingsFrame:onClickExpirationTab()
+    self.subCategoryPaging:setState(RmSettingsFrame.SUB_CATEGORY.EXPIRATION, true)
+end
+
+function RmSettingsFrame:onClickDlcModTab()
+    self.subCategoryPaging:setState(RmSettingsFrame.SUB_CATEGORY.DLCMOD, true)
+end
+
+-- =============================================================================
+-- PAGE SWITCHING
+-- =============================================================================
+
+--- Page switching handler (called by MultiTextOption onClick)
+--- Follows base game InGameMenuSettingsFrame pattern: show/hide pages, bind slider, link focus, set focus
+---@param state number The paging state index
+function RmSettingsFrame:updateSubCategoryPages(state)
+    local idx = tonumber(self.subCategoryPaging.texts[state])
+    if idx == nil then return end
+
+    RmSettingsFrame.currentSubCategory = idx
+
+    -- Show/hide page containers
+    for index, page in ipairs(self.subCategoryPages) do
+        page:setVisible(index == idx)
+    end
+
+    -- Bind slider and link focus for pages with ScrollingLayout
+    local layout = nil
+    if idx == RmSettingsFrame.SUB_CATEGORY.SETTINGS then
+        layout = self.sc1Layout
+    elseif idx == RmSettingsFrame.SUB_CATEGORY.EXPIRATION then
+        layout = self.sc2Layout
+    elseif idx == RmSettingsFrame.SUB_CATEGORY.DLCMOD then
+        layout = self.sc3Layout
+    end
+
+    if layout then
+        self.settingsSlider:setDataElement(layout)
+
+        local firstFocusable = layout:findFirstFocusable(true)
+
+        -- Find last focusable element (reverse search, skips hidden preset-controlled rows)
+        local lastFocusable = nil
+        for i = #layout.elements, 1, -1 do
+            lastFocusable = layout.elements[i]:findFirstFocusable(true)
+            if lastFocusable then break end
+        end
+
+        -- Bidirectional links (linkElements is unidirectional per FS25 FocusManager)
+        if firstFocusable then
+            FocusManager:linkElements(self.subCategoryPaging, FocusManager.BOTTOM, firstFocusable)
+            FocusManager:linkElements(firstFocusable, FocusManager.TOP, self.subCategoryPaging)
+        end
+        if lastFocusable then
+            FocusManager:linkElements(self.subCategoryPaging, FocusManager.TOP, lastFocusable)
+            FocusManager:linkElements(lastFocusable, FocusManager.BOTTOM, self.subCategoryPaging)
+        end
+    end
+
+    -- Set focus to paging element (tab bar)
+    FocusManager:setFocus(self.subCategoryPaging)
 end
 
 -- =============================================================================
@@ -833,14 +791,17 @@ function RmSettingsFrame:isAdmin()
     return g_currentMission.isMasterUser == true
 end
 
+-- =============================================================================
+-- READONLY STATE
+-- =============================================================================
+
 --- Update disabled state of all controls based on admin status
 --- Non-admin clients get disabled controls (grayed out)
---- Uses module-level fillTypeSelectorsShared (works across all frame instances)
 function RmSettingsFrame:updateReadonlyState()
     local isAdmin = self:isAdmin()
     local disabled = not isAdmin
 
-    -- Disable global checkboxes
+    -- Disable SC1 global controls
     if self.checkEnableExpiration then
         self.checkEnableExpiration:setDisabled(disabled)
     end
@@ -854,32 +815,193 @@ function RmSettingsFrame:updateReadonlyState()
         local showWarnings = RmFreshSettings:getGlobal("showWarnings") ~= false
         self.warningHoursSelector:setDisabled(disabled or not showWarnings)
     end
+    if self.presetSelector then
+        self.presetSelector:setDisabled(disabled)
+    end
 
-    -- Disable all fillType selectors (using shared table)
-    -- Fix C: Disable selector and ALL its children (buttons have dynamic names in profiles)
-    local selectors = RmSettingsFrame.fillTypeSelectorsShared or {}
-    local selectorCount = 0
-    for fillTypeName, selector in pairs(selectors) do
-        selector:setDisabled(disabled)
-        selectorCount = selectorCount + 1
-        -- Disable all child elements (arrow buttons, etc.)
-        local children = selector.elements or {}
-        local childCount = 0
-        for _, child in ipairs(children) do
-            if child.setDisabled then
-                child:setDisabled(disabled)
-                childCount = childCount + 1
-            end
+    -- Disable fillType row selectors
+    self:updateFillTypeRowsDisabled(self.sc2Rows)
+    self:updateFillTypeRowsDisabled(self.sc3Rows)
+
+    Log:debug("SETT: readonly=%s (isAdmin=%s)", tostring(disabled), tostring(isAdmin))
+end
+
+--- Update disabled state on all fillType row selectors
+---@param rows table|nil Array of { row, multiOption, fillTypeName }
+function RmSettingsFrame:updateFillTypeRowsDisabled(rows)
+    if not rows then return end
+    local disabled = not self:isAdmin()
+    for _, rowData in ipairs(rows) do
+        if rowData and rowData.multiOption then
+            rowData.multiOption:setDisabled(disabled)
         end
-        -- DIAGNOSTIC: Log first few selectors to verify disable
-        if fillTypeName == "WHEAT" or fillTypeName == "BARLEY" then
-            Log:info("DIAG_DISABLE: %s selector=%s disabled=%s children=%d",
-                fillTypeName, tostring(selector), tostring(disabled), childCount)
+    end
+end
+
+-- =============================================================================
+-- RESET TO DEFAULTS
+-- =============================================================================
+
+function RmSettingsFrame:onResetDefaults()
+    if not self:isAdmin() then
+        return
+    end
+
+    YesNoDialog.show(
+        self.onResetConfirmed,
+        self,
+        g_i18n:getText("fresh_settings_resetConfirm"),
+        g_i18n:getText("ui_attention")
+    )
+end
+
+function RmSettingsFrame:onResetConfirmed(yes)
+    Log:debug("SETT: onResetConfirmed(yes=%s)", tostring(yes))
+
+    if not yes then
+        return
+    end
+
+    if g_server then
+        RmFreshSettings:resetAllOverrides()
+        RmSettingsFrame.pendingFillTypeChanges = {}
+        self:refreshData()
+        Log:info("SETT: Reset to defaults complete")
+    else
+        if RmSettingsChangeRequestEvent then
+            g_client:getServerConnection():sendEvent(
+                RmSettingsChangeRequestEvent.new("resetAll", nil, nil)
+            )
+        end
+    end
+end
+
+-- =============================================================================
+-- SETTINGS onClick HANDLERS
+-- =============================================================================
+
+function RmSettingsFrame:onClickPreset(state)
+    if RmSettingsFrame.isRefreshing then return end
+    if not self:isAdmin() then return end
+
+    local presetName = RmSettingsFrame.PRESET_OPTIONS[state]
+    if not presetName then
+        Log:warning("SETT: Invalid preset state %d", state)
+        return
+    end
+
+    Log:debug("SETT PRESET: -> %s", presetName)
+
+    if g_server then
+        if presetName ~= "custom" then
+            RmFreshSettings:clearRedundantOverrides()
+        end
+        RmFreshSettings:setGlobal("preset", presetName)
+        self:refreshData()
+    else
+        if RmSettingsChangeRequestEvent then
+            g_client:getServerConnection():sendEvent(
+                RmSettingsChangeRequestEvent.new("setGlobal", "preset", presetName)
+            )
+        end
+    end
+end
+
+function RmSettingsFrame:onClickEnableExpiration(state)
+    if RmSettingsFrame.isRefreshing then return end
+    if not self:isAdmin() then return end
+
+    local enabled = (state == 2)
+
+    if g_server then
+        RmFreshSettings:setGlobal("enableExpiration", enabled)
+    else
+        if RmSettingsChangeRequestEvent then
+            g_client:getServerConnection():sendEvent(
+                RmSettingsChangeRequestEvent.new("setGlobal", "enableExpiration", enabled)
+            )
+        end
+    end
+end
+
+function RmSettingsFrame:onClickShowWarnings(state)
+    if RmSettingsFrame.isRefreshing then return end
+    if not self:isAdmin() then return end
+
+    local enabled = (state == 2)
+
+    if g_server then
+        RmFreshSettings:setGlobal("showWarnings", enabled)
+    else
+        if RmSettingsChangeRequestEvent then
+            g_client:getServerConnection():sendEvent(
+                RmSettingsChangeRequestEvent.new("setGlobal", "showWarnings", enabled)
+            )
         end
     end
 
-    Log:debug("SETTINGS_UI: readonly=%s (isAdmin=%s, selectors=%d, self=%s)",
-        tostring(disabled), tostring(isAdmin), selectorCount, tostring(self))
+    if self.warningHoursSelector then
+        self.warningHoursSelector:setDisabled(not enabled)
+    end
+end
+
+function RmSettingsFrame:onClickWarningHours(state)
+    if RmSettingsFrame.isRefreshing then return end
+    if not self:isAdmin() then return end
+
+    local opt = RmSettingsFrame.WARNING_HOURS_OPTIONS[state]
+    if not opt then return end
+
+    if g_server then
+        RmFreshSettings:setGlobal("warningHours", opt.hours)
+    else
+        if RmSettingsChangeRequestEvent then
+            g_client:getServerConnection():sendEvent(
+                RmSettingsChangeRequestEvent.new("setGlobal", "warningHours", opt.hours)
+            )
+        end
+    end
+end
+
+function RmSettingsFrame:onClickShowAgeDisplay(state)
+    if RmSettingsFrame.isRefreshing then return end
+    if not self:isAdmin() then return end
+
+    local enabled = (state == 2)
+
+    if g_server then
+        RmFreshSettings:setGlobal("showAgeDisplay", enabled)
+    else
+        if RmSettingsChangeRequestEvent then
+            g_client:getServerConnection():sendEvent(
+                RmSettingsChangeRequestEvent.new("setGlobal", "showAgeDisplay", enabled)
+            )
+        end
+    end
+end
+
+-- =============================================================================
+-- FILLTYPE CHANGE HANDLER
+-- =============================================================================
+
+--- Callback when a fillType expiration option is changed (from closure)
+---@param fillTypeName string The fillType name (captured in closure)
+---@param state number The new option index
+function RmSettingsFrame:onFillTypeOptionChangedByName(fillTypeName, state)
+    if RmSettingsFrame.isRefreshing then return end
+    if not self:isAdmin() then return end
+
+    local option = RmSettingsFrame.EXPIRATION_OPTIONS[state]
+    if option == nil then
+        Log:warning("SETT: Invalid option state %d", state)
+        return
+    end
+
+    local action = option.expires == false and "setDoNotExpire" or "setExpiration"
+    RmSettingsFrame.pendingFillTypeChanges[fillTypeName] = {
+        action = action,
+        value = option.period,
+    }
 end
 
 -- =============================================================================
@@ -887,7 +1009,6 @@ end
 -- =============================================================================
 
 --- Called by XML onCreate attribute to apply alternating row colors
--- Uses InGameMenuSettingsFrame.COLOR_ALTERNATING from base game
 function RmSettingsFrame:onCreateSettingRow(element)
     element:setImageColor(nil, table.unpack(InGameMenuSettingsFrame.COLOR_ALTERNATING[self.isEvenRow]))
     self.isEvenRow = not self.isEvenRow

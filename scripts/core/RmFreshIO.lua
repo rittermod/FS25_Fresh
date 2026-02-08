@@ -30,7 +30,7 @@ RmFreshIO.FILE_LOG = "rm_FreshLog.xml"
 RmFreshIO.VERSION = 4
 
 --- Settings file format version for compatibility checks
-RmFreshIO.SETTINGS_VERSION = 1
+RmFreshIO.SETTINGS_VERSION = 2
 
 --- XML Schema for save format validation (registered on first use)
 --- Uses FS25 XMLSchema API for path validation and type checking
@@ -421,8 +421,8 @@ function RmFreshIO:loadSettings(filePath)
 
     local result = { global = {}, fillTypes = {} }
     local version = xmlFile:getInt("freshSettings#version", 1)
+    result._version = version
     Log:trace("LOAD_SETTINGS: version=%d", version)
-    -- Future: Add migration logic here when SETTINGS_VERSION > 1
 
     -- Parse global settings (optional section)
     xmlFile:iterate("freshSettings.global.setting", function(_, path)
@@ -517,6 +517,72 @@ function RmFreshIO:saveSettings(filePath, data)
 
     Log:debug("SAVE_SETTINGS: Saved %d global, %d fillTypes to %s", globalIdx, ftIdx, filePath)
     return true
+end
+
+-- =============================================================================
+-- SETTINGS MIGRATIONS
+-- =============================================================================
+
+--- Sequential settings migrations. Each function transforms data from version N to N+1.
+--- v1 save → runs [1], then [2] (future), etc. Adding v3 = just add [2].
+RmFreshIO.SETTINGS_MIGRATIONS = {
+    -- v1→v2: Default preset changed from "custom" to "normal"
+    -- v1 saved ALL fillTypes (not just overrides), so strip redundant ones first
+    [1] = function(data)
+        local loadedPreset = data.global["preset"]
+        if loadedPreset ~= "custom" and loadedPreset ~= nil then
+            Log:info("SETTINGS_MIGRATE v1->v2: Preset is '%s', keeping as-is", tostring(loadedPreset))
+            return
+        end
+
+        -- Strip fillType overrides that match mod defaults exactly
+        local stripped = 0
+        for name, override in pairs(data.fillTypes) do
+            local modDefault = RmFreshSettings.modDefaults[name]
+            if modDefault then
+                local redundant = false
+                if override.expires == false and modDefault.expires == false then
+                    redundant = true
+                elseif override.period and modDefault.period
+                       and override.period == modDefault.period then
+                    redundant = true
+                end
+                if redundant then
+                    data.fillTypes[name] = nil
+                    stripped = stripped + 1
+                end
+            end
+        end
+
+        -- Check if any genuinely different overrides remain
+        if next(data.fillTypes) ~= nil then
+            data.global["preset"] = "custom"
+            local remaining = RmFreshSettings:tableCount(data.fillTypes)
+            Log:info("SETTINGS_MIGRATE v1->v2: %d custom overrides (stripped %d redundant), keeping custom",
+                remaining, stripped)
+        else
+            data.global["preset"] = nil  -- falls through to new default "normal"
+            Log:info("SETTINGS_MIGRATE v1->v2: All %d overrides matched defaults, preset migrated to normal",
+                stripped)
+        end
+    end,
+    -- Future: [2] = function(data) ... end,  -- v2→v3
+}
+
+--- Run sequential settings migrations from loaded version to current
+---@param data table Settings data with _version field
+function RmFreshIO:migrateSettingsData(data)
+    local version = data._version or 1
+    if version >= self.SETTINGS_VERSION then
+        return
+    end
+
+    Log:info("SETTINGS_MIGRATE: Migrating from v%d to v%d", version, self.SETTINGS_VERSION)
+    while self.SETTINGS_MIGRATIONS[version] do
+        self.SETTINGS_MIGRATIONS[version](data)
+        version = version + 1
+    end
+    data._version = self.SETTINGS_VERSION
 end
 
 -- =============================================================================
