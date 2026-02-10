@@ -27,13 +27,17 @@ Fresh tracks your products using a batch system - each harvest or production run
 ### Fresh Menu (Right Shift+F)
 - **Inventory Overview**: See all perishables at a glance with oldest ages
 - **Loss Statistics**: Track what you've lost and when
+- **Shelf Life**: List all perishable products with their active shelf life
 - **Settings**: Customize shelf lives for any product
 
 ### Settings & Customization
+- Difficulty presets (Very Easy/Easy/Normal/Hard) - adjust all shelf lives at once, or use Custom for individual control
 - Configure shelf life for any product (basegame, DLCs, maps/mods)
+- Products organized by basegame vs DLC & Mods tabs
 - Enable/disable expiration globally or per-product
 - Configurable warning threshold (6h/12h/24h/48h/72h) - choose when expiry warnings appear
 - Toggle age distribution display on/off
+- Reset all settings to defaults with one click
 - Per-savegame settings
 - Multiplayer: host/admin controls settings for all players
 
@@ -44,6 +48,7 @@ Fresh tracks your products using a batch system - each harvest or production run
 
 ### Perishable products
 - 100+ products with realistic shelf lives (fresh produce spoils in days, grains last months, canned products up to 3 years)
+- 130+ non-expiring products pre-configured (animals, wood, fuel, manufactured goods, etc.)
 - 4 bale types: Fresh Grass (days), Hay (18 months), Straw (24 months), Silage (12 months)
 - Wrapped grass bales begin aging after fermentation completes
 
@@ -72,7 +77,21 @@ Fresh tracks your products using a batch system - each harvest or production run
 
 - No loose item tracking (loose grass, grains, etc on the ground)
 
+## Known Issues
+
+**General:**
+- Store-bought pallets may show double the actual amount
+
+**Multiplayer:**
+- Clients may not see "Expires in" info when looking at bales
+
+**Edge Cases:**
+- Silo extensions are tracked separately rather than as a shared pool
+
 ## Installation
+
+### From itch.io
+1. Download the latest release from [itch.io](https://rittermod.itch.io/fs25-fresh)
 
 ### From GitHub Releases
 1. Download the latest release from [Releases](https://github.com/rittermod/FS25_Fresh/releases)
@@ -101,6 +120,18 @@ Fresh tracks your products using a batch system - each harvest or production run
 - **Platform**: PC (Windows/macOS)
 
 ## Changelog
+
+### 0.9.0.0 (Beta - 2026-02-09)
+- Added Shelf Life tab to Fresh Menu - list all perishable products with their active shelf life
+- Added difficulty presets (Very Easy/Easy/Normal/Hard/Custom) - adjust all shelf lives with a single setting
+- Reorganized Settings into tabbed pages: general settings, basegame products, and DLC & Mods products
+- Added "Reset to Defaults" button to restore all settings to mod defaults
+- Added fill type source detection - tooltips now show whether a product is from basegame, DLC, mod, or map
+- Expanded default configuration with 130+ non-expiring fill types (animals, wood, fuel, manufactured goods, etc.)
+- Added more expiration period options (4 months, 5 months, 1.5 years, 5 years)
+- Improved settings list by hiding irrelevant fill types (animals, cut crops, fuels, intermediates, etc.) - reduced visible list from 200+ to ~100 relevant products
+- Added French localization
+- Added Swedish localization
 
 ### 0.8.1.0 (Beta - 2026-01-31)
 - Fixed products changed to "never expire" still showing as expiring in overview, HUD, and age display

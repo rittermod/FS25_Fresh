@@ -273,7 +273,7 @@ function RmFreshAgeDisplay.buildRows(containers)
     for fillTypeName, data in pairs(byFillType) do
         local fillTypeIndex = data.fillTypeIndex
 
-        -- Skip non-perishable fill types (RIT-192)
+        -- Skip non-perishable fill types
         if fillTypeIndex and RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
             -- Get expiration threshold
             local config = RmFreshSettings:getThresholdByIndex(fillTypeIndex)
