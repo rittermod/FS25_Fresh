@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<l10n>
+    <texts>
+        <!-- Expires in display -->
+        <text name="fresh_expires_in" text="Expire dans"/>
+        <text name="fresh_expires_hour" text="1 heure"/>
+        <text name="fresh_expires_hours" text="%d heures"/>
+        <text name="fresh_expires_day" text="1 jour"/>
+        <text name="fresh_expires_days" text="%d jours"/>
+        <text name="fresh_expires_month" text="1 mois"/>
+        <text name="fresh_expires_months" text="%.1f mois"/>
+
+        <!-- Status messages -->
+        <text name="fresh_expired" text="Périmé"/>
+        <text name="fresh_near_expiration" text="Proche de la péremption"/>
+
+        <!-- Daily loss notification (summary at day change) -->
+        <text name="fresh_dailyLossNotification" text="Perdu %.0f unités périmées"/>
+
+        <!-- Storage HUD (used by both placeable storage and husbandry feed) -->
+        <text name="fresh_storage_expiring" text="-%d dans %s"/>
+        <text name="fresh_storage_expiring_volume" text="-%s dans %s"/>
+        <text name="fresh_vehicle_expiring_volume" text="-%s"/>
+
+        <!-- Age Distribution HUD -->
+        <text name="fresh_age_display_title" text="Fraîcheur"/>
+
+        <!-- Fresh Menu keybind -->
+        <text name="input_RM_FRESH_MENU" text="Menu Fraîcheur"/>
+
+        <!-- Overview tab -->
+        <text name="fresh_overview_title" text="Prévisualisation Fraîcheur"/>
+
+        <!-- Settings tab -->
+        <text name="fresh_settings_title" text="Paramètres Fraîcheur"/>
+
+        <!-- Settings expiration duration options -->
+        <text name="fresh_expire_never" text="N'expire jamais"/>
+        <text name="fresh_expire_1_month" text="1 mois"/>
+        <text name="fresh_expire_2_months" text="2 mois"/>
+        <text name="fresh_expire_3_months" text="3 mois"/>
+        <text name="fresh_expire_4_months" text="4 mois"/>
+        <text name="fresh_expire_5_months" text="5 mois"/>
+        <text name="fresh_expire_6_months" text="6 mois"/>
+        <text name="fresh_expire_9_months" text="9 mois"/>
+        <text name="fresh_expire_1_year" text="1 an"/>
+        <text name="fresh_expire_1_5_years" text="1,5 ans"/>
+        <text name="fresh_expire_2_years" text="2 ans"/>
+        <text name="fresh_expire_3_years" text="3 ans"/>
+        <text name="fresh_expire_5_years" text="5 ans"/>
+
+        <!-- Settings global section -->
+        <text name="fresh_settings_global" text="Paramètres globaux"/>
+        <text name="fresh_settings_enableExpiration" text="Activer expiration"/>
+        <text name="fresh_settings_enableExpiration_tooltip" text="Si activée, les denrées périssables vieilliront et périmeront si pas utilisées/vendues avant."/>
+        <text name="fresh_settings_showWarnings" text="Montrer notifications"/>
+        <text name="fresh_settings_showWarnings_tooltip" text="Montrer une alerte quand un produit est sur le point de périmer."/>
+        <text name="fresh_settings_showAgeDisplay" text="Montrer barre d'état de fraîcheur"/>
+        <text name="fresh_settings_showAgeDisplay_tooltip" text="Montrer la barre quand proche du stockage."/>
+        <text name="fresh_settings_warningHours" text="Seuil d'alerte"/>
+        <text name="fresh_settings_warningHours_tooltip" text="Montrer une alerte quand un produit périmera au-delà de cette durée. Un produit à la durée de vie courte montrera toujours qu'il va périmer."/>
+        <text name="fresh_warning_6h" text="6 heures"/>
+        <text name="fresh_warning_12h" text="12 heures"/>
+        <text name="fresh_warning_24h" text="24 heures"/>
+        <text name="fresh_warning_48h" text="48 heures"/>
+        <text name="fresh_warning_72h" text="72 heures"/>
+        <text name="fresh_settings_fillTypes" text="Temps d'expiration"/>
+
+        <!-- Settings reset button -->
+        <text name="fresh_settings_resetDefaults" text="Paramètres par défaut"/>
+        <text name="fresh_settings_resetConfirm" text="Remettre tous les paramètres du mod par défaut ? Ne peut être annulé."/>
+        <text name="fresh_settings_reset" text="Paramètres de la remise à l'état par défaut du mod"/>
+
+        <!-- Status Frame / Inventory Overview -->
+        <text name="fresh_inventory_title" text="Prévisualisation inventaire"/>
+        <text name="fresh_inventory_summary" text="Total: %d types de produits dans %d conteneurs"/>
+        <text name="fresh_inventory_empty" text="Aucun produit périssable suivi"/>
+        <text name="fresh_no_farm" text="Aucune ferme sélectionnée. Rejoignez une ferme pour voir l'inventaire."/>
+        <text name="fresh_column_type" text="Produit"/>
+        <text name="fresh_column_amount" text="Quantité"/>
+        <text name="fresh_column_expiring" text="Proche de la péremption"/>
+        <text name="fresh_column_age" text="Prochaine date d'expiration"/>
+        <text name="fresh_column_status" text="Etat"/>
+        <text name="fresh_status_ok" text="OK"/>
+        <text name="fresh_status_expiring" text="Proche de la péremption"/>
+        <text name="fresh_sort_label" text="Trier par"/>
+        <text name="fresh_sort_by_type" text="Type"/>
+        <text name="fresh_sort_by_expiring" text="Quantité proche de la péremption"/>
+        <text name="fresh_sort_by_age" text="date d'expiration"/>
+
+        <!-- Expiring Soon table -->
+        <text name="fresh_expires_within" text="Expire dans un délai de"/>
+        <text name="fresh_expires_24h" text="24 heures"/>
+        <text name="fresh_expires_48h" text="48 heures"/>
+        <text name="fresh_expires_72h" text="72 heures"/>
+        <text name="fresh_column_storage" text="Stockage"/>
+        <text name="fresh_column_timeleft" text="Temps restant"/>
+        <text name="fresh_expiring_empty" text="Rien de proche de la péremption actuellement"/>
+        <text name="fresh_expiring_summary" text="%d élément (%.0f L total)"/>
+        <text name="fresh_expires_soon" text="&lt; 1 heure"/>
+
+        <!-- Statistics Frame -->
+        <text name="fresh_stats_title" text="Statistiques de pertes"/>
+        <text name="fresh_stats_today" text="Perte aujourd'hui"/>
+        <text name="fresh_stats_month" text="Perte ce mois"/>
+        <text name="fresh_stats_12months" text="Perte les 12 derniers mois"/>
+        <text name="fresh_stats_total" text="Perte totale"/>
+        <text name="fresh_stats_breakdown" text="Produits perdus les 12 derniers mois"/>
+        <text name="fresh_stats_recent" text="Perte récente"/>
+        <text name="fresh_stats_breakdown_empty" text="Aucune perte recensée"/>
+        <text name="fresh_stats_log_empty" text="Aucune perte recente"/>
+        <text name="fresh_column_product" text="Produit"/>
+        <text name="fresh_column_amount_lost" text="Quantité"/>
+        <text name="fresh_column_value" text="Valeur"/>
+        <text name="fresh_column_datetime" text="Date/heure"/>
+    </texts>
+</l10n>
