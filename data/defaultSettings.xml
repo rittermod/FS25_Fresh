@@ -7,19 +7,30 @@
 
     Format (unified for mod defaults and user overrides):
         <freshSettings version="2">
+            <categories>
+                <category name="ANIMAL" hidden="true"/>  - Hide entire FS25 fillType category
+            </categories>
             <fillTypes>
                 <fillType name="NAME" period="X"/>  - Expires in X months
                 <fillType name="NAME" expires="false"/>  - Explicitly does NOT expire
+                <fillType name="NAME" expires="false" hidden="true"/>  - Non-expiring AND hidden from settings UI
             </fillTypes>
         </freshSettings>
 
     FillTypes not listed default to "do not expire".
+    Categories auto-hide all fillTypes in that FS25 category (including mod-added ones).
 
     UI-supported values: 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 9.0, 12.0, 18.0, 24.0, 36.0, 60.0
     Values are research-based with adjustments for playability.
     Sources: USDA FoodKeeper, Whole Grains Council, FDA Seafood Safety
 -->
 <freshSettings version="2">
+    <!-- Auto-hide entire FS25 fillType categories (catches mod-added fillTypes too) -->
+    <categories>
+        <category name="ANIMAL" hidden="true"/>
+        <category name="HORSE" hidden="true"/>
+    </categories>
+
     <fillTypes>
 
         <!-- ===================================================================== -->
@@ -147,7 +158,6 @@
         <!-- ===================================================================== -->
         <fillType name="ONION" period="3.0"/>
         <fillType name="ONIONBAG" period="3.0"/>
-        <fillType name="ONION_DIRTY" period="4.0"/>
         <fillType name="SUGARBEET" period="5.0"/>
 
         <!-- ===================================================================== -->
@@ -206,93 +216,95 @@
         <!-- ===================================================================== -->
         <fillType name="GRASS_WINDROW" period="1.0"/>
         <fillType name="DRYGRASS_WINDROW" period="18.0"/>
-        <fillType name="GRASS" period="1.0"/>
-        <fillType name="DRYGRASS" period="18.0"/>
 
         <!-- ===================================================================== -->
-        <!-- NON-EXPIRING: Cut crops                                               -->
+        <!-- NON-EXPIRING: Cut crops & intermediates (hidden)                      -->
         <!-- ===================================================================== -->
-        <fillType name="BARLEY_CUT" expires="false"/>
-        <fillType name="CANOLA_CUT" expires="false"/>
-        <fillType name="OAT_CUT" expires="false"/>
-        <fillType name="SOYBEAN_CUT" expires="false"/>
-        <fillType name="WHEAT_CUT" expires="false"/>
+        <fillType name="GRASS" expires="false" hidden="true"/>
+        <fillType name="MEADOW" expires="false" hidden="true"/>
+        <fillType name="DRYGRASS" expires="false" hidden="true"/>
+        <fillType name="ONION_DIRTY" expires="false" hidden="true"/>
+        <fillType name="BARLEY_CUT" expires="false" hidden="true"/>
+        <fillType name="CANOLA_CUT" expires="false" hidden="true"/>
+        <fillType name="OAT_CUT" expires="false" hidden="true"/>
+        <fillType name="SOYBEAN_CUT" expires="false" hidden="true"/>
+        <fillType name="WHEAT_CUT" expires="false" hidden="true"/>
 
         <!-- ===================================================================== -->
-        <!-- NON-EXPIRING: Animals                                                 -->
+        <!-- NON-EXPIRING: Animals (hidden - not relevant to freshness)            -->
         <!-- ===================================================================== -->
-        <fillType name="CHICKEN" expires="false"/>
-        <fillType name="CHICKEN_ROOSTER" expires="false"/>
-        <fillType name="GOAT" expires="false"/>
-        <fillType name="COW_ANGUS" expires="false"/>
-        <fillType name="COW_HIGHLAND_CATTLE" expires="false"/>
-        <fillType name="COW_HOLSTEIN" expires="false"/>
-        <fillType name="COW_LIMOUSIN" expires="false"/>
-        <fillType name="COW_SWISS_BROWN" expires="false"/>
-        <fillType name="COW_WATERBUFFALO" expires="false"/>
-        <fillType name="HORSE_BAY" expires="false"/>
-        <fillType name="HORSE_BLACK" expires="false"/>
-        <fillType name="HORSE_CHESTNUT" expires="false"/>
-        <fillType name="HORSE_DUN" expires="false"/>
-        <fillType name="HORSE_GRAY" expires="false"/>
-        <fillType name="HORSE_PALOMINO" expires="false"/>
-        <fillType name="HORSE_PINTO" expires="false"/>
-        <fillType name="HORSE_SEAL_BROWN" expires="false"/>
-        <fillType name="PIG_BERKSHIRE" expires="false"/>
-        <fillType name="PIG_BLACK_PIED" expires="false"/>
-        <fillType name="PIG_LANDRACE" expires="false"/>
-        <fillType name="SHEEP_BLACK_WELSH" expires="false"/>
-        <fillType name="SHEEP_LANDRACE" expires="false"/>
-        <fillType name="SHEEP_STEINSCHAF" expires="false"/>
-        <fillType name="SHEEP_SWISS_MOUNTAIN" expires="false"/>
+        <fillType name="CHICKEN" expires="false" hidden="true"/>
+        <fillType name="CHICKEN_ROOSTER" expires="false" hidden="true"/>
+        <fillType name="GOAT" expires="false" hidden="true"/>
+        <fillType name="COW_ANGUS" expires="false" hidden="true"/>
+        <fillType name="COW_HIGHLAND_CATTLE" expires="false" hidden="true"/>
+        <fillType name="COW_HOLSTEIN" expires="false" hidden="true"/>
+        <fillType name="COW_LIMOUSIN" expires="false" hidden="true"/>
+        <fillType name="COW_SWISS_BROWN" expires="false" hidden="true"/>
+        <fillType name="COW_WATERBUFFALO" expires="false" hidden="true"/>
+        <fillType name="HORSE_BAY" expires="false" hidden="true"/>
+        <fillType name="HORSE_BLACK" expires="false" hidden="true"/>
+        <fillType name="HORSE_CHESTNUT" expires="false" hidden="true"/>
+        <fillType name="HORSE_DUN" expires="false" hidden="true"/>
+        <fillType name="HORSE_GRAY" expires="false" hidden="true"/>
+        <fillType name="HORSE_PALOMINO" expires="false" hidden="true"/>
+        <fillType name="HORSE_PINTO" expires="false" hidden="true"/>
+        <fillType name="HORSE_SEAL_BROWN" expires="false" hidden="true"/>
+        <fillType name="PIG_BERKSHIRE" expires="false" hidden="true"/>
+        <fillType name="PIG_BLACK_PIED" expires="false" hidden="true"/>
+        <fillType name="PIG_LANDRACE" expires="false" hidden="true"/>
+        <fillType name="SHEEP_BLACK_WELSH" expires="false" hidden="true"/>
+        <fillType name="SHEEP_LANDRACE" expires="false" hidden="true"/>
+        <fillType name="SHEEP_STEINSCHAF" expires="false" hidden="true"/>
+        <fillType name="SHEEP_SWISS_MOUNTAIN" expires="false" hidden="true"/>
 
         <!-- ===================================================================== -->
-        <!-- NON-EXPIRING: Bales & wrapping                                        -->
+        <!-- NON-EXPIRING: Bales & wrapping (hidden - not relevant to freshness)   -->
         <!-- ===================================================================== -->
-        <fillType name="BALE_NET" expires="false"/>
-        <fillType name="BALE_TWINE" expires="false"/>
-        <fillType name="BALE_WRAP" expires="false"/>
-        <fillType name="ROUNDBALE" expires="false"/>
-        <fillType name="ROUNDBALE_COTTON" expires="false"/>
-        <fillType name="ROUNDBALE_DRYGRASS" expires="false"/>
-        <fillType name="ROUNDBALE_GRASS" expires="false"/>
-        <fillType name="ROUNDBALE_WOOD" expires="false"/>
-        <fillType name="SQUAREBALE" expires="false"/>
-        <fillType name="SQUAREBALE_COTTON" expires="false"/>
-        <fillType name="SQUAREBALE_DRYGRASS" expires="false"/>
-        <fillType name="SQUAREBALE_GRASS" expires="false"/>
-        <fillType name="SQUAREBALE_WOOD" expires="false"/>
+        <fillType name="BALE_NET" expires="false" hidden="true"/>
+        <fillType name="BALE_TWINE" expires="false" hidden="true"/>
+        <fillType name="BALE_WRAP" expires="false" hidden="true"/>
+        <fillType name="ROUNDBALE" expires="false" hidden="true"/>
+        <fillType name="ROUNDBALE_COTTON" expires="false" hidden="true"/>
+        <fillType name="ROUNDBALE_DRYGRASS" expires="false" hidden="true"/>
+        <fillType name="ROUNDBALE_GRASS" expires="false" hidden="true"/>
+        <fillType name="ROUNDBALE_WOOD" expires="false" hidden="true"/>
+        <fillType name="SQUAREBALE" expires="false" hidden="true"/>
+        <fillType name="SQUAREBALE_COTTON" expires="false" hidden="true"/>
+        <fillType name="SQUAREBALE_DRYGRASS" expires="false" hidden="true"/>
+        <fillType name="SQUAREBALE_GRASS" expires="false" hidden="true"/>
+        <fillType name="SQUAREBALE_WOOD" expires="false" hidden="true"/>
 
         <!-- ===================================================================== -->
-        <!-- NON-EXPIRING: Wood & construction                                     -->
+        <!-- NON-EXPIRING: Wood & construction (hidden - not relevant to freshness)-->
         <!-- ===================================================================== -->
-        <fillType name="BOARDS" expires="false"/>
-        <fillType name="PLANKS" expires="false"/>
-        <fillType name="WOODBEAM" expires="false"/>
-        <fillType name="WOOD" expires="false"/>
-        <fillType name="WOODCHIPS" expires="false"/>
-        <fillType name="POPLAR" expires="false"/>
-        <fillType name="PREFABWALL" expires="false"/>
-        <fillType name="CEMENT" expires="false"/>
-        <fillType name="CEMENTBRICKS" expires="false"/>
+        <fillType name="BOARDS" expires="false" hidden="true"/>
+        <fillType name="PLANKS" expires="false" hidden="true"/>
+        <fillType name="WOODBEAM" expires="false" hidden="true"/>
+        <fillType name="WOOD" expires="false" hidden="true"/>
+        <fillType name="WOODCHIPS" expires="false" hidden="true"/>
+        <fillType name="POPLAR" expires="false" hidden="true"/>
+        <fillType name="PREFABWALL" expires="false" hidden="true"/>
+        <fillType name="CEMENT" expires="false" hidden="true"/>
+        <fillType name="CEMENTBRICKS" expires="false" hidden="true"/>
 
         <!-- ===================================================================== -->
-        <!-- NON-EXPIRING: Manufactured goods                                      -->
+        <!-- NON-EXPIRING: Manufactured goods (hidden - not relevant to freshness) -->
         <!-- ===================================================================== -->
-        <fillType name="BARREL" expires="false"/>
-        <fillType name="BATHTUB" expires="false"/>
-        <fillType name="BUCKET" expires="false"/>
-        <fillType name="CARTONROLL" expires="false"/>
-        <fillType name="CLOTHES" expires="false"/>
-        <fillType name="FABRIC" expires="false"/>
-        <fillType name="FURNITURE" expires="false"/>
-        <fillType name="PAPERROLL" expires="false"/>
-        <fillType name="PIANO" expires="false"/>
-        <fillType name="ROOFPLATES" expires="false"/>
-        <fillType name="ROPE" expires="false"/>
-        <fillType name="TARP" expires="false"/>
-        <fillType name="TOYTRACTOR" expires="false"/>
-        <fillType name="WAGON" expires="false"/>
+        <fillType name="BARREL" expires="false" hidden="true"/>
+        <fillType name="BATHTUB" expires="false" hidden="true"/>
+        <fillType name="BUCKET" expires="false" hidden="true"/>
+        <fillType name="CARTONROLL" expires="false" hidden="true"/>
+        <fillType name="CLOTHES" expires="false" hidden="true"/>
+        <fillType name="FABRIC" expires="false" hidden="true"/>
+        <fillType name="FURNITURE" expires="false" hidden="true"/>
+        <fillType name="PAPERROLL" expires="false" hidden="true"/>
+        <fillType name="PIANO" expires="false" hidden="true"/>
+        <fillType name="ROOFPLATES" expires="false" hidden="true"/>
+        <fillType name="ROPE" expires="false" hidden="true"/>
+        <fillType name="TARP" expires="false" hidden="true"/>
+        <fillType name="TOYTRACTOR" expires="false" hidden="true"/>
+        <fillType name="WAGON" expires="false" hidden="true"/>
 
         <!-- ===================================================================== -->
         <!-- NON-EXPIRING: Farm supplies & chemicals                               -->
@@ -303,41 +315,41 @@
         <fillType name="LIQUIDFERTILIZER" expires="false"/>
         <fillType name="MINERAL_FEED" expires="false"/>
         <fillType name="SILAGE_ADDITIVE" expires="false"/>
-        <fillType name="LIQUIDSEEDTREATMENT" expires="false"/>
+        <fillType name="LIQUIDSEEDTREATMENT" expires="false" hidden="true"/>
 
         <!-- ===================================================================== -->
         <!-- NON-EXPIRING: Natural resources & byproducts                          -->
         <!-- ===================================================================== -->
         <fillType name="COTTON" expires="false"/>
-        <fillType name="STONE" expires="false"/>
-        <fillType name="TREE" expires="false"/>
-        <fillType name="WEED" expires="false"/>
+        <fillType name="STONE" expires="false" hidden="true"/>
+        <fillType name="TREE" expires="false" hidden="true"/>
+        <fillType name="WEED" expires="false" hidden="true"/>
         <fillType name="WOOL" expires="false"/>
-        <fillType name="OILSEEDRADISH" expires="false"/>
+        <fillType name="OILSEEDRADISH" expires="false" hidden="true"/>
         <fillType name="MANURE" expires="false"/>
         <fillType name="LIQUIDMANURE" expires="false"/>
         <fillType name="DIGESTATE" expires="false"/>
 
         <!-- ===================================================================== -->
-        <!-- NON-EXPIRING: Fuel, energy & misc                                     -->
+        <!-- NON-EXPIRING: Fuel, energy & misc (hidden - not relevant to freshness)-->
         <!-- ===================================================================== -->
-        <fillType name="AIR" expires="false"/>
-        <fillType name="DIESEL" expires="false"/>
-        <fillType name="DEF" expires="false"/>
-        <fillType name="ELECTRICCHARGE" expires="false"/>
-        <fillType name="METHANE" expires="false"/>
-        <fillType name="SNOW" expires="false"/>
-        <fillType name="ROADSALT" expires="false"/>
-        <fillType name="WATER" expires="false"/>
+        <fillType name="AIR" expires="false" hidden="true"/>
+        <fillType name="DIESEL" expires="false" hidden="true"/>
+        <fillType name="DEF" expires="false" hidden="true"/>
+        <fillType name="ELECTRICCHARGE" expires="false" hidden="true"/>
+        <fillType name="METHANE" expires="false" hidden="true"/>
+        <fillType name="SNOW" expires="false" hidden="true"/>
+        <fillType name="ROADSALT" expires="false" hidden="true"/>
+        <fillType name="WATER" expires="false" hidden="true"/>
 
         <!-- ===================================================================== -->
         <!-- NON-EXPIRING: DLC fill types                                          -->
         <!-- ===================================================================== -->
-        <fillType name="COAL" expires="false"/>
-        <fillType name="CASTLEROCK" expires="false"/>
-        <fillType name="STONEBIG" expires="false"/>
-        <fillType name="SHINGLEROOF" expires="false"/>
-        <fillType name="MEADOW" expires="false"/>
+        <fillType name="COAL" expires="false" hidden="true"/>
+        <fillType name="CASTLEROCK" expires="false" hidden="true"/>
+        <fillType name="STONEBIG" expires="false" hidden="true"/>
+        <fillType name="SHINGLEROOF" expires="false" hidden="true"/>
+
 
     </fillTypes>
 </freshSettings>

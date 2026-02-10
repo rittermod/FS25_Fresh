@@ -52,7 +52,7 @@ RmFreshIO.logSchema = nil
 --- Uses FS25 XMLSchema API for path registration and type validation
 function RmFreshIO.registerSchema()
     if RmFreshIO.xmlSchema ~= nil then
-        return  -- Already registered
+        return -- Already registered
     end
 
     local schema = XMLSchema.new("freshData")
@@ -107,7 +107,7 @@ end
 --- Unified format for both mod defaults and user overrides
 function RmFreshIO.registerSettingsSchema()
     if RmFreshIO.settingsSchema ~= nil then
-        return  -- Already registered
+        return -- Already registered
     end
 
     local schema = XMLSchema.new("freshSettings")
@@ -119,10 +119,15 @@ function RmFreshIO.registerSettingsSchema()
     schema:register(XMLValueType.STRING, "freshSettings.global.setting(?)#name", "Setting name")
     schema:register(XMLValueType.STRING, "freshSettings.global.setting(?)#value", "Setting value")
 
+    -- Category settings (auto-hide entire FS25 fillType categories)
+    schema:register(XMLValueType.STRING, "freshSettings.categories.category(?)#name", "Category name")
+    schema:register(XMLValueType.STRING, "freshSettings.categories.category(?)#hidden", "Hidden from UI")
+
     -- FillType settings
     schema:register(XMLValueType.STRING, "freshSettings.fillTypes.fillType(?)#name", "FillType name")
     schema:register(XMLValueType.FLOAT, "freshSettings.fillTypes.fillType(?)#period", "Expiration period")
     schema:register(XMLValueType.STRING, "freshSettings.fillTypes.fillType(?)#expires", "Expires flag")
+    schema:register(XMLValueType.STRING, "freshSettings.fillTypes.fillType(?)#hidden", "Hidden from UI")
 
     RmFreshIO.settingsSchema = schema
     Log:debug("SCHEMA_REGISTER: Fresh settings format v%d schema registered", RmFreshIO.SETTINGS_VERSION)
@@ -132,7 +137,7 @@ end
 --- Called once on first log load/save operation
 function RmFreshIO.registerLogSchema()
     if RmFreshIO.logSchema ~= nil then
-        return  -- Already registered
+        return -- Already registered
     end
 
     local schema = XMLSchema.new("freshLog")
@@ -419,10 +424,20 @@ function RmFreshIO:loadSettings(filePath)
         return { global = {}, fillTypes = {} }
     end
 
-    local result = { global = {}, fillTypes = {} }
+    local result = { global = {}, fillTypes = {}, categories = {} }
     local version = xmlFile:getInt("freshSettings#version", 1)
     result._version = version
     Log:trace("LOAD_SETTINGS: version=%d", version)
+
+    -- Parse categories (optional section, auto-hide entire FS25 fillType categories)
+    xmlFile:iterate("freshSettings.categories.category", function(_, path)
+        local name = xmlFile:getString(path .. "#name")
+        local hidden = xmlFile:getString(path .. "#hidden")
+        if name and hidden == "true" then
+            result.categories[name] = { hidden = true }
+            Log:trace("LOAD_SETTINGS: category %s = hidden", name)
+        end
+    end)
 
     -- Parse global settings (optional section)
     xmlFile:iterate("freshSettings.global.setting", function(_, path)
@@ -444,10 +459,19 @@ function RmFreshIO:loadSettings(filePath)
     xmlFile:iterate("freshSettings.fillTypes.fillType", function(_, path)
         local name = xmlFile:getString(path .. "#name")
         if name then
+            local hidden = xmlFile:getString(path .. "#hidden")
             local expires = xmlFile:getString(path .. "#expires")
             local period = xmlFile:getFloat(path .. "#period", nil)
 
-            if expires == "false" then
+            if hidden == "true" then
+                if period and period > 0 then
+                    Log:warning(
+                    "LOAD_SETTINGS: %s has both period=%.2f and hidden=true (treating as hidden, non-expiring)", name,
+                        period)
+                end
+                result.fillTypes[name] = { expires = false, hidden = true }
+                Log:trace("LOAD_SETTINGS: %s = hidden (non-expiring, excluded from UI)", name)
+            elseif expires == "false" then
                 result.fillTypes[name] = { expires = false }
                 Log:trace("LOAD_SETTINGS: %s = expires=false", name)
             elseif period and period > 0 then
@@ -462,8 +486,9 @@ function RmFreshIO:loadSettings(filePath)
 
     xmlFile:delete()
 
-    Log:debug("LOAD_SETTINGS: Loaded %d global, %d fillTypes from %s",
-        self:countTable(result.global), self:countTable(result.fillTypes), filePath)
+    Log:debug("LOAD_SETTINGS: Loaded %d global, %d fillTypes, %d hidden categories from %s",
+        self:countTable(result.global), self:countTable(result.fillTypes),
+        self:countTable(result.categories), filePath)
     return result
 end
 
@@ -544,7 +569,7 @@ RmFreshIO.SETTINGS_MIGRATIONS = {
                 if override.expires == false and modDefault.expires == false then
                     redundant = true
                 elseif override.period and modDefault.period
-                       and override.period == modDefault.period then
+                    and override.period == modDefault.period then
                     redundant = true
                 end
                 if redundant then
@@ -561,7 +586,7 @@ RmFreshIO.SETTINGS_MIGRATIONS = {
             Log:info("SETTINGS_MIGRATE v1->v2: %d custom overrides (stripped %d redundant), keeping custom",
                 remaining, stripped)
         else
-            data.global["preset"] = nil  -- falls through to new default "normal"
+            data.global["preset"] = nil -- falls through to new default "normal"
             Log:info("SETTINGS_MIGRATE v1->v2: All %d overrides matched defaults, preset migrated to normal",
                 stripped)
         end
@@ -707,8 +732,8 @@ function RmFreshIO:load(savegameDir)
             id = containerId,
             entityType = entityType,
             identityMatch = identityMatch,
-            runtimeEntity = nil,  -- CRITICAL: Set during reconciliation
-            fillTypeIndex = nil,  -- CRITICAL: Resolved at runtime
+            runtimeEntity = nil, -- CRITICAL: Set during reconciliation
+            fillTypeIndex = nil, -- CRITICAL: Resolved at runtime
             batches = {},
             farmId = 0,
             metadata = {}
@@ -728,7 +753,7 @@ function RmFreshIO:load(savegameDir)
         if #container.batches == 0 then
             Log:trace("LOAD: Skipping empty container %s (entityType=%s, no batches)",
                 containerId, entityType)
-            return  -- Skip this container, don't add to pool
+            return -- Skip this container, don't add to pool
         end
 
         -- Read metadata

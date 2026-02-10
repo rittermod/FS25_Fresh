@@ -24,8 +24,8 @@ RmFreshSettings.GLOBAL_DEFAULTS = {
     enableExpiration = true,
     showWarnings = true,
     showAgeDisplay = true,
-    warningHours = 24,  -- Warn when expiring within N hours
-    preset = "normal",  -- Difficulty preset (veryEasy/easy/normal/hard/custom)
+    warningHours = 24, -- Warn when expiring within N hours
+    preset = "normal", -- Difficulty preset (veryEasy/easy/normal/hard/custom)
 }
 
 --- Merge threshold for batch compaction (0.01 periods = ~7 in-game hours)
@@ -59,6 +59,10 @@ RmFreshSettings.userOverrides = {
     global = {},
     fillTypes = {},
 }
+
+--- Hidden category indices (resolved from XML category names at init)
+--- Key: category index (number), Value: true
+RmFreshSettings.hiddenCategoryIndices = {}
 
 --- Runtime cache - index-keyed for fast lookups (rebuilt on settings change)
 RmFreshSettings.perishableByIndex = {}
@@ -224,8 +228,9 @@ function RmFreshSettings:initialize(modDir)
     self:rebuildIndexCache()
 
     -- Log initialization summary
-    Log:info("RmFreshSettings initialized: %d fillTypes, %d mod defaults, %d perishable",
-        self:getFillTypeCount(), self:getModDefaultCount(), self:tableCount(self.perishableByIndex))
+    Log:info("RmFreshSettings initialized: %d fillTypes, %d mod defaults (%d hidden), %d perishable",
+        self:getFillTypeCount(), self:getModDefaultCount(), self:getHiddenCount(),
+        self:tableCount(self.perishableByIndex))
 end
 
 --- Load all fillTypes from g_fillTypeManager
@@ -261,6 +266,7 @@ end
 --- Delegates parsing to RmFreshIO:loadSettings() for unified format handling
 function RmFreshSettings:loadModDefaults()
     self.modDefaults = {}
+    self.hiddenCategoryIndices = {}
 
     if self.modDirectory == nil then
         Log:warning("SETTINGS_LOAD: modDirectory not set")
@@ -271,7 +277,21 @@ function RmFreshSettings:loadModDefaults()
     local data = RmFreshIO:loadSettings(xmlPath)
     self.modDefaults = data.fillTypes or {}
 
-    Log:debug("SETTINGS_LOAD: Loaded %d mod defaults", self:tableCount(self.modDefaults))
+    -- Resolve hidden category names to FS25 category indices
+    for catName, config in pairs(data.categories or {}) do
+        if config.hidden and g_fillTypeManager then
+            local idx = g_fillTypeManager.nameToCategoryIndex[catName]
+            if idx then
+                self.hiddenCategoryIndices[idx] = true
+                Log:debug("SETTINGS_LOAD: Hidden category %s -> index %d", catName, idx)
+            else
+                Log:warning("SETTINGS_LOAD: Unknown hidden category: %s", catName)
+            end
+        end
+    end
+
+    Log:debug("SETTINGS_LOAD: Loaded %d mod defaults, %d hidden categories",
+        self:tableCount(self.modDefaults), self:tableCount(self.hiddenCategoryIndices))
 end
 
 -- =============================================================================
@@ -280,10 +300,17 @@ end
 
 --- Get expiration period for a fillType (3-layer merge: user → preset×mod → nil)
 --- Returns nil for fillTypes that don't expire
---- User override ALWAYS wins (safety: prevents inventory loss on mod update)
+--- Hidden fillTypes always return nil
+--- User override ALWAYS wins for non-hidden fillTypes (safety: prevents inventory loss on mod update)
 ---@param fillTypeName string The fillType name (e.g., "WHEAT")
 ---@return number|nil Expiration period in months, or nil if doesn't expire
 function RmFreshSettings:getExpiration(fillTypeName)
+    -- Hidden fillTypes are always non-expiring (mod author decision, overrides all layers)
+    local modDefault = self.modDefaults[fillTypeName]
+    if modDefault ~= nil and modDefault.hidden == true then
+        return nil
+    end
+
     -- Layer 1: User override ALWAYS wins (safety: prevents inventory loss on mod update)
     local userOverride = self.userOverrides.fillTypes[fillTypeName]
     if userOverride ~= nil then
@@ -298,7 +325,7 @@ function RmFreshSettings:getExpiration(fillTypeName)
     end
 
     -- Layer 2: Mod default (with optional preset multiplier)
-    local modDefault = self.modDefaults[fillTypeName]
+    -- (modDefault already read above for hidden check)
     if modDefault ~= nil then
         if modDefault.expires == false then
             Log:trace("EXPIRATION: %s -> nil (mod default expires=false)", fillTypeName)
@@ -329,6 +356,38 @@ function RmFreshSettings:isPerishable(fillTypeName)
     return self:getExpiration(fillTypeName) ~= nil
 end
 
+--- Check if a fillType is hidden from the settings UI
+--- Checks both explicit per-fillType hidden flag and category-based auto-hide
+---@param fillTypeName string The fillType name
+---@return boolean True if fillType is hidden
+function RmFreshSettings:isHidden(fillTypeName)
+    local modDefault = self.modDefaults[fillTypeName]
+    if modDefault ~= nil and modDefault.hidden == true then
+        return true
+    end
+    return self:isHiddenByCategory(fillTypeName)
+end
+
+--- Check if a fillType belongs to any hidden category
+--- Uses FS25 fillTypeIndexToCategories to check membership
+---@param fillTypeName string The fillType name
+---@return boolean True if fillType is in a hidden category
+function RmFreshSettings:isHiddenByCategory(fillTypeName)
+    if g_fillTypeManager == nil or next(self.hiddenCategoryIndices) == nil then
+        return false
+    end
+    local ftIndex = g_fillTypeManager:getFillTypeIndexByName(fillTypeName)
+    if ftIndex == nil then return false end
+    local cats = g_fillTypeManager.fillTypeIndexToCategories[ftIndex]
+    if cats == nil then return false end
+    for catIdx, _ in pairs(cats) do
+        if self.hiddenCategoryIndices[catIdx] then
+            return true
+        end
+    end
+    return false
+end
+
 --- Get all fillType names as a sorted array
 ---@return table Array of fillType names (sorted alphabetically)
 function RmFreshSettings:getAllFillTypes()
@@ -350,6 +409,18 @@ end
 ---@return number Number of fillTypes with mod defaults
 function RmFreshSettings:getModDefaultCount()
     return self:tableCount(self.modDefaults)
+end
+
+--- Get count of hidden fillTypes (both explicit and category-based)
+---@return number Number of hidden fillTypes
+function RmFreshSettings:getHiddenCount()
+    local count = 0
+    for fillTypeName, _ in pairs(self.allFillTypes) do
+        if self:isHidden(fillTypeName) then
+            count = count + 1
+        end
+    end
+    return count
 end
 
 -- =============================================================================
@@ -548,7 +619,7 @@ function RmFreshSettings:resetAllOverrides()
     end
 end
 
---- Clear fillType overrides that are redundant (match mod default exactly)
+--- Clear fillType overrides that are redundant (match mod default exactly or hidden)
 --- Called when switching to a preset so the preset multiplier can take effect
 --- Keeps overrides where the user intentionally changed the value from the default
 function RmFreshSettings:clearRedundantOverrides()
@@ -557,7 +628,9 @@ function RmFreshSettings:clearRedundantOverrides()
         local modDefault = self.modDefaults[name]
         if modDefault ~= nil then
             local redundant = false
-            if override.expires == false and modDefault.expires == false then
+            if modDefault.hidden == true then
+                redundant = true
+            elseif override.expires == false and modDefault.expires == false then
                 redundant = true
             elseif override.period and modDefault.period and override.period == modDefault.period then
                 redundant = true
@@ -569,7 +642,7 @@ function RmFreshSettings:clearRedundantOverrides()
         end
     end
     if removed > 0 then
-        Log:debug("SETTINGS_PRESET: Cleared %d redundant fillType overrides (matching mod defaults)", removed)
+        Log:debug("SETTINGS_PRESET: Cleared %d redundant fillType overrides", removed)
     end
     return removed
 end

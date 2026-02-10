@@ -12,7 +12,7 @@ local modDirectory = g_currentModDirectory
 
 source(modDirectory .. "scripts/rmlib/RmLogging.lua")
 Log = RmLogging.getLogger("Fresh")
-Log:setLevel(RmLogging.LOG_LEVEL.TRACE)
+Log:setLevel(RmLogging.LOG_LEVEL.INFO)
 
 -- =============================================================================
 -- CORE MODULES
@@ -128,8 +128,9 @@ local function onLoadMapFinished()
     -- Get savegame directory for load/save operations
     local savegameDir = g_currentMission.missionInfo.savegameDirectory
 
-    -- Load existing container data from savegame (if any)
-    if savegameDir ~= nil then
+    -- Load existing container data from savegame (server only)
+    -- Clients receive settings via RmSettingsSyncEvent and containers via RmFreshSyncEvent
+    if savegameDir ~= nil and g_server ~= nil then
         RmFreshManager:onLoad(savegameDir)
     end
 

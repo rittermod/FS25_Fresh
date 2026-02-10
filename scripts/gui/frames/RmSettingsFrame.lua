@@ -47,18 +47,6 @@ RmSettingsFrame.EXPIRATION_OPTIONS = {
     { period = 60.0,   label = "fresh_expire_5_years" },
 }
 
---- Fallback categories to check when boolean type flags are all false
---- (workaround for mods like LazyDistribution that overwrite fillTypes without preserving flags)
-RmSettingsFrame.TYPE_FALLBACK_CATEGORIES = {
-    "COMBINE",
-    "FARMSILO",
-    "TRAINWAGON",
-    "PRODUCT",
-    "SELLINGSTATION_PRODUCTSFOOD",
-    "WINDROW",
-    "SELLINGSTATION_BALES",
-}
-
 --- Map period values to EXPIRATION_OPTIONS indices for quick lookup
 RmSettingsFrame.PERIOD_TO_INDEX = {}
 
@@ -297,60 +285,33 @@ function RmSettingsFrame:isBasegameFillType(fillTypeName)
     return source == "basegame"
 end
 
---- Check if fillType belongs to any fallback category indicating it's a real product
----@param fillTypeIndex number The fillType index
----@return boolean True if fillType is in any fallback category
-function RmSettingsFrame:checkCategoryFallback(fillTypeIndex)
-    for _, categoryName in ipairs(RmSettingsFrame.TYPE_FALLBACK_CATEGORIES) do
-        if g_fillTypeManager:getIsFillTypeInCategory(fillTypeIndex, categoryName) then
-            return true
-        end
-    end
-    return false
-end
-
---- Get list of ALL fillTypes sorted by type relevance, then expiration, then alphabetically
----@return table Array of { name = string, title = string, expires = boolean, hasType = boolean }
+--- Get list of ALL visible fillTypes sorted alphabetically
+---@return table Array of { name = string, title = string, expires = boolean }
 function RmSettingsFrame:getPerishableFillTypes()
     local fillTypes = {}
+    local hiddenCount = 0
 
     for fillTypeName, fillTypeData in pairs(RmFreshSettings.allFillTypes or {}) do
-        if fillTypeName ~= "UNKNOWN" then
+        if fillTypeName ~= "UNKNOWN" and RmFreshSettings:isHidden(fillTypeName) then
+            hiddenCount = hiddenCount + 1
+        elseif fillTypeName ~= "UNKNOWN" then
             local expiration = RmFreshSettings:getExpiration(fillTypeName)
-
-            local hasType = false
-            local fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(fillTypeName)
-            if fillTypeIndex then
-                local fillType = g_fillTypeManager:getFillTypeByIndex(fillTypeIndex)
-                if fillType then
-                    hasType = fillType.isBulkType or fillType.isPalletType or fillType.isBaleType or false
-
-                    if not hasType then
-                        hasType = self:checkCategoryFallback(fillTypeIndex)
-                    end
-                end
-            end
 
             local source, modName = RmFreshSettings:getFillTypeSource(fillTypeName)
             table.insert(fillTypes, {
                 name = fillTypeName,
                 title = fillTypeData.title or fillTypeName,
                 expires = expiration ~= nil,
-                hasType = hasType,
                 source = source,
                 sourceMod = modName,
             })
         end
     end
 
-    -- Sort: hasType first, then expires, then alphabetically
+    Log:debug("SETTINGS_UI: %d fillTypes visible, %d hidden", #fillTypes, hiddenCount)
+
+    -- Sort alphabetically by title
     table.sort(fillTypes, function(a, b)
-        if a.hasType ~= b.hasType then
-            return a.hasType
-        end
-        if a.expires ~= b.expires then
-            return a.expires
-        end
         return a.title:lower() < b.title:lower()
     end)
 
@@ -369,9 +330,8 @@ end
 
 --- Build tooltip text for a fillType row
 ---@param fillTypeName string The internal fillType name (e.g., "WHEAT")
----@param fillType table|nil The fillType object from g_fillTypeManager
 ---@return string Tooltip text
-function RmSettingsFrame:buildFillTypeTooltip(fillTypeName, fillType)
+function RmSettingsFrame:buildFillTypeTooltip(fillTypeName)
     local parts = {}
     table.insert(parts, string.format("Fill type: %s", fillTypeName))
 
@@ -385,16 +345,6 @@ function RmSettingsFrame:buildFillTypeTooltip(fillTypeName, fillType)
         table.insert(parts, "Source: Map")
     elseif source == "basegame" then
         table.insert(parts, "Source: Base game")
-    end
-
-    if fillType then
-        local typeInfo = {}
-        if fillType.isBulkType then table.insert(typeInfo, "Bulk") end
-        if fillType.isPalletType then table.insert(typeInfo, "Pallet") end
-        if fillType.isBaleType then table.insert(typeInfo, "Bale") end
-        if #typeInfo > 0 then
-            table.insert(parts, "Type: " .. table.concat(typeInfo, ", "))
-        end
     end
 
     return table.concat(parts, " | ")
@@ -607,7 +557,7 @@ function RmSettingsFrame:populateSc2()
         -- Set tooltip
         local tooltipElement = row:getDescendantByName("fillTypeTooltip")
         if tooltipElement then
-            tooltipElement:setText(self:buildFillTypeTooltip(ft.name, fillType))
+            tooltipElement:setText(self:buildFillTypeTooltip(ft.name))
         end
 
         self.sc2Rows[index] = { row = row, multiOption = multiOption, fillTypeName = ft.name }
@@ -688,7 +638,7 @@ function RmSettingsFrame:populateSc3()
         -- Set tooltip
         local tooltipElement = row:getDescendantByName("fillTypeTooltip")
         if tooltipElement then
-            tooltipElement:setText(self:buildFillTypeTooltip(ft.name, fillType))
+            tooltipElement:setText(self:buildFillTypeTooltip(ft.name))
         end
 
         self.sc3Rows[index] = { row = row, multiOption = multiOption, fillTypeName = ft.name }
