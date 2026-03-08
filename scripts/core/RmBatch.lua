@@ -47,10 +47,15 @@ end
 ---@param warningHours number Hours threshold (e.g., 24)
 ---@param expirationThreshold number Expiration threshold in periods
 ---@param daysPerPeriod number Days per in-game month
+---@param multiplier number|nil Storage class aging multiplier (default 1.0, 0 = disabled/never expires)
 ---@return boolean
-function RmBatch.isNearExpiration(batch, warningHours, expirationThreshold, daysPerPeriod)
+function RmBatch.isNearExpiration(batch, warningHours, expirationThreshold, daysPerPeriod, multiplier)
+    multiplier = multiplier or 1.0
+    if multiplier == 0 then
+        return false -- Disabled storage class: never expires, never near expiration
+    end
     local remainingPeriods = (expirationThreshold or 1.0) - batch.ageInPeriods
-    local remainingHours = remainingPeriods * (daysPerPeriod or 1) * 24
+    local remainingHours = remainingPeriods * (daysPerPeriod or 1) * 24 / multiplier
     return remainingHours <= (warningHours or 24)
 end
 
@@ -73,19 +78,25 @@ end
 --- Breakpoints: <48h → hours, <60d (1440h) → days, >=60d → months
 --- DEPENDENCY: Requires FS25 environment with g_i18n loaded and Fresh localization keys registered:
 ---   fresh_expired, fresh_expires_hour, fresh_expires_hours, fresh_expires_day,
----   fresh_expires_days, fresh_expires_month, fresh_expires_months
+---   fresh_expires_days, fresh_expires_month, fresh_expires_months, fresh_expires_never
 ---@param batch table PerishableBatch
 ---@param threshold number Expiration threshold in periods
 ---@param daysPerPeriod number Days per in-game month (from environment)
+---@param multiplier number|nil Storage class aging multiplier (default 1.0, 0 = disabled/never expires)
 ---@return string Formatted expiration time (e.g., "12 hours", "4 days", "2 months")
-function RmBatch.formatExpiresIn(batch, threshold, daysPerPeriod)
+function RmBatch.formatExpiresIn(batch, threshold, daysPerPeriod, multiplier)
     local remainingPeriods = threshold - batch.ageInPeriods
 
     if remainingPeriods <= 0 then
         return g_i18n:getText("fresh_expired")
     end
 
-    local remainingHours = remainingPeriods * daysPerPeriod * 24
+    multiplier = multiplier or 1.0
+    if multiplier == 0 then
+        return g_i18n:getText("fresh_expires_never")
+    end
+
+    local remainingHours = remainingPeriods * daysPerPeriod * 24 / multiplier
 
     if remainingHours < 48 then
         -- Hours (< 2 days remaining)
@@ -105,7 +116,7 @@ function RmBatch.formatExpiresIn(batch, threshold, daysPerPeriod)
         end
     else
         -- Months (>= 60 days remaining)
-        local months = remainingPeriods
+        local months = remainingPeriods / multiplier
         return string.format(g_i18n:getText("fresh_expires_months"), months)
     end
 end

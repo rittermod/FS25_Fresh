@@ -2019,13 +2019,15 @@ function RmFreshManager:getDisplayInfo(containerId)
     local config = RmFreshSettings:getThresholdByIndex(container.fillTypeIndex)
     local daysPerPeriod = (g_currentMission and g_currentMission.environment and g_currentMission.environment.daysPerPeriod) or
         1
+    local classInfo = self:resolveStorageClassInfo(container)
+    local multiplier = classInfo and classInfo.multiplier or 1.0
 
-    local text = RmBatch.formatExpiresIn(oldest, config.expiration, daysPerPeriod)
+    local text = RmBatch.formatExpiresIn(oldest, config.expiration, daysPerPeriod, multiplier)
     local warningHours = RmFreshSettings:getWarningHours()
 
     return {
         text = text,
-        isWarning = RmBatch.isNearExpiration(oldest, warningHours, config.expiration, daysPerPeriod),
+        isWarning = RmBatch.isNearExpiration(oldest, warningHours, config.expiration, daysPerPeriod, multiplier),
         isExpiring = oldest.ageInPeriods >= config.expiration,
     }
 end
@@ -2429,19 +2431,31 @@ function RmFreshManager:getExpiringWithin(hours, farmId)
                 local config = RmFreshSettings:getThresholdByIndex(container.fillTypeIndex)
                 local expirationThreshold = config.expiration
 
-                -- Calculate expiring batches
+                -- Resolve storage class multiplier for accurate time calculations
+                local classInfo = self:resolveStorageClassInfo(container)
+                local multiplier = classInfo and classInfo.multiplier or 1.0
+
+                if multiplier ~= 1.0 then
+                    Log:trace("EXPIRING_WITHIN: container=%s multiplier=%.2f (class=%s)",
+                        containerId, multiplier,
+                        self.STORAGE_CLASS_NAMES[classInfo and classInfo.effective] or "?")
+                end
+
+                -- Calculate expiring batches (disabled containers never expire)
                 local expiringAmount = 0
                 local soonestExpiresInHours = nil
 
-                for _, batch in ipairs(container.batches or {}) do
-                    local remainingPeriods = expirationThreshold - batch.ageInPeriods
-                    local remainingHours = remainingPeriods * hoursPerPeriod
+                if multiplier > 0 then
+                    for _, batch in ipairs(container.batches or {}) do
+                        local remainingPeriods = expirationThreshold - batch.ageInPeriods
+                        local remainingHours = remainingPeriods * hoursPerPeriod / multiplier
 
-                    -- Include batches at or approaching expiration within threshold
-                    if remainingHours >= 0 and remainingHours <= hours then
-                        expiringAmount = expiringAmount + batch.amount
-                        if soonestExpiresInHours == nil or remainingHours < soonestExpiresInHours then
-                            soonestExpiresInHours = remainingHours
+                        -- Include batches at or approaching expiration within threshold
+                        if remainingHours >= 0 and remainingHours <= hours then
+                            expiringAmount = expiringAmount + batch.amount
+                            if soonestExpiresInHours == nil or remainingHours < soonestExpiresInHours then
+                                soonestExpiresInHours = remainingHours
+                            end
                         end
                     end
                 end
@@ -2460,8 +2474,7 @@ function RmFreshManager:getExpiringWithin(hours, farmId)
                         name = container.metadata.location
                     end
 
-                    -- Resolve storage class for display
-                    local classInfo = self:resolveStorageClassInfo(container)
+                    -- Use already-resolved classInfo for display
                     local storageClass = classInfo and classInfo.effective or nil
                     local storageClassName = nil
                     if storageClass ~= nil then
@@ -2540,6 +2553,7 @@ function RmFreshManager:getInventorySummary(farmId)
                         totalAmount = 0,
                         expiringAmount = 0, -- Amount within warning hours
                         oldestAge = 0,
+                        oldestMultiplier = 1.0, -- Multiplier of container holding oldest batch
                         containerCount = 0,
                         isWarning = false,
                     }
@@ -2548,17 +2562,29 @@ function RmFreshManager:getInventorySummary(farmId)
                 local entry = summary[fillTypeName]
                 local threshold = RmFreshSettings:getExpiration(fillTypeName)
 
+                -- Resolve storage class multiplier for this container
+                local classInfo = self:resolveStorageClassInfo(container)
+                local multiplier = classInfo and classInfo.multiplier or 1.0
+
+                if multiplier ~= 1.0 then
+                    Log:trace("INVENTORY_MULT: container=%s fillType=%s multiplier=%.2f (class=%s)",
+                        containerId, fillTypeName, multiplier,
+                        self.STORAGE_CLASS_NAMES[classInfo and classInfo.effective] or "?")
+                end
+
                 -- Sum amounts from all batches, tracking expiring amounts
                 for _, batch in ipairs(container.batches) do
                     entry.totalAmount = entry.totalAmount + batch.amount
-                    -- Track oldest age across all batches
+                    -- Track oldest age across all batches (and its multiplier for display)
                     if batch.ageInPeriods > entry.oldestAge then
                         entry.oldestAge = batch.ageInPeriods
+                        entry.oldestMultiplier = multiplier
                     end
                     -- Track expiring amount (batches within warning hours, epsilon guard)
-                    if threshold and batch.amount >= RmBatch.MIN_AMOUNT then
+                    -- Disabled containers (multiplier=0) never expire
+                    if threshold and batch.amount >= RmBatch.MIN_AMOUNT and multiplier > 0 then
                         local remainingPeriods = threshold - batch.ageInPeriods
-                        local remainingHrs = remainingPeriods * daysPerPeriod * 24
+                        local remainingHrs = remainingPeriods * daysPerPeriod * 24 / multiplier
                         if remainingHrs <= warningHours then
                             entry.expiringAmount = entry.expiringAmount + batch.amount
                         end
@@ -2598,11 +2624,20 @@ function RmFreshManager:getInventoryList(farmId, sortBy)
     for _, entry in pairs(summary) do
         -- Add display-friendly fields
         entry.fillTypeTitle = g_fillTypeManager:getFillTypeTitleByIndex(entry.fillTypeIndex) or entry.fillTypeName
-        -- Calculate time until expiry (threshold - current age)
+        -- Calculate time until expiry (threshold - current age), adjusted for storage class
         local threshold = RmFreshSettings:getExpiration(entry.fillTypeName)
+        local multiplier = entry.oldestMultiplier or 1.0
         local expiresIn = threshold and (threshold - entry.oldestAge) or 0
-        entry.expiresIn = math.max(0, expiresIn) -- Store for sorting
-        entry.ageDisplay = RmBatch.formatExpiresIn({ageInPeriods = entry.oldestAge}, threshold or 1.0, daysPerPeriod)
+        if multiplier > 0 then
+            entry.expiresIn = math.max(0, expiresIn / multiplier) -- Store for sorting (in real periods)
+        else
+            entry.expiresIn = math.huge -- Disabled: never expires, sort last
+        end
+        if multiplier ~= 1.0 then
+            Log:trace("INVENTORY_DISPLAY: fillType=%s oldestMultiplier=%.2f expiresIn=%.2f",
+                entry.fillTypeName, multiplier, entry.expiresIn)
+        end
+        entry.ageDisplay = RmBatch.formatExpiresIn({ageInPeriods = entry.oldestAge}, threshold or 1.0, daysPerPeriod, multiplier)
         entry.amountDisplay = string.format("%.0f L", entry.totalAmount)
         -- Add expiring amount display (shows how much is at/above warning threshold)
         if entry.expiringAmount > 0 then

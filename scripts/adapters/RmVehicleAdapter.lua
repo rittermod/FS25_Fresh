@@ -560,10 +560,13 @@ function RmVehicleAdapter:showInfo(superFunc, box)
             local entry = byFillType[ftIndex]
             if RmFreshSettings:isPerishableByIndex(ftIndex) then
                 local config = RmFreshSettings:getThresholdByIndex(ftIndex)
+                -- Resolve storage class multiplier for accurate time calculations
+                local classInfo = RmFreshManager:resolveStorageClassInfo(container)
+                local multiplier = classInfo and classInfo.multiplier or 1.0
                 for _, batch in ipairs(container.batches) do
                     entry.totalAmount = entry.totalAmount + batch.amount
                     if batch.amount >= RmBatch.MIN_AMOUNT
-                        and RmBatch.isNearExpiration(batch, warningHours, config.expiration, daysPerPeriod) then
+                        and RmBatch.isNearExpiration(batch, warningHours, config.expiration, daysPerPeriod, multiplier) then
                         entry.expiringAmount = entry.expiringAmount + batch.amount
                     end
                 end

@@ -12,6 +12,7 @@
 
         <!-- Status messages -->
         <text name="fresh_expired" text="Utgången"/>
+        <text name="fresh_expires_never" text="Går aldrig ut"/>
         <text name="fresh_near_expiration" text="Nära utgång"/>
 
         <!-- Daily loss notification (summary at day change) -->

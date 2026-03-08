@@ -1040,9 +1040,14 @@ function RmPlaceableAdapter:updateInfo(superFunc, infoTable)
             local batches = RmFreshManager:getBatches(containerId)
             local config = RmFreshSettings:getThresholdByIndex(fillTypeIndex)
 
+            -- Resolve storage class multiplier for accurate time calculations
+            local container = RmFreshManager:getContainer(containerId)
+            local classInfo = container and RmFreshManager:resolveStorageClassInfo(container) or nil
+            local multiplier = classInfo and classInfo.multiplier or 1.0
+
             for _, batch in ipairs(batches or {}) do
                 if batch.amount >= RmBatch.MIN_AMOUNT
-                    and RmBatch.isNearExpiration(batch, warningHours, config.expiration, daysPerPeriod) then
+                    and RmBatch.isNearExpiration(batch, warningHours, config.expiration, daysPerPeriod, multiplier) then
                     local entry = expiringByFillType[fillTypeIndex]
                     if not entry then
                         entry = { amount = 0, soonestHours = math.huge }
@@ -1051,7 +1056,7 @@ function RmPlaceableAdapter:updateInfo(superFunc, infoTable)
                     entry.amount = entry.amount + batch.amount
                     totalExpiring = totalExpiring + batch.amount
                     -- Track soonest expiry (oldest batch = lowest remaining hours)
-                    local remainingHours = (config.expiration - batch.ageInPeriods) * daysPerPeriod * 24
+                    local remainingHours = (config.expiration - batch.ageInPeriods) * daysPerPeriod * 24 / multiplier
                     if remainingHours < entry.soonestHours then
                         entry.soonestHours = remainingHours
                     end
