@@ -46,7 +46,7 @@ function RmLogger:new(name)
     local instance = setmetatable({}, RmLogger)
     instance.name = name
     instance.level = RmLogging.LOG_LEVEL.INFO
-    instance._customPrefix = nil  -- Optional override, nil = use auto-generated
+    instance._customPrefix = nil -- Optional override, nil = use auto-generated
     return instance
 end
 
@@ -56,13 +56,13 @@ function RmLogger:_getContextSuffix()
     -- Check FS25 globals to determine execution context
     -- These are set during mission initialization
     if g_dedicatedServer ~= nil then
-        return "|DS"  -- Dedicated Server
+        return "|DS" -- Dedicated Server
     elseif g_server ~= nil and g_client ~= nil then
-        return "|H"   -- Host (Listen Server)
+        return "|H"  -- Host (Listen Server)
     elseif g_client ~= nil and g_server == nil then
-        return "|C"   -- Client
+        return "|C"  -- Client
     end
-    return ""  -- Context not yet available (during mod loading)
+    return ""        -- Context not yet available (during mod loading)
 end
 
 ---Build the log prefix dynamically
@@ -381,10 +381,10 @@ function RmLogging:consoleSetLogLevel(nameArg, levelArg)
 end
 
 -- ============================================================================
--- Console Command Registration
+-- Console Command Registration (self-contained via mod event listener)
 -- ============================================================================
 
----Register console commands (call this from mission start hook)
+---Register console commands - called automatically via loadMap listener
 ---Safe to call multiple times - will only register once
 function RmLogging.registerConsoleCommands()
     if RmLogging._consoleCommandsRegistered then
@@ -396,7 +396,7 @@ function RmLogging.registerConsoleCommands()
     RmLogging._consoleCommandsRegistered = true
 end
 
----Unregister console commands (call this from mission delete hook)
+---Unregister console commands - called automatically via deleteMap listener
 function RmLogging.unregisterConsoleCommands()
     if not RmLogging._consoleCommandsRegistered then
         return
@@ -405,4 +405,21 @@ function RmLogging.unregisterConsoleCommands()
     removeConsoleCommand("rmShowLoglevel")
     removeConsoleCommand("rmSetLoglevel")
     RmLogging._consoleCommandsRegistered = false
+end
+
+-- ============================================================================
+-- Self-contained Lifecycle Hooks
+-- ============================================================================
+
+function RmLogging.loadMap()
+    RmLogging.registerConsoleCommands()
+end
+
+function RmLogging.deleteMap()
+    RmLogging.unregisterConsoleCommands()
+end
+
+if not RmLogging._listenerRegistered then
+    addModEventListener(RmLogging)
+    RmLogging._listenerRegistered = true
 end
