@@ -57,6 +57,69 @@ RmFreshManager = {}
 local Log = RmLogging.getLogger("Fresh")
 
 -- =============================================================================
+-- STORAGE CLASS ENUM (Epic F-123)
+-- =============================================================================
+
+--- Storage class values for differential aging rates
+--- Higher class = better storage = slower aging
+RmFreshManager.STORAGE_CLASS = {
+    EXPOSED   = 0,
+    SHELTERED = 1,
+    INDOOR    = 2,
+    COOLED    = 3,
+    FROZEN    = 4,
+    DISABLED  = 5,
+}
+
+--- Reverse lookup: storage class value → display name string
+RmFreshManager.STORAGE_CLASS_NAMES = {
+    [0] = "exposed",
+    [1] = "sheltered",
+    [2] = "indoor",
+    [3] = "cooled",
+    [4] = "frozen",
+    [5] = "disabled",
+}
+
+--- Resolve a storage class name string to its numeric value (case-insensitive)
+---@param name string|nil Storage class name (e.g., "cooled", "FROZEN")
+---@return number|nil Storage class value, or nil if unknown/nil
+function RmFreshManager:getStorageClassByName(name)
+    if name == nil then return nil end
+    local lower = string.lower(name)
+    for value, displayName in pairs(self.STORAGE_CLASS_NAMES) do
+        if string.lower(displayName) == lower then
+            return value
+        end
+    end
+    return nil
+end
+
+--- Resolve effective storage class by applying ceiling logic
+--- DISABLED (5) bypasses ceiling — always returns DISABLED (player opt-out)
+--- For all other classes: math.min(storageClass, maxBenefitClass) caps benefit
+---@param storageClass number Storage class value (0-5)
+---@param maxBenefitClass number Maximum benefit class for this fillType
+---@return number Effective storage class value
+function RmFreshManager:_resolveEffectiveClass(storageClass, maxBenefitClass)
+    Log:trace(">>> _resolveEffectiveClass(storageClass=%d [%s], maxBenefit=%d [%s])",
+        storageClass, self.STORAGE_CLASS_NAMES[storageClass] or "?",
+        maxBenefitClass, self.STORAGE_CLASS_NAMES[maxBenefitClass] or "?")
+
+    -- DISABLED bypasses ceiling — player opt-out always honored
+    if storageClass == self.STORAGE_CLASS.DISABLED then
+        Log:trace("<<< _resolveEffectiveClass = %d (DISABLED overrides ceiling)", self.STORAGE_CLASS.DISABLED)
+        return self.STORAGE_CLASS.DISABLED
+    end
+
+    -- Ceiling: cap benefit at maxBenefitClass
+    local effective = math.min(storageClass, maxBenefitClass)
+    Log:trace("<<< _resolveEffectiveClass = %d (%s)",
+        effective, self.STORAGE_CLASS_NAMES[effective] or "?")
+    return effective
+end
+
+-- =============================================================================
 -- STATE
 -- =============================================================================
 
@@ -1550,10 +1613,36 @@ function RmFreshManager:_applyAging(hours)
                 -- Sync fillType for bales before aging (handles GRASS→SILAGE transformation)
                 self:syncBaleFillType(containerId, container)
 
+                -- Resolve storage class multiplier for this container
+                local storageMultiplier = 1.0
+                if RmFreshSettings.storageAgingEnabled then
+                    local storageClass = container.metadata and container.metadata.storageClass
+                        or self.STORAGE_CLASS.SHELTERED
+                    local maxBenefitClass = RmFreshSettings:getMaxBenefitClass(container.fillTypeIndex)
+                    local effectiveClass = self:_resolveEffectiveClass(storageClass, maxBenefitClass)
+                    storageMultiplier = RmFreshSettings:getClassMultiplier(effectiveClass)
+
+                    Log:trace("    STORAGE: container=%s class=%s(%d) effective=%s(%d) mult=%.2f",
+                        containerId,
+                        self.STORAGE_CLASS_NAMES[storageClass] or "?", storageClass,
+                        self.STORAGE_CLASS_NAMES[effectiveClass] or "?", effectiveClass,
+                        storageMultiplier)
+
+                    if storageMultiplier ~= 1.0 then
+                        Log:debug("STORAGE_MULT: container=%s class=%s(%d) maxBenefit=%s(%d) effective=%s(%d) mult=%.2f",
+                            containerId,
+                            self.STORAGE_CLASS_NAMES[storageClass] or "?", storageClass,
+                            self.STORAGE_CLASS_NAMES[maxBenefitClass] or "?", maxBenefitClass,
+                            self.STORAGE_CLASS_NAMES[effectiveClass] or "?", effectiveClass,
+                            storageMultiplier)
+                    end
+                end
+                local adjustedIncrement = increment * storageMultiplier
+
                 if container.batches and #container.batches > 0 then
-                    -- Age all batches
+                    -- Age all batches with storage-adjusted increment
                     for _, batch in ipairs(container.batches) do
-                        RmBatch.age(batch, increment)
+                        RmBatch.age(batch, adjustedIncrement)
                     end
 
                     -- Process expirations

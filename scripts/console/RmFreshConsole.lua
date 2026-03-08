@@ -124,6 +124,7 @@ function RmFreshConsole:registerCommands()
     addConsoleCommand("fList", "List containers (fList [type])", "consoleCommandList", self)
     addConsoleCommand("fInspect", "Inspect container (fInspect <#>)", "consoleCommandInspect", self)
     addConsoleCommand("fBatches", "Show batches (fBatches <#>)", "consoleCommandBatches", self)
+    addConsoleCommand("fStorages", "Storage classes (fStorages [class|config])", "consoleCommandStorages", self)
     -- Note: fTest is registered by RmTestRunner when tests/ folder exists
 
     -- Batch manipulation commands (admin only) - removed fillUnit parameter
@@ -149,7 +150,7 @@ function RmFreshConsole:registerCommands()
     addConsoleCommand("fReconcile", "Reconcile with game state (admin)", "consoleCommandReconcile", self)
 
     Log:info(
-    "CONSOLE: fList, fInspect, fBatches, fAddBatch, fRemBatch, fSetAge, fSetAllAge, fAge, fAgeContainer, fExpire, fExpireAll, fStats, fStatus, fLog, fDump, fClearLog, fReconcile commands registered")
+    "CONSOLE: fList, fInspect, fBatches, fStorages, fAddBatch, fRemBatch, fSetAge, fSetAllAge, fAge, fAgeContainer, fExpire, fExpireAll, fStats, fStatus, fLog, fDump, fClearLog, fReconcile commands registered")
 end
 
 --- Unregister console commands
@@ -158,6 +159,7 @@ function RmFreshConsole:unregisterCommands()
     removeConsoleCommand("fList")
     removeConsoleCommand("fInspect")
     removeConsoleCommand("fBatches")
+    removeConsoleCommand("fStorages")
     -- Note: fTest is unregistered by RmTestRunner when tests/ folder exists
 
     -- Batch manipulation commands
@@ -248,6 +250,137 @@ function RmFreshConsole:consoleCommandList(typeStr)
     end
 
     return string.format("Listed %d containers", #containers)
+end
+
+-- ============================================================================
+-- fStorages Command (Epic F-123.3)
+-- ============================================================================
+
+--- Capitalize first letter of a string
+---@param name string|nil
+---@return string
+local function capitalize(name)
+    if name == nil or name == "" then return "?" end
+    return name:sub(1, 1):upper() .. name:sub(2)
+end
+
+--- Console command: Show storage class info for all containers
+---@param filterStr string|nil Optional class filter or "config"
+---@return string Console output message
+function RmFreshConsole:consoleCommandStorages(filterStr)
+    self.targets = {}
+    Log:trace(">>> consoleCommandStorages(filter=%s)", tostring(filterStr))
+
+    -- Header: global toggle status
+    local toggleStr = RmFreshSettings.storageAgingEnabled and "ENABLED" or "DISABLED"
+
+    -- Header: class multiplier values (Exposed through Frozen)
+    local SC = RmFreshManager.STORAGE_CLASS
+    local multParts = {}
+    for classValue = SC.EXPOSED, SC.FROZEN do
+        local className = capitalize(RmFreshManager.STORAGE_CLASS_NAMES[classValue])
+        local mult = RmFreshSettings:getClassMultiplier(classValue)
+        table.insert(multParts, string.format("%s=%.2fx", className, mult))
+    end
+    local multLine = table.concat(multParts, " ")
+
+    -- Handle "config" subcommand
+    if filterStr and string.lower(filterStr) == "config" then
+        return self:formatStorageConfig()
+    end
+
+    -- Parse optional class filter
+    local classFilter = nil
+    if filterStr ~= nil then
+        classFilter = RmFreshManager:getStorageClassByName(filterStr)
+        if classFilter == nil then
+            -- Build valid class names list
+            local validNames = {}
+            for classValue = SC.EXPOSED, SC.DISABLED do
+                table.insert(validNames, capitalize(RmFreshManager.STORAGE_CLASS_NAMES[classValue]))
+            end
+            return string.format("Unknown storage class '%s'. Valid: %s, config",
+                filterStr, table.concat(validNames, ", "))
+        end
+    end
+
+    -- Print header
+    local filterLabel = classFilter and string.format(" (filter: %s)",
+        capitalize(RmFreshManager.STORAGE_CLASS_NAMES[classFilter])) or ""
+    print(string.format("=== Storage Classes%s ===", filterLabel))
+    print(string.format("Storage Aging Effects: %s", toggleStr))
+    print(string.format("Multipliers: %s", multLine))
+
+    -- Get all containers
+    local containers = {}
+    for _, container in pairs(RmFreshManager:getAllContainers()) do
+        table.insert(containers, container)
+    end
+
+    -- Sort by containerId for stable output
+    table.sort(containers, function(a, b)
+        return a.id < b.id
+    end)
+
+    -- Iterate and format
+    local count = 0
+    for _, container in ipairs(containers) do
+        local storageClass = container.metadata and container.metadata.storageClass
+            or SC.SHELTERED
+        local fillTypeName = container.identityMatch and container.identityMatch.storage
+            and container.identityMatch.storage.fillTypeName or "?"
+        local fillTypeIndex = container.fillTypeIndex
+            or g_fillTypeManager:getFillTypeIndexByName(fillTypeName)
+        local maxBenefitClass = RmFreshSettings:getMaxBenefitClass(fillTypeIndex)
+        local effectiveClass = RmFreshManager:_resolveEffectiveClass(storageClass, maxBenefitClass)
+        local multiplier = RmFreshSettings:getClassMultiplier(effectiveClass)
+
+        -- Apply class filter
+        if classFilter ~= nil and effectiveClass ~= classFilter then
+            -- skip
+        else
+            count = count + 1
+            self.targets[count] = container.id
+
+            local name = self:getEntityName(container)
+            print(string.format("#%d: %s \"%s\" [%s] %s class=%s maxBenefit=%s effective=%s mult=%.2fx",
+                count, container.entityType, name, container.id, fillTypeName,
+                capitalize(RmFreshManager.STORAGE_CLASS_NAMES[storageClass]),
+                capitalize(RmFreshManager.STORAGE_CLASS_NAMES[maxBenefitClass]),
+                capitalize(RmFreshManager.STORAGE_CLASS_NAMES[effectiveClass]),
+                multiplier))
+        end
+    end
+
+    if count == 0 and classFilter ~= nil then
+        print(string.format("No containers with effective class: %s",
+            capitalize(RmFreshManager.STORAGE_CLASS_NAMES[classFilter])))
+    end
+
+    return string.format("Listed %d containers", count)
+end
+
+--- Format storage class configuration for all perishable fillTypes
+---@return string Console output summary
+function RmFreshConsole:formatStorageConfig()
+    print("=== Storage Class Config ===")
+
+    local entries = {}
+    for fillTypeIndex, _ in pairs(RmFreshSettings.perishableByIndex) do
+        local fillTypeName = g_fillTypeManager:getFillTypeNameByIndex(fillTypeIndex)
+        local maxClass = RmFreshSettings:getMaxBenefitClass(fillTypeIndex)
+        local className = capitalize(RmFreshManager.STORAGE_CLASS_NAMES[maxClass])
+        table.insert(entries, { name = fillTypeName or "?", className = className })
+    end
+
+    table.sort(entries, function(a, b) return a.name < b.name end)
+
+    for _, entry in ipairs(entries) do
+        print(string.format("%s: maxBenefitClass=%s", entry.name, entry.className))
+    end
+
+    print("(fillTypes without config default to Sheltered)")
+    return string.format("Listed %d configured fillTypes", #entries)
 end
 
 -- ============================================================================

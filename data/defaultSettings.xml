@@ -31,191 +31,201 @@
         <category name="HORSE" hidden="true"/>
     </categories>
 
+    <!-- Storage class aging multipliers (Epic F-123) -->
+    <!-- Higher class = better storage = slower aging. DISABLED is hardcoded at 0 (not configurable). -->
+    <storageClasses enabled="true">
+        <class name="exposed" multiplier="1.5" />
+        <class name="sheltered" multiplier="1.0" />
+        <class name="indoor" multiplier="0.8" />
+        <class name="cooled" multiplier="0.3" />
+        <class name="frozen" multiplier="0.05" />
+    </storageClasses>
+
     <fillTypes>
 
         <!-- ===================================================================== -->
         <!-- FRESH PRODUCE (Real: days-weeks -> Game: 1.0-5.0 periods)             -->
         <!-- Very perishable items                                                 -->
         <!-- ===================================================================== -->
-        <fillType name="STRAWBERRY" period="1.0"/>
-        <fillType name="TOMATO" period="2.0"/>
-        <fillType name="LETTUCE" period="2.0"/>
-        <fillType name="SPINACH_BAGS" period="1.0"/>
-        <fillType name="SPRING_ONION" period="2.0"/>
-        <fillType name="CHILLI" period="2.0"/>
-        <fillType name="GARLIC" period="3.0"/>
-        <fillType name="NAPACABBAGE" period="2.0"/>
-        <fillType name="POTATO" period="3.0"/>
-        <fillType name="CARROT" period="5.0"/>
-        <fillType name="PARSNIP" period="5.0"/>
-        <fillType name="BEETROOT" period="4.0"/>
-        <fillType name="GREENBEAN" period="1.0"/>
-        <fillType name="SPINACH" period="1.0"/>
-        <fillType name="PEA" period="1.0"/>
-        <fillType name="GRAPE" period="2.0"/>
-        <fillType name="OLIVE" period="1.0"/>
-        <fillType name="SUGARCANE" period="1.0"/>
+        <fillType name="STRAWBERRY" period="1.0" maxBenefitClass="frozen"/>
+        <fillType name="TOMATO" period="2.0" maxBenefitClass="frozen"/>
+        <fillType name="LETTUCE" period="2.0" maxBenefitClass="frozen"/>
+        <fillType name="SPINACH_BAGS" period="1.0" maxBenefitClass="frozen"/>
+        <fillType name="SPRING_ONION" period="2.0" maxBenefitClass="frozen"/>
+        <fillType name="CHILLI" period="2.0" maxBenefitClass="frozen"/>
+        <fillType name="GARLIC" period="3.0" maxBenefitClass="frozen"/>
+        <fillType name="NAPACABBAGE" period="2.0" maxBenefitClass="frozen"/>
+        <fillType name="POTATO" period="3.0" maxBenefitClass="frozen"/>
+        <fillType name="CARROT" period="5.0" maxBenefitClass="frozen"/>
+        <fillType name="PARSNIP" period="5.0" maxBenefitClass="frozen"/>
+        <fillType name="BEETROOT" period="4.0" maxBenefitClass="frozen"/>
+        <fillType name="GREENBEAN" period="1.0" maxBenefitClass="frozen"/>
+        <fillType name="SPINACH" period="1.0" maxBenefitClass="frozen"/>
+        <fillType name="PEA" period="1.0" maxBenefitClass="frozen"/>
+        <fillType name="GRAPE" period="2.0" maxBenefitClass="frozen"/>
+        <fillType name="OLIVE" period="1.0" maxBenefitClass="frozen"/>
+        <fillType name="SUGARCANE" period="1.0" maxBenefitClass="frozen"/>
 
         <!-- ===================================================================== -->
         <!-- MUSHROOMS (Real: 3-7 days -> Game: 1.0 periods)                       -->
         <!-- ===================================================================== -->
-        <fillType name="ENOKI" period="1.0"/>
-        <fillType name="OYSTER" period="1.0"/>
+        <fillType name="ENOKI" period="1.0" maxBenefitClass="frozen"/>
+        <fillType name="OYSTER" period="1.0" maxBenefitClass="frozen"/>
 
         <!-- ===================================================================== -->
         <!-- FRESH FISH (Real: 1-14 days)                                          -->
         <!-- Highly perishable, but since we don't differentiate by storage place  -->
         <!-- we assign longer periods for farmed fish types to grow and stay alive -->
         <!-- ===================================================================== -->
-        <fillType name="SALMON" period="6.0"/>
-        <fillType name="SALMONYOUNG" period="30.0"/>
-        <fillType name="TROUT" period="6.0"/>
-        <fillType name="TROUTYOUNG" period="12.0"/>
+        <fillType name="SALMON" period="6.0" maxBenefitClass="frozen"/>
+        <fillType name="SALMONYOUNG" period="30.0" maxBenefitClass="frozen"/>
+        <fillType name="TROUT" period="6.0" maxBenefitClass="frozen"/>
+        <fillType name="TROUTYOUNG" period="12.0" maxBenefitClass="frozen"/>
 
         <!-- ===================================================================== -->
         <!-- DAIRY - FRESH (Real: days-weeks -> Game: 1.0-2.0 periods)             -->
         <!-- ===================================================================== -->
-        <fillType name="MILK_BOTTLED" period="1.0"/>
-        <fillType name="GOATMILK_BOTTLED" period="1.0"/>
-        <fillType name="BUFFALOMILK_BOTTLED" period="1.0"/>
-        <fillType name="BUFFALOMOZZARELLA" period="2.0"/>
-        <fillType name="EGG" period="2.0"/>
+        <fillType name="MILK_BOTTLED" period="1.0" maxBenefitClass="cooled"/>
+        <fillType name="GOATMILK_BOTTLED" period="1.0" maxBenefitClass="cooled"/>
+        <fillType name="BUFFALOMILK_BOTTLED" period="1.0" maxBenefitClass="cooled"/>
+        <fillType name="BUFFALOMOZZARELLA" period="2.0" maxBenefitClass="cooled"/>
+        <fillType name="EGG" period="2.0" maxBenefitClass="cooled"/>
 
         <!-- ===================================================================== -->
         <!-- DAIRY - RAW (Real: days -> Game: 1.0 periods)                         -->
         <!-- Unpasteurized raw milk - very short shelf life                        -->
         <!-- ===================================================================== -->
-        <fillType name="MILK" period="1.0"/>
-        <fillType name="BUFFALOMILK" period="1.0"/>
-        <fillType name="GOATMILK" period="1.0"/>
+        <fillType name="MILK" period="1.0" maxBenefitClass="cooled"/>
+        <fillType name="BUFFALOMILK" period="1.0" maxBenefitClass="cooled"/>
+        <fillType name="GOATMILK" period="1.0" maxBenefitClass="cooled"/>
 
         <!-- ===================================================================== -->
         <!-- DAIRY - AGED (Real: months -> Game: 3.0-6.0 periods)                  -->
         <!-- ===================================================================== -->
-        <fillType name="BUTTER" period="3.0"/>
-        <fillType name="CHEESE" period="6.0"/>
-        <fillType name="GOATCHEESE" period="6.0"/>
+        <fillType name="BUTTER" period="3.0" maxBenefitClass="cooled"/>
+        <fillType name="CHEESE" period="6.0" maxBenefitClass="cooled"/>
+        <fillType name="GOATCHEESE" period="6.0" maxBenefitClass="cooled"/>
 
         <!-- ===================================================================== -->
         <!-- BAKED GOODS (Real: days-weeks -> Game: 1.0 periods)                   -->
         <!-- ===================================================================== -->
-        <fillType name="BREAD" period="1.0"/>
-        <fillType name="CAKE" period="1.0"/>
+        <fillType name="BREAD" period="1.0" maxBenefitClass="frozen"/>
+        <fillType name="CAKE" period="1.0" maxBenefitClass="frozen"/>
 
         <!-- ===================================================================== -->
         <!-- PROCESSED FOODS (Real: months -> Game: 4.0-18.0 periods)              -->
         <!-- ===================================================================== -->
-        <fillType name="CEREAL" period="9.0"/>
-        <fillType name="CHOCOLATE" period="18.0"/>
-        <fillType name="POTATOCHIPS" period="4.0"/>
-        <fillType name="RICEROLLS" period="4.0"/>
+        <fillType name="CEREAL" period="9.0" maxBenefitClass="indoor"/>
+        <fillType name="CHOCOLATE" period="18.0" maxBenefitClass="indoor"/>
+        <fillType name="POTATOCHIPS" period="4.0" maxBenefitClass="indoor"/>
+        <fillType name="RICEROLLS" period="4.0" maxBenefitClass="indoor"/>
 
         <!-- ===================================================================== -->
         <!-- BEVERAGES (Real: weeks-months -> Game: 2.0 periods)                   -->
         <!-- ===================================================================== -->
-        <fillType name="GRAPEJUICE" period="2.0"/>
+        <fillType name="GRAPEJUICE" period="2.0" maxBenefitClass="cooled"/>
 
         <!-- ===================================================================== -->
         <!-- GRAINS & FLOUR (Real: 6-24 months -> Game: 6.0-18.0 periods)          -->
         <!-- ===================================================================== -->
-        <fillType name="WHEAT" period="12.0"/>
-        <fillType name="BARLEY" period="12.0"/>
-        <fillType name="OAT" period="18.0"/>
-        <fillType name="SORGHUM" period="9.0"/>
-        <fillType name="RICE_BAGS" period="12.0"/>
-        <fillType name="RICE_BOXES" period="12.0"/>
-        <fillType name="FLOUR" period="9.0"/>
-        <fillType name="RICEFLOUR" period="6.0"/>
-        <fillType name="CANOLA" period="9.0"/>
-        <fillType name="SUNFLOWER" period="9.0"/>
-        <fillType name="SOYBEAN" period="9.0"/>
-        <fillType name="MAIZE" period="9.0"/>
-        <fillType name="RICE" period="9.0"/>
-        <fillType name="RICELONGGRAIN" period="9.0"/>
+        <fillType name="WHEAT" period="12.0" maxBenefitClass="indoor"/>
+        <fillType name="BARLEY" period="12.0" maxBenefitClass="indoor"/>
+        <fillType name="OAT" period="18.0" maxBenefitClass="indoor"/>
+        <fillType name="SORGHUM" period="9.0" maxBenefitClass="indoor"/>
+        <fillType name="RICE_BAGS" period="12.0" maxBenefitClass="indoor"/>
+        <fillType name="RICE_BOXES" period="12.0" maxBenefitClass="indoor"/>
+        <fillType name="FLOUR" period="9.0" maxBenefitClass="indoor"/>
+        <fillType name="RICEFLOUR" period="6.0" maxBenefitClass="indoor"/>
+        <fillType name="CANOLA" period="9.0" maxBenefitClass="indoor"/>
+        <fillType name="SUNFLOWER" period="9.0" maxBenefitClass="indoor"/>
+        <fillType name="SOYBEAN" period="9.0" maxBenefitClass="indoor"/>
+        <fillType name="MAIZE" period="9.0" maxBenefitClass="indoor"/>
+        <fillType name="RICE" period="9.0" maxBenefitClass="indoor"/>
+        <fillType name="RICELONGGRAIN" period="9.0" maxBenefitClass="indoor"/>
 
         <!-- ===================================================================== -->
         <!-- SEEDS & SAPLINGS (Real: 1-3 years -> Game: 2.0-24.0 periods)          -->
         <!-- ===================================================================== -->
-        <fillType name="SEEDS" period="24.0"/>
-        <fillType name="RICESAPLINGS" period="2.0"/>
-        <fillType name="TREESAPLINGS" period="3.0"/>
+        <fillType name="SEEDS" period="24.0" maxBenefitClass="indoor"/>
+        <fillType name="RICESAPLINGS" period="2.0" maxBenefitClass="indoor"/>
+        <fillType name="TREESAPLINGS" period="3.0" maxBenefitClass="indoor"/>
 
         <!-- ===================================================================== -->
         <!-- COOKING OILS (Real: 12-24 months -> Game: 12.0-18.0 periods)          -->
         <!-- ===================================================================== -->
-        <fillType name="CANOLA_OIL" period="12.0"/>
-        <fillType name="OLIVE_OIL" period="18.0"/>
-        <fillType name="SUNFLOWER_OIL" period="12.0"/>
-        <fillType name="RICE_OIL" period="12.0"/>
+        <fillType name="CANOLA_OIL" period="12.0" maxBenefitClass="indoor"/>
+        <fillType name="OLIVE_OIL" period="18.0" maxBenefitClass="indoor"/>
+        <fillType name="SUNFLOWER_OIL" period="12.0" maxBenefitClass="indoor"/>
+        <fillType name="RICE_OIL" period="12.0" maxBenefitClass="indoor"/>
 
         <!-- ===================================================================== -->
         <!-- ANIMAL PRODUCTS (Real: 2+ years -> Game: 24.0 periods)                -->
         <!-- ===================================================================== -->
-        <fillType name="HONEY" period="24.0"/>
+        <fillType name="HONEY" period="24.0" maxBenefitClass="indoor"/>
 
         <!-- ===================================================================== -->
         <!-- ROOT VEGETABLES & ALLIUMS (Real: 1-8 months -> Game: 3.0-5.0 periods) -->
         <!-- ===================================================================== -->
-        <fillType name="ONION" period="3.0"/>
-        <fillType name="ONIONBAG" period="3.0"/>
-        <fillType name="SUGARBEET" period="5.0"/>
+        <fillType name="ONION" period="3.0" maxBenefitClass="cooled"/>
+        <fillType name="ONIONBAG" period="3.0" maxBenefitClass="cooled"/>
+        <fillType name="SUGARBEET" period="5.0" maxBenefitClass="cooled"/>
 
         <!-- ===================================================================== -->
         <!-- PROCESSED ONION PRODUCTS (Real: 6 months - 2 years)                   -->
         <!-- ===================================================================== -->
-        <fillType name="FRIEDONION" period="6.0"/>
-        <fillType name="ONIONSALT" period="24.0"/>
+        <fillType name="FRIEDONION" period="6.0" maxBenefitClass="frozen"/>
+        <fillType name="ONIONSALT" period="24.0" maxBenefitClass="indoor"/>
 
         <!-- ===================================================================== -->
         <!-- CANNED GOODS (Real: 2-5 years -> Game: 18.0-24.0 periods)             -->
         <!-- Low-acid canned foods have very long shelf life                       -->
         <!-- ===================================================================== -->
-        <fillType name="CANNED_PEAS" period="24.0"/>
-        <fillType name="JARRED_GREENBEAN" period="18.0"/>
-        <fillType name="NOODLESOUP" period="24.0"/>
-        <fillType name="ONIONSOUP" period="24.0"/>
-        <fillType name="SOUPCANSBEETROOT" period="24.0"/>
-        <fillType name="SOUPCANSCARROTS" period="24.0"/>
-        <fillType name="SOUPCANSMIXED" period="24.0"/>
-        <fillType name="SOUPCANSPARSNIP" period="24.0"/>
-        <fillType name="SOUPCANSPOTATO" period="24.0"/>
+        <fillType name="CANNED_PEAS" period="24.0" maxBenefitClass="indoor"/>
+        <fillType name="JARRED_GREENBEAN" period="18.0" maxBenefitClass="indoor"/>
+        <fillType name="NOODLESOUP" period="24.0" maxBenefitClass="indoor"/>
+        <fillType name="ONIONSOUP" period="24.0" maxBenefitClass="indoor"/>
+        <fillType name="SOUPCANSBEETROOT" period="24.0" maxBenefitClass="indoor"/>
+        <fillType name="SOUPCANSCARROTS" period="24.0" maxBenefitClass="indoor"/>
+        <fillType name="SOUPCANSMIXED" period="24.0" maxBenefitClass="indoor"/>
+        <fillType name="SOUPCANSPARSNIP" period="24.0" maxBenefitClass="indoor"/>
+        <fillType name="SOUPCANSPOTATO" period="24.0" maxBenefitClass="indoor"/>
 
         <!-- ===================================================================== -->
         <!-- PRESERVED/PICKLED (Real: 6 months - 2 years -> Game: 6.0-18.0 periods)-->
         <!-- ===================================================================== -->
-        <fillType name="FERMENTEDNAPACABBAGE" period="6.0"/>
-        <fillType name="PRESERVEDBEETROOT" period="18.0"/>
-        <fillType name="PRESERVEDCARROTS" period="18.0"/>
-        <fillType name="PRESERVEDPARSNIP" period="18.0"/>
+        <fillType name="FERMENTEDNAPACABBAGE" period="6.0" maxBenefitClass="indoor"/>
+        <fillType name="PRESERVEDBEETROOT" period="18.0" maxBenefitClass="indoor"/>
+        <fillType name="PRESERVEDCARROTS" period="18.0" maxBenefitClass="indoor"/>
+        <fillType name="PRESERVEDPARSNIP" period="18.0" maxBenefitClass="indoor"/>
 
         <!-- ===================================================================== -->
         <!-- DRIED FRUIT & SUGAR (Real: 6 months - indefinite)                     -->
         <!-- ===================================================================== -->
-        <fillType name="RAISINS" period="12.0"/>
-        <fillType name="SUGAR" period="36.0"/>
+        <fillType name="RAISINS" period="12.0" maxBenefitClass="indoor"/>
+        <fillType name="SUGAR" period="36.0" maxBenefitClass="indoor"/>
 
         <!-- ===================================================================== -->
         <!-- ANIMAL FEED & BEDDING (Real: days-2 years -> Game: 1.0-24.0 periods)  -->
         <!-- ===================================================================== -->
-        <fillType name="PIGFOOD" period="6.0"/>
-        <fillType name="FISHFOOD" period="9.0"/>
-        <fillType name="STRAW" period="24.0"/>
-        <fillType name="CHAFF" period="5.0"/>
-        <fillType name="SUGARBEET_CUT" period="1.0"/>
+        <fillType name="PIGFOOD" period="6.0" maxBenefitClass="indoor"/>
+        <fillType name="FISHFOOD" period="9.0" maxBenefitClass="indoor"/>
+        <fillType name="STRAW" period="24.0" maxBenefitClass="sheltered"/>
+        <fillType name="CHAFF" period="5.0" maxBenefitClass="sheltered"/>
+        <fillType name="SUGARBEET_CUT" period="1.0" maxBenefitClass="cooled"/>
 
         <!-- ===================================================================== -->
         <!-- SILAGE & FERMENTED FEED (Real: months-years -> Game: 5.0-12.0 periods)-->
         <!-- Anaerobic fermentation provides long-term preservation                -->
         <!-- ===================================================================== -->
-        <fillType name="SILAGE" period="12.0"/>
-        <fillType name="FORAGE" period="5.0"/>
-        <fillType name="FORAGE_MIXING" period="5.0"/>
+        <fillType name="SILAGE" period="12.0" maxBenefitClass="indoor"/>
+        <fillType name="FORAGE" period="5.0" maxBenefitClass="sheltered"/>
+        <fillType name="FORAGE_MIXING" period="5.0" maxBenefitClass="sheltered"/>
 
         <!-- ===================================================================== -->
         <!-- BALES - Windrow fill types used when creating bales                   -->
         <!-- ===================================================================== -->
-        <fillType name="GRASS_WINDROW" period="1.0"/>
-        <fillType name="DRYGRASS_WINDROW" period="18.0"/>
+        <fillType name="GRASS_WINDROW" period="1.0" maxBenefitClass="sheltered"/>
+        <fillType name="DRYGRASS_WINDROW" period="18.0" maxBenefitClass="sheltered"/>
 
         <!-- ===================================================================== -->
         <!-- NON-EXPIRING: Cut crops & intermediates (hidden)                      -->

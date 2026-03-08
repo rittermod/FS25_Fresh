@@ -128,6 +128,12 @@ function RmFreshIO.registerSettingsSchema()
     schema:register(XMLValueType.FLOAT, "freshSettings.fillTypes.fillType(?)#period", "Expiration period")
     schema:register(XMLValueType.STRING, "freshSettings.fillTypes.fillType(?)#expires", "Expires flag")
     schema:register(XMLValueType.STRING, "freshSettings.fillTypes.fillType(?)#hidden", "Hidden from UI")
+    schema:register(XMLValueType.STRING, "freshSettings.fillTypes.fillType(?)#maxBenefitClass", "Max benefit class")
+
+    -- Storage class settings (Epic F-123)
+    schema:register(XMLValueType.STRING, "freshSettings.storageClasses#enabled", "Enable storage aging")
+    schema:register(XMLValueType.STRING, "freshSettings.storageClasses.class(?)#name", "Class name")
+    schema:register(XMLValueType.FLOAT, "freshSettings.storageClasses.class(?)#multiplier", "Class multiplier")
 
     RmFreshIO.settingsSchema = schema
     Log:debug("SCHEMA_REGISTER: Fresh settings format v%d schema registered", RmFreshIO.SETTINGS_VERSION)

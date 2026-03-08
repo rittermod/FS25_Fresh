@@ -40,6 +40,17 @@ RmFreshSettings.DEFAULT_THRESHOLDS = {
 RmFreshSettings.PRESET_MULTIPLIERS = { veryEasy = 4.0, easy = 2.0, normal = 1.0, hard = 0.5 }
 RmFreshSettings.PRESET_NAMES = { "veryEasy", "easy", "normal", "hard", "custom" }
 
+--- Default storage class multipliers (Epic F-123)
+--- Key: storage class value, Value: aging rate multiplier
+RmFreshSettings.DEFAULT_CLASS_MULTIPLIERS = {
+    [0] = 1.5,  -- EXPOSED
+    [1] = 1.0,  -- SHELTERED (baseline)
+    [2] = 0.8,  -- INDOOR
+    [3] = 0.3,  -- COOLED
+    [4] = 0.05, -- FROZEN
+    [5] = 0,    -- DISABLED (hardcoded, not configurable)
+}
+
 -- =============================================================================
 -- STATE STRUCTURES (initialized in initialize())
 -- =============================================================================
@@ -77,6 +88,17 @@ RmFreshSettings.fillTypeSourceMap = {}
 
 --- Internal flag: true while inside FillTypeManager:loadModFillTypes()
 RmFreshSettings._isLoadingModFillTypes = false
+
+--- Storage aging enabled toggle (loaded from XML storageClasses#enabled)
+RmFreshSettings.storageAgingEnabled = true
+
+--- Runtime storage class multipliers (classValue → multiplier)
+--- Populated by loadStorageClasses() from XML, falls back to DEFAULT_CLASS_MULTIPLIERS
+RmFreshSettings.classMultipliers = {}
+
+--- Per-fillType maximum benefit class ceiling (fillTypeName → classValue)
+--- Populated by loadStorageClasses() from XML maxBenefitClass attributes
+RmFreshSettings.maxBenefitClassDefaults = {}
 
 -- =============================================================================
 -- FILL TYPE SOURCE TRACKING
@@ -224,6 +246,9 @@ function RmFreshSettings:initialize(modDir)
     -- Load mod author defaults from XML
     self:loadModDefaults()
 
+    -- Load storage class config (multipliers + per-fillType maxBenefitClass)
+    self:loadStorageClasses()
+
     -- Build index-based cache for adapter performance
     self:rebuildIndexCache()
 
@@ -292,6 +317,103 @@ function RmFreshSettings:loadModDefaults()
 
     Log:debug("SETTINGS_LOAD: Loaded %d mod defaults, %d hidden categories",
         self:tableCount(self.modDefaults), self:tableCount(self.hiddenCategoryIndices))
+end
+
+--- Load storage class configuration from defaultSettings.xml
+--- Loads multipliers per class and maxBenefitClass per fillType
+--- Opens XML independently (same file as loadModDefaults, separate open)
+function RmFreshSettings:loadStorageClasses()
+    -- Initialize with defaults
+    self.classMultipliers = {}
+    for k, v in pairs(self.DEFAULT_CLASS_MULTIPLIERS) do
+        self.classMultipliers[k] = v
+    end
+    self.maxBenefitClassDefaults = {}
+    self.storageAgingEnabled = true
+
+    if self.modDirectory == nil then
+        Log:warning("STORAGE_CLASS_LOAD: modDirectory not set")
+        return
+    end
+
+    local xmlPath = self.modDirectory .. self.MOD_DEFAULTS_PATH
+
+    RmFreshIO.registerSettingsSchema()
+
+    local xmlFile = XMLFile.loadIfExists("freshSettings", xmlPath, RmFreshIO.settingsSchema)
+    if xmlFile == nil then
+        Log:debug("STORAGE_CLASS_LOAD: File not found: %s", xmlPath)
+        return
+    end
+
+    -- Load enabled toggle
+    local enabledStr = xmlFile:getString("freshSettings.storageClasses#enabled")
+    if enabledStr ~= nil then
+        self.storageAgingEnabled = (enabledStr == "true")
+    end
+
+    -- Load class multipliers
+    local classCount = 0
+    xmlFile:iterate("freshSettings.storageClasses.class", function(_, path)
+        local name = xmlFile:getString(path .. "#name")
+        local multiplier = xmlFile:getFloat(path .. "#multiplier", nil)
+        if name and multiplier then
+            local classValue = RmFreshManager:getStorageClassByName(name)
+            if classValue ~= nil then
+                self.classMultipliers[classValue] = multiplier
+                classCount = classCount + 1
+                Log:debug("STORAGE_CLASS_CONFIG: %s(%d) = %.2fx", name, classValue, multiplier)
+            else
+                Log:warning("Unknown storage class '%s' in defaultSettings.xml, skipping", name)
+            end
+        end
+    end)
+
+    -- Load per-fillType maxBenefitClass from fillType elements
+    local maxBenefitCount = 0
+    xmlFile:iterate("freshSettings.fillTypes.fillType", function(_, path)
+        local fillTypeName = xmlFile:getString(path .. "#name")
+        local maxBenefitStr = xmlFile:getString(path .. "#maxBenefitClass")
+        if fillTypeName and maxBenefitStr then
+            local classValue = RmFreshManager:getStorageClassByName(maxBenefitStr)
+            if classValue ~= nil then
+                self.maxBenefitClassDefaults[fillTypeName] = classValue
+                maxBenefitCount = maxBenefitCount + 1
+                Log:trace("MAX_BENEFIT: %s -> %s(%d)", fillTypeName, maxBenefitStr, classValue)
+            else
+                Log:warning("Unknown maxBenefitClass '%s' for fillType '%s', skipping",
+                    maxBenefitStr, fillTypeName)
+            end
+        end
+    end)
+
+    xmlFile:delete()
+
+    Log:info("Storage class config loaded: %d classes, %d fillType ceilings, aging %s",
+        classCount, maxBenefitCount, self.storageAgingEnabled and "enabled" or "disabled")
+end
+
+--- Get the aging rate multiplier for a storage class value
+---@param classValue number Storage class value (0-5)
+---@return number Multiplier (fallback 1.0 for unknown classes)
+function RmFreshSettings:getClassMultiplier(classValue)
+    local multiplier = self.classMultipliers[classValue]
+    if multiplier ~= nil then
+        return multiplier
+    end
+    return 1.0
+end
+
+--- Get the maximum benefit class ceiling for a fillType
+--- Returns the highest storage class that provides aging benefit for this fillType
+---@param fillTypeIndex number Fill type index
+---@return number Storage class value (fallback: SHELTERED)
+function RmFreshSettings:getMaxBenefitClass(fillTypeIndex)
+    local fillTypeName = g_fillTypeManager:getFillTypeNameByIndex(fillTypeIndex)
+    if fillTypeName and self.maxBenefitClassDefaults[fillTypeName] then
+        return self.maxBenefitClassDefaults[fillTypeName]
+    end
+    return RmFreshManager.STORAGE_CLASS.SHELTERED
 end
 
 -- =============================================================================
