@@ -61,6 +61,10 @@ function RmLossTracker:recordExpiration(container, amount, location)
         end
     end
 
+    -- Resolve effective storage class at expiration time
+    local classInfo = RmFreshManager:resolveStorageClassInfo(container)
+    local storageClass = classInfo and classInfo.effective or nil
+
     -- Build loss entry
     local entry = {
         -- When
@@ -78,6 +82,7 @@ function RmLossTracker:recordExpiration(container, amount, location)
         location = loc,
         objectUniqueId = objectUniqueId,
         entityType = container.entityType or "unknown",
+        storageClass = storageClass,
 
         -- Who
         farmId = farmId,
@@ -92,8 +97,10 @@ function RmLossTracker:recordExpiration(container, amount, location)
         Log:debug("LOSS_BROADCAST: sent to clients")
     end
 
-    Log:debug("LOSS_RECORDED: %s %.0f at %s (farm %d, Y%d P%d D%d H%d)",
-        fillTypeName, amount, loc, farmId,
+    Log:debug("LOSS_RECORDED: %s %.0f at %s [%s] (farm %d, Y%d P%d D%d H%d)",
+        fillTypeName, amount, loc,
+        storageClass and (RmFreshManager.STORAGE_CLASS_NAMES[storageClass] or "?") or "n/a",
+        farmId,
         env.currentYear or 1, env.currentPeriod or 1, env.currentDayInPeriod or 1, env.currentHour or 0)
 end
 

@@ -105,7 +105,7 @@ function RmFreshAgeDisplay.onPlaceableDrawHook(placeable)
     box:clear()
     box:setTitle(g_i18n:getText("fresh_age_display_title"))
     for _, row in ipairs(rows) do
-        box:addRow(row.fillTypeName, row.buckets, row.total)
+        box:addRow(row.fillTypeName, row.buckets, row.total, row.storageClassName)
     end
     box:showNextFrame()
 end
@@ -198,7 +198,7 @@ function RmFreshAgeDisplay:draw()
     box:clear()
     box:setTitle(g_i18n:getText("fresh_age_display_title"))
     for _, row in ipairs(rows) do
-        box:addRow(row.fillTypeName, row.buckets, row.total)
+        box:addRow(row.fillTypeName, row.buckets, row.total, row.storageClassName)
     end
     box:showNextFrame()
 end
@@ -243,9 +243,10 @@ end
 function RmFreshAgeDisplay.buildRows(containers)
     local rows = {}
     local C = RmFreshInfoBox.COLORS
+    local SC = RmFreshManager.STORAGE_CLASS
 
-    -- First pass: Group batches by fillTypeName
-    local byFillType = {} -- fillTypeName -> { batches = {}, fillTypeIndex = nil }
+    -- First pass: Group batches by fillTypeName, track worst storage class
+    local byFillType = {} -- fillTypeName -> { batches = {}, fillTypeIndex = nil, worstClass = nil }
 
     for _, container in ipairs(containers) do
         local batches = container.batches
@@ -255,11 +256,21 @@ function RmFreshAgeDisplay.buildRows(containers)
                                  container.identityMatch.storage.fillTypeName
 
             if fillTypeName then
+                -- Resolve effective class for this container
+                local classInfo = RmFreshManager:resolveStorageClassInfo(container)
+                local effectiveClass = classInfo and classInfo.effective or SC.SHELTERED
+
                 if not byFillType[fillTypeName] then
                     byFillType[fillTypeName] = {
                         batches = {},
-                        fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(fillTypeName)
+                        fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(fillTypeName),
+                        worstClass = effectiveClass,
                     }
+                else
+                    -- Lower enum value = worse storage (EXPOSED=0 < SHELTERED=1 < ...)
+                    if effectiveClass < byFillType[fillTypeName].worstClass then
+                        byFillType[fillTypeName].worstClass = effectiveClass
+                    end
                 end
                 -- Merge batches from this container
                 for _, batch in ipairs(batches) do
@@ -286,11 +297,26 @@ function RmFreshAgeDisplay.buildRows(containers)
                 -- Get display name
                 local displayName = g_fillTypeManager:getFillTypeTitleByIndex(fillTypeIndex) or fillTypeName
 
+                -- Resolve storage class display name via l10n
+                local storageClassName = nil
+                if data.worstClass ~= nil then
+                    local classKey = RmFreshManager.STORAGE_CLASS_NAMES[data.worstClass]
+                    if classKey then
+                        storageClassName = g_i18n:getText("fresh_class_" .. classKey)
+                    end
+                end
+
+                Log:trace("BUILDROWS: %s class=%s(%s)",
+                    fillTypeName,
+                    data.worstClass and tostring(data.worstClass) or "nil",
+                    storageClassName or "n/a")
+
                 table.insert(rows, {
                     fillTypeIndex = fillTypeIndex,
                     fillTypeName = displayName,
                     buckets = buckets,
                     total = total,
+                    storageClassName = storageClassName,
                 })
             end
         end

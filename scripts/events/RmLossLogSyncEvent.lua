@@ -43,6 +43,8 @@ function RmLossLogSyncEvent:writeStream(streamId, connection)
     streamWriteString(streamId, entry.entityType or "")
     -- Who (1 int)
     streamWriteUInt16(streamId, entry.farmId or 0)
+    -- Storage class (UInt8, 255 = nil/unknown)
+    streamWriteUInt8(streamId, entry.storageClass or 255)
 
     Log:debug("LOSSLOG_SYNC_WRITE: %s %.0f (farm %d)", entry.fillTypeName or "?", entry.amount or 0, entry.farmId or 0)
 end
@@ -51,6 +53,7 @@ end
 ---@param streamId number Network stream ID
 ---@param connection table Network connection
 function RmLossLogSyncEvent:readStream(streamId, connection)
+    local scRaw = nil
     self.entry = {
         -- When
         year = streamReadInt16(streamId),
@@ -68,6 +71,9 @@ function RmLossLogSyncEvent:readStream(streamId, connection)
         -- Who
         farmId = streamReadUInt16(streamId),
     }
+    -- Storage class (UInt8, 255 = nil/unknown)
+    scRaw = streamReadUInt8(streamId)
+    self.entry.storageClass = scRaw ~= 255 and scRaw or nil
 
     Log:debug("LOSSLOG_SYNC_READ: %s %.0f (farm %d)", self.entry.fillTypeName or "?", self.entry.amount or 0, self.entry.farmId or 0)
     self:run(connection)

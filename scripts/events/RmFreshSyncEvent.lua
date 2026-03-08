@@ -66,10 +66,13 @@ function RmFreshSyncEvent:writeStream(streamId, connection)
 
         -- Write metadata
         local location = ""
-        if container.metadata and container.metadata.location then
-            location = container.metadata.location
+        local storageClass = RmFreshManager.STORAGE_CLASS.SHELTERED
+        if container.metadata then
+            location = container.metadata.location or ""
+            storageClass = container.metadata.storageClass or RmFreshManager.STORAGE_CLASS.SHELTERED
         end
         streamWriteString(streamId, location)
+        streamWriteUInt8(streamId, storageClass)
 
         -- Write flat batches array (not nested in fillUnits)
         local batches = container.batches or {}
@@ -132,6 +135,7 @@ function RmFreshSyncEvent:readStream(streamId, connection)
 
         -- Read metadata
         local location = streamReadString(streamId)
+        local storageClass = streamReadUInt8(streamId)
 
         -- Read flat batches
         local batchCount = streamReadUInt8(streamId)
@@ -156,7 +160,7 @@ function RmFreshSyncEvent:readStream(streamId, connection)
                 storage = { fillTypeName = fillTypeName }
             },
             batches = batches,
-            metadata = { location = location }
+            metadata = { location = location, storageClass = storageClass }
         }
 
         self.containersData[containerId] = container

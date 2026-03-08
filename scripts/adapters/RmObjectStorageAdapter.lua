@@ -51,6 +51,17 @@ function RmObjectStorageAdapter.registerOverwrittenFunctions(placeableType)
 end
 
 -- =============================================================================
+-- STORAGE CLASS DETECTION (F-124-1)
+-- =============================================================================
+
+--- Detect storage class for object storage - always INDOOR (stored inside buildings)
+---@param abstractObject table Abstract object entity
+---@return number storageClass Storage class enum value
+function RmObjectStorageAdapter.detectStorageClass(abstractObject)
+    return RmFreshManager.STORAGE_CLASS.INDOOR
+end
+
+-- =============================================================================
 -- LIFECYCLE HOOKS
 -- =============================================================================
 
@@ -174,11 +185,12 @@ function RmObjectStorageAdapter.doLoadRegistration(placeable, entityId)
 
                 -- Register with Manager (will reconcile with fresh.xml)
                 -- AbstractObject IS a runtime entity - it exists in spec_objectStorage.storedObjects[]
+                local osStorageClass = RmObjectStorageAdapter.detectStorageClass(abstractObject)
                 local containerId, wasReconciled = RmFreshManager:registerContainer(
                     RmObjectStorageAdapter.ENTITY_TYPE,
                     identityMatch,
                     abstractObject, -- AbstractObject is the runtime entity for stored items
-                    { adapter = RmObjectStorageAdapter, farmId = farmId }
+                    { adapter = RmObjectStorageAdapter, farmId = farmId, storageClass = osStorageClass }
                 )
 
                 if containerId then
@@ -229,10 +241,11 @@ function RmObjectStorageAdapter.rescanForPerishables()
                             local fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(fillTypeName)
                             if fillTypeIndex and RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
                                 local farmId = placeable.getOwnerFarmId and placeable:getOwnerFarmId() or 0
+                                local rescanOsClass = RmObjectStorageAdapter.detectStorageClass(abstractObject)
                                 local containerId = RmFreshManager:registerContainer(
                                     RmObjectStorageAdapter.ENTITY_TYPE,
                                     identityMatch, abstractObject,
-                                    { adapter = RmObjectStorageAdapter, farmId = farmId }
+                                    { adapter = RmObjectStorageAdapter, farmId = farmId, storageClass = rescanOsClass }
                                 )
                                 if containerId then
                                     spec.abstractObjectContainers[abstractObject] = containerId
@@ -468,11 +481,12 @@ function RmObjectStorageAdapter:addObjectToObjectStorageHook(superFunc, object, 
 
     -- Register stored container with abstractObject as runtimeEntity
     -- AbstractObject IS a runtime entity - it exists in spec_objectStorage.storedObjects[]
+    local entryStorageClass = RmObjectStorageAdapter.detectStorageClass(abstractObject)
     local storedContainerId, _ = RmFreshManager:registerContainer(
         RmObjectStorageAdapter.ENTITY_TYPE,
         identityMatch,
         abstractObject, -- AbstractObject is the runtime entity for stored items
-        { adapter = RmObjectStorageAdapter, farmId = farmId }
+        { adapter = RmObjectStorageAdapter, farmId = farmId, storageClass = entryStorageClass }
     )
 
     if not storedContainerId then

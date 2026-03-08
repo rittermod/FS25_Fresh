@@ -34,6 +34,17 @@ function RmHusbandryFoodAdapter:buildIdentityMatch(placeable, fillTypeName, fill
 end
 
 -- =============================================================================
+-- STORAGE CLASS DETECTION (F-124-1)
+-- =============================================================================
+
+--- Detect storage class for husbandry food - always SHELTERED (troughs under roof/cover)
+---@param placeable table Placeable entity
+---@return number storageClass Storage class enum value
+function RmHusbandryFoodAdapter.detectStorageClass(placeable)
+    return RmFreshManager.STORAGE_CLASS.SHELTERED
+end
+
+-- =============================================================================
 -- SPECIALIZATION SETUP
 -- =============================================================================
 
@@ -132,9 +143,10 @@ function RmHusbandryFoodAdapter.registerFoodContainer(placeable, spec, fillTypeI
 
     local identityMatch = RmHusbandryFoodAdapter:buildIdentityMatch(placeable, fillTypeName, fillLevel)
 
+    local hfStorageClass = RmHusbandryFoodAdapter.detectStorageClass(placeable)
     local containerId, wasReconciled = RmFreshManager:registerContainer(
         "husbandryfood", identityMatch, placeable,
-        { location = placeable:getName() or "Animal Building" }
+        { location = placeable:getName() or "Animal Building", storageClass = hfStorageClass }
     )
 
     spec.containerIds[fillTypeName] = containerId

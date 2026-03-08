@@ -149,8 +149,12 @@ function RmFreshConsole:registerCommands()
     addConsoleCommand("fClearLog", "Clear loss log (admin)", "consoleCommandClearLog", self)
     addConsoleCommand("fReconcile", "Reconcile with game state (admin)", "consoleCommandReconcile", self)
 
+    -- Storage class override commands (admin only, Epic F-124)
+    addConsoleCommand("fSetStorage", "Set storage class override (fSetStorage <#|items> <class>)", "consoleCommandSetStorage", self)
+    addConsoleCommand("fClearStorage", "Clear storage class override (fClearStorage <#|items>)", "consoleCommandClearStorage", self)
+
     Log:info(
-    "CONSOLE: fList, fInspect, fBatches, fStorages, fAddBatch, fRemBatch, fSetAge, fSetAllAge, fAge, fAgeContainer, fExpire, fExpireAll, fStats, fStatus, fLog, fDump, fClearLog, fReconcile commands registered")
+    "CONSOLE: fList, fInspect, fBatches, fStorages, fAddBatch, fRemBatch, fSetAge, fSetAllAge, fAge, fAgeContainer, fExpire, fExpireAll, fStats, fStatus, fLog, fDump, fClearLog, fReconcile, fSetStorage, fClearStorage commands registered")
 end
 
 --- Unregister console commands
@@ -181,6 +185,8 @@ function RmFreshConsole:unregisterCommands()
     removeConsoleCommand("fDump")
     removeConsoleCommand("fClearLog")
     removeConsoleCommand("fReconcile")
+    removeConsoleCommand("fSetStorage")
+    removeConsoleCommand("fClearStorage")
 
     self.targets = {}
     Log:debug("CONSOLE: commands unregistered")
@@ -325,30 +331,28 @@ function RmFreshConsole:consoleCommandStorages(filterStr)
     -- Iterate and format
     local count = 0
     for _, container in ipairs(containers) do
-        local storageClass = container.metadata and container.metadata.storageClass
-            or SC.SHELTERED
         local fillTypeName = container.identityMatch and container.identityMatch.storage
             and container.identityMatch.storage.fillTypeName or "?"
-        local fillTypeIndex = container.fillTypeIndex
-            or g_fillTypeManager:getFillTypeIndexByName(fillTypeName)
-        local maxBenefitClass = RmFreshSettings:getMaxBenefitClass(fillTypeIndex)
-        local effectiveClass = RmFreshManager:_resolveEffectiveClass(storageClass, maxBenefitClass)
-        local multiplier = RmFreshSettings:getClassMultiplier(effectiveClass)
+        local info = RmFreshManager:resolveStorageClassInfo(container)
 
         -- Apply class filter
-        if classFilter ~= nil and effectiveClass ~= classFilter then
+        if classFilter ~= nil and info.effective ~= classFilter then
             -- skip
         else
             count = count + 1
             self.targets[count] = container.id
 
+            local overrideStr = info.override
+                and capitalize(RmFreshManager.STORAGE_CLASS_NAMES[info.override])
+                or "\xE2\x80\x94"
             local name = self:getEntityName(container)
-            print(string.format("#%d: %s \"%s\" [%s] %s class=%s maxBenefit=%s effective=%s mult=%.2fx",
+            print(string.format("#%d: %s \"%s\" [%s] %s detected=%s override=%s maxBenefit=%s effective=%s mult=%.2fx",
                 count, container.entityType, name, container.id, fillTypeName,
-                capitalize(RmFreshManager.STORAGE_CLASS_NAMES[storageClass]),
-                capitalize(RmFreshManager.STORAGE_CLASS_NAMES[maxBenefitClass]),
-                capitalize(RmFreshManager.STORAGE_CLASS_NAMES[effectiveClass]),
-                multiplier))
+                capitalize(RmFreshManager.STORAGE_CLASS_NAMES[info.detected]),
+                overrideStr,
+                capitalize(RmFreshManager.STORAGE_CLASS_NAMES[info.maxBenefitClass]),
+                capitalize(RmFreshManager.STORAGE_CLASS_NAMES[info.effective]),
+                info.multiplier))
         end
     end
 
@@ -1309,8 +1313,17 @@ function RmFreshConsole:consoleCommandLog(countStr)
         local timeStr = string.format("Y%d P%d D%d H%d",
             entry.year or 1, entry.period or 1, entry.dayInPeriod or 1, entry.hour or 0)
 
-        print(string.format("[%d] %s: %.0f at %s (farm %d, %s)",
-            i, fillTypeName, amount, location, farmId, timeStr))
+        -- Storage class label (omit for legacy entries without storageClass)
+        local classStr = ""
+        if entry.storageClass ~= nil then
+            local className = RmFreshManager.STORAGE_CLASS_NAMES[entry.storageClass]
+            if className then
+                classStr = string.format(" [%s]", className:sub(1, 1):upper() .. className:sub(2))
+            end
+        end
+
+        print(string.format("[%d] %s: %.0f at %s%s (farm %d, %s)",
+            i, fillTypeName, amount, location, classStr, farmId, timeStr))
     end
 
     return ""
@@ -1475,4 +1488,156 @@ function RmFreshConsole:consoleCommandExpireAll(typeStr)
         )
         return "Request sent to server..."
     end
+end
+
+-- ============================================================================
+-- fSetStorage / fClearStorage Commands (Epic F-124, AC: 1, 3, 5, 6)
+-- ============================================================================
+
+--- Resolve override key from index or "items" keyword
+--- Returns overrideKey string, display label, or nil + error message
+---@param indexOrKey string Index number or "items"
+---@return string|nil overrideKey
+---@return string labelOrError Display label (success) or error message (failure)
+function RmFreshConsole:resolveOverrideKey(indexOrKey)
+    if string.lower(indexOrKey) == "items" then
+        return "itemsInWorld", "Items in World"
+    end
+
+    local index = tonumber(indexOrKey)
+    if not index then
+        return nil, "Usage: fSetStorage <#|items> <class>"
+    end
+
+    if next(self.targets) == nil then
+        return nil, "No containers indexed. Run fList first."
+    end
+    if index < 1 or index > #self.targets then
+        return nil, string.format("Invalid index. Valid range: 1-%d", #self.targets)
+    end
+
+    local containerId = self.targets[index]
+    if not containerId then
+        return nil, "Invalid index. Run fList first."
+    end
+
+    local container = RmFreshManager.containers[containerId]
+    if not container then
+        return nil, "Container not found"
+    end
+
+    -- Bales and pallets use combined "itemsInWorld" override (not per-item uniqueId)
+    if container.entityType == "bale" or (container.metadata and container.metadata.isPallet) then
+        return "itemsInWorld", "Items in World"
+    end
+
+    -- All other entity types use worldObject.uniqueId (for stored objects, this IS the parent placeable's uniqueId)
+    local wo = container.identityMatch and container.identityMatch.worldObject
+    local uniqueId = wo and wo.uniqueId
+    if not uniqueId then
+        return nil, "Container has no uniqueId (cannot override)"
+    end
+
+    local label = container.metadata and container.metadata.location or uniqueId
+    return uniqueId, label
+end
+
+--- Console command: Set storage class override
+--- Usage: fSetStorage <#|items> <class>
+---@param indexOrKey string Container index from fList or "items"
+---@param classStr string Storage class name (exposed, sheltered, indoor, cooled, frozen, disabled)
+---@return string Console output message
+function RmFreshConsole:consoleCommandSetStorage(indexOrKey, classStr)
+    if not indexOrKey or not classStr then
+        return "Usage: fSetStorage <#|items> <class>  (valid classes: exposed, sheltered, indoor, cooled, frozen, disabled)"
+    end
+
+    -- Parse class name
+    local classValue = RmFreshManager:getStorageClassByName(classStr)
+    if not classValue then
+        return "Invalid class '" .. classStr .. "'. Valid: exposed, sheltered, indoor, cooled, frozen, disabled"
+    end
+
+    -- Resolve override key
+    local overrideKey, label = self:resolveOverrideKey(indexOrKey)
+    if not overrideKey then
+        return label -- label contains the error message
+    end
+
+    -- Check admin (early feedback)
+    local ok, err = self:requireAdmin("fSetStorage")
+    if not ok then return err end
+
+    -- Determine execution context
+    local isServer = g_currentMission:getIsServer()
+    local isMultiplayer = g_currentMission.missionDynamicInfo.isMultiplayer
+
+    if not isMultiplayer or isServer then
+        return self:executeSetStorage(overrideKey, classValue)
+    else
+        -- MP Client: send request to server
+        g_client:getServerConnection():sendEvent(
+            RmFreshConsoleRequestEvent.new("SET_STORAGE", "", 0, { key = overrideKey, classValue = classValue })
+        )
+        return "Request sent to server..."
+    end
+end
+
+--- Console command: Clear storage class override
+--- Usage: fClearStorage <#|items>
+---@param indexOrKey string Container index from fList or "items"
+---@return string Console output message
+function RmFreshConsole:consoleCommandClearStorage(indexOrKey)
+    if not indexOrKey then
+        return "Usage: fClearStorage <#|items>"
+    end
+
+    -- Resolve override key
+    local overrideKey, label = self:resolveOverrideKey(indexOrKey)
+    if not overrideKey then
+        return label -- label contains the error message
+    end
+
+    -- Check admin (early feedback)
+    local ok, err = self:requireAdmin("fClearStorage")
+    if not ok then return err end
+
+    -- Determine execution context
+    local isServer = g_currentMission:getIsServer()
+    local isMultiplayer = g_currentMission.missionDynamicInfo.isMultiplayer
+
+    if not isMultiplayer or isServer then
+        return self:executeClearStorage(overrideKey)
+    else
+        -- MP Client: send request to server
+        g_client:getServerConnection():sendEvent(
+            RmFreshConsoleRequestEvent.new("CLEAR_STORAGE", "", 0, { key = overrideKey })
+        )
+        return "Request sent to server..."
+    end
+end
+
+--- Execute set storage class override (runs on server)
+---@param overrideKey string uniqueId or "itemsInWorld"
+---@param classValue number Storage class enum value
+---@return string Console output message
+function RmFreshConsole:executeSetStorage(overrideKey, classValue)
+    RmFreshSettings:setStorageClassOverride(overrideKey, classValue)
+    local className = RmFreshManager.STORAGE_CLASS_NAMES[classValue] or "?"
+    local label = overrideKey == "itemsInWorld" and "Items in World" or overrideKey
+    return string.format("Override set: %s -> %s", label, className)
+end
+
+--- Execute clear storage class override (runs on server)
+---@param overrideKey string uniqueId or "itemsInWorld"
+---@return string Console output message
+function RmFreshConsole:executeClearStorage(overrideKey)
+    local existing = RmFreshSettings:getStorageClassOverride(overrideKey)
+    if existing == nil then
+        local label = overrideKey == "itemsInWorld" and "Items in World" or overrideKey
+        return string.format("No override exists for %s", label)
+    end
+    RmFreshSettings:clearStorageClassOverride(overrideKey)
+    local label = overrideKey == "itemsInWorld" and "Items in World" or overrideKey
+    return string.format("Override cleared: %s (reverted to detected class)", label)
 end

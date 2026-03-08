@@ -67,10 +67,13 @@ function RmFreshUpdateEvent:writeStream(streamId, connection)
 
         -- Write metadata
         local location = ""
-        if container.metadata and container.metadata.location then
-            location = container.metadata.location
+        local storageClass = RmFreshManager.STORAGE_CLASS.SHELTERED
+        if container.metadata then
+            location = container.metadata.location or ""
+            storageClass = container.metadata.storageClass or RmFreshManager.STORAGE_CLASS.SHELTERED
         end
         streamWriteString(streamId, location)
+        streamWriteUInt8(streamId, storageClass)
 
         -- Write flat batches array
         local batches = container.batches or {}
@@ -121,6 +124,7 @@ function RmFreshUpdateEvent:readStream(streamId, connection)
 
         -- Read metadata
         local location = streamReadString(streamId)
+        local storageClass = streamReadUInt8(streamId)
 
         -- Read flat batches
         local batchCount = streamReadUInt8(streamId)
@@ -145,7 +149,7 @@ function RmFreshUpdateEvent:readStream(streamId, connection)
                 storage = { fillTypeName = fillTypeName }
             },
             batches = batches,
-            metadata = { location = location }
+            metadata = { location = location, storageClass = storageClass }
         }
 
     elseif self.operation == RmFreshUpdateEvent.OP_UPDATE then

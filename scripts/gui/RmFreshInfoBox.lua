@@ -128,11 +128,13 @@ end
 ---@param fillTypeName string Display name of the fill type
 ---@param buckets table Array of {color, amount}
 ---@param total number Total amount
-function RmFreshInfoBox:addRow(fillTypeName, buckets, total)
+---@param storageClassName string|nil Storage class display name (e.g., "Indoor")
+function RmFreshInfoBox:addRow(fillTypeName, buckets, total, storageClassName)
     table.insert(self.rows, {
         fillTypeName = fillTypeName,
         buckets = buckets,
-        total = total
+        total = total,
+        storageClassName = storageClassName,
     })
 end
 
@@ -208,12 +210,16 @@ function RmFreshInfoBox:drawRow(leftX, rowY, row)
     -- Max text width (truncate to fit bar)
     local maxTextWidth = barX - textX - self.textBarGap
 
-    -- Draw fillType name
+    -- Draw fillType name (with storage class appended if available)
     setTextBold(false)
     setTextAlignment(RenderText.ALIGN_LEFT)
     setTextColor(1, 1, 1, 1)
     local textY = rowY + (self.rowHeight - self.rowTextSize) / 2 + self.rowTextSize * 0.15
-    local displayName = Utils.limitTextToWidth(row.fillTypeName or "Unknown", self.rowTextSize, maxTextWidth, false, "...")
+    local baseName = row.fillTypeName or "Unknown"
+    if row.storageClassName then
+        baseName = baseName .. " (" .. row.storageClassName .. ")"
+    end
+    local displayName = Utils.limitTextToWidth(baseName, self.rowTextSize, maxTextWidth, false, "...")
     renderText(textX, textY, self.rowTextSize, displayName)
 
     -- Draw bar using ThreePartOverlay

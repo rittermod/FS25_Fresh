@@ -42,6 +42,34 @@ function RmVehicleAdapter:buildIdentityMatch(vehicle, fillUnitIndex)
 end
 
 -- =============================================================================
+-- STORAGE CLASS DETECTION (F-124-1)
+-- =============================================================================
+
+--- Detect storage class for a vehicle based on its type
+--- Pallet/bigBag → EXPOSED, open-top (FillVolume) → EXPOSED, enclosed → SHELTERED
+---@param vehicle table Vehicle entity
+---@return number storageClass Storage class enum value
+function RmVehicleAdapter.detectStorageClass(vehicle)
+    local SC = RmFreshManager.STORAGE_CLASS
+
+    Log:trace(">>> detectStorageClass: isPallet=%s fillVolume=%s fillUnit=%s",
+        tostring(vehicle.isPallet),
+        tostring(vehicle.spec_fillVolume ~= nil),
+        tostring(vehicle.spec_fillUnit ~= nil))
+
+    -- Pallet/bigBag: always exposed (isPallet covers both)
+    if vehicle.isPallet then
+        return SC.EXPOSED
+    end
+    -- Open-top heap (trailer with FillVolume): exposed
+    if vehicle.spec_fillVolume ~= nil then
+        return SC.EXPOSED
+    end
+    -- Enclosed container (spec_fillUnit only): sheltered
+    return SC.SHELTERED
+end
+
+-- =============================================================================
 -- FILL LEVEL MANIPULATION (for console commands)
 -- Uses containerId as identifier - adapter resolves fillUnitIndex internally
 -- =============================================================================
@@ -286,6 +314,8 @@ function RmVehicleAdapter.doRegistration(vehicle, entityId)
     local fillUnits = vehicle.spec_fillUnit and vehicle.spec_fillUnit.fillUnits
     if fillUnits == nil then return end
 
+    local storageClass = RmVehicleAdapter.detectStorageClass(vehicle)
+
     for fillUnitIndex, fillUnit in ipairs(fillUnits) do
         local fillType = fillUnit.fillType
 
@@ -297,7 +327,7 @@ function RmVehicleAdapter.doRegistration(vehicle, entityId)
                 "vehicle",
                 identityMatch,
                 vehicle,
-                { location = vehicle:getName() or "Vehicle" }
+                { location = vehicle:getName() or "Vehicle", storageClass = storageClass, isPallet = vehicle.isPallet or false }
             )
 
             spec.containerIds[fillUnitIndex] = containerId
@@ -312,6 +342,8 @@ function RmVehicleAdapter.doRegistration(vehicle, entityId)
 
             Log:debug("VEHICLE_REGISTERED: fillType=%s containerId=%s reconciled=%s name=%s",
                 identityMatch.storage.fillTypeName, containerId or "nil", tostring(wasReconciled), vehicle:getName() or "unknown")
+            Log:debug("STORAGE_DETECT: container=%s type=vehicle class=%s(%d)",
+                containerId or "nil", RmFreshManager.STORAGE_CLASS_NAMES[storageClass], storageClass)
         end
     end
 end
@@ -343,9 +375,10 @@ function RmVehicleAdapter.rescanForPerishables()
                        and (fillUnit.fillLevel or 0) > 0 then
 
                         local identityMatch = RmVehicleAdapter:buildIdentityMatch(vehicle, fillUnitIndex)
+                        local rescanStorageClass = RmVehicleAdapter.detectStorageClass(vehicle)
                         local containerId, wasReconciled = RmFreshManager:registerContainer(
                             "vehicle", identityMatch, vehicle,
-                            { location = vehicle:getName() or "Vehicle" }
+                            { location = vehicle:getName() or "Vehicle", storageClass = rescanStorageClass, isPallet = vehicle.isPallet or false }
                         )
                         spec.containerIds[fillUnitIndex] = containerId
                         if not wasReconciled and containerId and (fillUnit.fillLevel or 0) > 0 then
@@ -417,10 +450,11 @@ function RmVehicleAdapter:onFillUnitFillLevelChanged(fillUnitIndex, fillLevelDel
     -- Dynamic registration: if no container but fill is perishable and being added
     if containerId == nil and fillLevelDelta > 0 and RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
         local identityMatch = RmVehicleAdapter:buildIdentityMatch(self, fillUnitIndex)
+        local dynStorageClass = RmVehicleAdapter.detectStorageClass(self)
         local wasReconciled
         containerId, wasReconciled = RmFreshManager:registerContainer(
             "vehicle", identityMatch, self,
-            { location = self:getName() or "Vehicle" }
+            { location = self:getName() or "Vehicle", storageClass = dynStorageClass, isPallet = self.isPallet or false }
         )
         spec.containerIds[fillUnitIndex] = containerId
 

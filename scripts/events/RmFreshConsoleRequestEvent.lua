@@ -16,6 +16,8 @@ RmFreshConsoleRequestEvent.ACTION_EXPIRE = 6
 RmFreshConsoleRequestEvent.ACTION_EXPIRE_ALL = 7
 RmFreshConsoleRequestEvent.ACTION_CLEAR_LOG = 8
 RmFreshConsoleRequestEvent.ACTION_RECONCILE = 9
+RmFreshConsoleRequestEvent.ACTION_SET_STORAGE = 10
+RmFreshConsoleRequestEvent.ACTION_CLEAR_STORAGE = 11
 
 local RmFreshConsoleRequestEvent_mt = Class(RmFreshConsoleRequestEvent, Event)
 
@@ -66,6 +68,10 @@ local function getActionCode(actionType)
         return RmFreshConsoleRequestEvent.ACTION_CLEAR_LOG
     elseif actionType == "RECONCILE" then
         return RmFreshConsoleRequestEvent.ACTION_RECONCILE
+    elseif actionType == "SET_STORAGE" then
+        return RmFreshConsoleRequestEvent.ACTION_SET_STORAGE
+    elseif actionType == "CLEAR_STORAGE" then
+        return RmFreshConsoleRequestEvent.ACTION_CLEAR_STORAGE
     end
     return 0
 end
@@ -94,6 +100,10 @@ local function getActionString(code)
         return "CLEAR_LOG"
     elseif code == RmFreshConsoleRequestEvent.ACTION_RECONCILE then
         return "RECONCILE"
+    elseif code == RmFreshConsoleRequestEvent.ACTION_SET_STORAGE then
+        return "SET_STORAGE"
+    elseif code == RmFreshConsoleRequestEvent.ACTION_CLEAR_STORAGE then
+        return "CLEAR_STORAGE"
     end
     return "UNKNOWN"
 end
@@ -131,6 +141,11 @@ function RmFreshConsoleRequestEvent:writeStream(streamId, connection)
         -- No additional data
     elseif self.actionType == "RECONCILE" then
         -- No additional data
+    elseif self.actionType == "SET_STORAGE" then
+        streamWriteString(streamId, self.data.key or "")
+        streamWriteUInt8(streamId, self.data.classValue or 0)
+    elseif self.actionType == "CLEAR_STORAGE" then
+        streamWriteString(streamId, self.data.key or "")
     end
 
     Log:debug("CONSOLE_REQUEST_WRITE: action=%s containerId=%s", self.actionType, self.containerId)
@@ -169,6 +184,11 @@ function RmFreshConsoleRequestEvent:readStream(streamId, connection)
         -- No additional data
     elseif self.actionType == "RECONCILE" then
         -- No additional data
+    elseif self.actionType == "SET_STORAGE" then
+        self.data.key = streamReadString(streamId)
+        self.data.classValue = streamReadUInt8(streamId)
+    elseif self.actionType == "CLEAR_STORAGE" then
+        self.data.key = streamReadString(streamId)
     end
 
     Log:debug("CONSOLE_REQUEST_READ: action=%s containerId=%s", self.actionType, self.containerId)
@@ -250,6 +270,10 @@ function RmFreshConsoleRequestEvent:run(connection)
         message = RmFreshConsole:executeClearLog()
     elseif self.actionType == "RECONCILE" then
         message = RmFreshConsole:executeReconcile()
+    elseif self.actionType == "SET_STORAGE" then
+        message = RmFreshConsole:executeSetStorage(self.data.key, self.data.classValue)
+    elseif self.actionType == "CLEAR_STORAGE" then
+        message = RmFreshConsole:executeClearStorage(self.data.key)
     else
         success = false
         message = "Unknown action type: " .. tostring(self.actionType)

@@ -421,10 +421,14 @@ function RmOverviewFrame:populateExpiringCell(index, cell)
         productElement:setText(fillTypeTitle)
     end
 
-    -- Storage/location name
+    -- Storage/location name (with class label if available)
     local storageElement = cell:getAttribute("expiringStorage")
     if storageElement then
-        storageElement:setText(entry.name or "Unknown")
+        local storageName = entry.name or "Unknown"
+        if entry.storageClassName then
+            storageName = storageName .. " (" .. entry.storageClassName .. ")"
+        end
+        storageElement:setText(storageName)
     end
 
     -- Amount (no color - time column shows urgency)

@@ -45,6 +45,25 @@ function RmPlaceableAdapter:buildIdentityMatch(placeable, storage, fillTypeName,
 end
 
 -- =============================================================================
+-- STORAGE CLASS DETECTION (F-124-1)
+-- =============================================================================
+
+--- Detect storage class for a placeable based on its specializations
+--- HusbandryMilk → COOLED, everything else (silo, production, factory) → INDOOR
+---@param placeable table Placeable entity
+---@return number storageClass Storage class enum value
+function RmPlaceableAdapter.detectStorageClass(placeable)
+    local SC = RmFreshManager.STORAGE_CLASS
+
+    -- HusbandryMilk: cooled (dairy building)
+    if placeable.spec_husbandryMilk then
+        return SC.COOLED
+    end
+    -- Everything else (silo, production, factory, husbandry, default): indoor
+    return SC.INDOOR
+end
+
+-- =============================================================================
 -- CAPABILITY DETECTION (Step 5)
 -- =============================================================================
 
@@ -531,13 +550,15 @@ function RmPlaceableAdapter.onStorageFillChanged(placeable, spec, storage, fillT
             placeable, fillTypeIndex
         )
 
+        local dynStorageClass = RmPlaceableAdapter.detectStorageClass(placeable)
         local wasReconciled
         containerId, wasReconciled = RmFreshManager:registerContainer(
             "placeable", identityMatch, placeable,
             {
                 location = placeable:getName() or "Silo",
                 playerCanFill = playerCanFill,
-                playerCanEmpty = playerCanEmpty
+                playerCanEmpty = playerCanEmpty,
+                storageClass = dynStorageClass
             }
         )
 
@@ -615,12 +636,14 @@ function RmPlaceableAdapter.registerStorageContents(placeable, spec, storage)
                     placeable, fillTypeIndex
                 )
 
+                local placeableStorageClass = RmPlaceableAdapter.detectStorageClass(placeable)
                 local containerId, wasReconciled = RmFreshManager:registerContainer(
                     "placeable", identityMatch, placeable,
                     {
                         location = placeable:getName() or "Silo",
                         playerCanFill = playerCanFill,
-                        playerCanEmpty = playerCanEmpty
+                        playerCanEmpty = playerCanEmpty,
+                        storageClass = placeableStorageClass
                     }
                 )
 

@@ -92,6 +92,10 @@ RmFreshSettings._isLoadingModFillTypes = false
 --- Storage aging enabled toggle (loaded from XML storageClasses#enabled)
 RmFreshSettings.storageAgingEnabled = true
 
+--- Storage class overrides (keyed by uniqueId string or "itemsInWorld" → storage class value)
+--- Set by admin via fSetStorage command, synced via RmSettingsSyncEvent
+RmFreshSettings.storageClassOverrides = {}
+
 --- Runtime storage class multipliers (classValue → multiplier)
 --- Populated by loadStorageClasses() from XML, falls back to DEFAULT_CLASS_MULTIPLIERS
 RmFreshSettings.classMultipliers = {}
@@ -795,6 +799,53 @@ function RmFreshSettings:setGlobal(key, value)
 
     -- Notify dependents and sync MP
     self:onSettingsChanged()
+end
+
+-- =============================================================================
+-- STORAGE CLASS OVERRIDE API
+-- =============================================================================
+
+--- Set a storage class override for a building/vehicle or "itemsInWorld"
+---@param key string uniqueId or "itemsInWorld"
+---@param classValue number Storage class enum value
+function RmFreshSettings:setStorageClassOverride(key, classValue)
+    self.storageClassOverrides[key] = classValue
+    Log:info("STORAGE_OVERRIDE_SET: %s -> %s(%d)",
+        key, RmFreshManager.STORAGE_CLASS_NAMES[classValue] or "?", classValue)
+    self:onSettingsChanged()
+end
+
+--- Clear a storage class override
+---@param key string uniqueId or "itemsInWorld"
+function RmFreshSettings:clearStorageClassOverride(key)
+    if self.storageClassOverrides[key] ~= nil then
+        local oldClass = self.storageClassOverrides[key]
+        self.storageClassOverrides[key] = nil
+        Log:info("STORAGE_OVERRIDE_CLEAR: %s (was %s(%d))",
+            key, RmFreshManager.STORAGE_CLASS_NAMES[oldClass] or "?", oldClass)
+        self:onSettingsChanged()
+    end
+end
+
+--- Get storage class override for a key
+---@param key string uniqueId or "itemsInWorld"
+---@return number|nil classValue or nil if no override
+function RmFreshSettings:getStorageClassOverride(key)
+    return self.storageClassOverrides[key]
+end
+
+--- Get all storage class overrides (for sync/save)
+---@return table overrides table keyed by string → classValue
+function RmFreshSettings:getAllStorageClassOverrides()
+    return self.storageClassOverrides
+end
+
+--- Bulk set all storage class overrides (from sync/load)
+--- Suppresses per-item notifications
+---@param overrides table keyed by string → classValue
+function RmFreshSettings:setAllStorageClassOverrides(overrides)
+    self.storageClassOverrides = overrides or {}
+    Log:debug("STORAGE_OVERRIDES_BULK: %d overrides loaded", self:tableCount(self.storageClassOverrides))
 end
 
 -- =============================================================================

@@ -135,6 +135,10 @@ function RmFreshIO.registerSettingsSchema()
     schema:register(XMLValueType.STRING, "freshSettings.storageClasses.class(?)#name", "Class name")
     schema:register(XMLValueType.FLOAT, "freshSettings.storageClasses.class(?)#multiplier", "Class multiplier")
 
+    -- Storage class overrides (Epic F-124)
+    schema:register(XMLValueType.STRING, "freshSettings.storageClassOverrides.override(?)#key", "Override key (uniqueId or itemsInWorld)")
+    schema:register(XMLValueType.STRING, "freshSettings.storageClassOverrides.override(?)#class", "Storage class name")
+
     RmFreshIO.settingsSchema = schema
     Log:debug("SCHEMA_REGISTER: Fresh settings format v%d schema registered", RmFreshIO.SETTINGS_VERSION)
 end
@@ -172,6 +176,9 @@ function RmFreshIO.registerLogSchema()
 
     -- Who
     schema:register(XMLValueType.INT, entryPath .. "#farmId", "Owner farm ID", 0)
+
+    -- Storage class at expiration (optional, nil for pre-F-124 entries)
+    schema:register(XMLValueType.INT, entryPath .. "#storageClass", "Storage class at expiration")
 
     RmFreshIO.logSchema = schema
     Log:debug("SCHEMA_REGISTER: Fresh log format v%d schema registered", RmFreshIO.VERSION)
@@ -392,6 +399,10 @@ function RmFreshIO:saveLog(savegameDir, lossLog)
         xmlFile:setString(entryPath .. "#entityType", entry.entityType or "unknown")
         -- Who
         xmlFile:setInt(entryPath .. "#farmId", entry.farmId or 0)
+        -- Storage class (optional)
+        if entry.storageClass ~= nil then
+            xmlFile:setInt(entryPath .. "#storageClass", entry.storageClass)
+        end
 
         Log:trace("    entry[%d]: %s %.0f at %s (farm %d)",
             i, entry.fillTypeName or "?", entry.amount or 0, entry.location or "?", entry.farmId or 0)
@@ -490,11 +501,27 @@ function RmFreshIO:loadSettings(filePath)
         end
     end)
 
+    -- Parse storage class overrides (Epic F-124, optional section)
+    result.storageClassOverrides = {}
+    xmlFile:iterate("freshSettings.storageClassOverrides.override", function(_, path)
+        local key = xmlFile:getString(path .. "#key")
+        local classStr = xmlFile:getString(path .. "#class")
+        if key and classStr then
+            local classValue = RmFreshManager:getStorageClassByName(classStr)
+            if classValue ~= nil then
+                result.storageClassOverrides[key] = classValue
+                Log:trace("LOAD_SETTINGS: storageClassOverride %s = %s(%d)", key, classStr, classValue)
+            else
+                Log:warning("LOAD_SETTINGS: Unknown storage class '%s' for override key '%s', skipping", classStr, key)
+            end
+        end
+    end)
+
     xmlFile:delete()
 
-    Log:debug("LOAD_SETTINGS: Loaded %d global, %d fillTypes, %d hidden categories from %s",
+    Log:debug("LOAD_SETTINGS: Loaded %d global, %d fillTypes, %d hidden categories, %d overrides from %s",
         self:countTable(result.global), self:countTable(result.fillTypes),
-        self:countTable(result.categories), filePath)
+        self:countTable(result.categories), self:countTable(result.storageClassOverrides), filePath)
     return result
 end
 
@@ -543,10 +570,20 @@ function RmFreshIO:saveSettings(filePath, data)
         ftIdx = ftIdx + 1
     end
 
+    -- Write storage class overrides (Epic F-124)
+    local overrideIdx = 0
+    for key, classValue in pairs(data.storageClassOverrides or {}) do
+        local path = string.format("freshSettings.storageClassOverrides.override(%d)", overrideIdx)
+        xmlFile:setString(path .. "#key", key)
+        local className = RmFreshManager.STORAGE_CLASS_NAMES[classValue] or "sheltered"
+        xmlFile:setString(path .. "#class", string.upper(className))
+        overrideIdx = overrideIdx + 1
+    end
+
     xmlFile:save()
     xmlFile:delete()
 
-    Log:debug("SAVE_SETTINGS: Saved %d global, %d fillTypes to %s", globalIdx, ftIdx, filePath)
+    Log:debug("SAVE_SETTINGS: Saved %d global, %d fillTypes, %d overrides to %s", globalIdx, ftIdx, overrideIdx, filePath)
     return true
 end
 
@@ -842,6 +879,7 @@ function RmFreshIO:loadLog(savegameDir)
     local entryCount = 0
     xmlFile:iterate("freshLog.entry", function(_, entryPath)
         local objectUniqueId = xmlFile:getString(entryPath .. "#objectUniqueId", "")
+        local scRaw = xmlFile:getInt(entryPath .. "#storageClass")
         local entry = {
             -- Timing
             year = xmlFile:getInt(entryPath .. "#year", 1),
@@ -856,6 +894,7 @@ function RmFreshIO:loadLog(savegameDir)
             location = xmlFile:getString(entryPath .. "#location", "Unknown"),
             objectUniqueId = objectUniqueId ~= "" and objectUniqueId or nil,
             entityType = xmlFile:getString(entryPath .. "#entityType", "unknown"),
+            storageClass = scRaw,  -- nil if missing (backward compat with pre-F-124 saves)
             -- Who
             farmId = xmlFile:getInt(entryPath .. "#farmId", 0),
         }

@@ -25,6 +25,14 @@
         <!-- Age Distribution HUD -->
         <text name="fresh_age_display_title" text="Freshness"/>
 
+        <!-- Storage class labels -->
+        <text name="fresh_class_exposed" text="Exposed"/>
+        <text name="fresh_class_sheltered" text="Sheltered"/>
+        <text name="fresh_class_indoor" text="Indoor"/>
+        <text name="fresh_class_cooled" text="Cooled"/>
+        <text name="fresh_class_frozen" text="Frozen"/>
+        <text name="fresh_class_disabled" text="Disabled"/>
+
         <!-- Fresh Menu keybind -->
         <text name="input_RM_FRESH_MENU" text="Fresh Menu"/>
 

@@ -80,7 +80,18 @@ function RmSettingsSyncEvent:writeStream(streamId, connection)
         end
     end
 
-    Log:debug("SETTINGS_SYNC_WRITE: %d global, %d fillTypes", #globals, #fillTypes)
+    -- Write storage class overrides (Epic F-124)
+    local overrides = self.settingsData.storageClassOverrides or {}
+    local overrideCount = 0
+    for _ in pairs(overrides) do overrideCount = overrideCount + 1 end
+    streamWriteUInt16(streamId, overrideCount)
+    for key, classValue in pairs(overrides) do
+        streamWriteString(streamId, key)
+        streamWriteUInt8(streamId, classValue)
+        Log:trace("    override: %s = %d", key, classValue)
+    end
+
+    Log:debug("SETTINGS_SYNC_WRITE: %d global, %d fillTypes, %d overrides", #globals, #fillTypes, overrideCount)
 end
 
 --- Deserialize settings from network
@@ -124,7 +135,17 @@ function RmSettingsSyncEvent:readStream(streamId, connection)
         end
     end
 
-    Log:debug("SETTINGS_SYNC_READ: %d global, %d fillTypes", globalCount, ftCount)
+    -- Read storage class overrides (Epic F-124)
+    local overrideCount = streamReadUInt16(streamId)
+    self.settingsData.storageClassOverrides = {}
+    for _ = 1, overrideCount do
+        local key = streamReadString(streamId)
+        local classValue = streamReadUInt8(streamId)
+        self.settingsData.storageClassOverrides[key] = classValue
+        Log:trace("    override: %s = %d", key, classValue)
+    end
+
+    Log:debug("SETTINGS_SYNC_READ: %d global, %d fillTypes, %d overrides", globalCount, ftCount, overrideCount)
     self:run(connection)
 end
 
@@ -152,7 +173,12 @@ function RmSettingsSyncEvent:run(connection)
     for _ in pairs(self.settingsData.fillTypes or {}) do ftCount = ftCount + 1 end
 
     RmFreshSettings:setUserOverrides(self.settingsData)
-    Log:info("SETTINGS_SYNC_RUN: Applied server settings (%d global, %d fillTypes)", globalCount, ftCount)
+    RmFreshSettings:setAllStorageClassOverrides(self.settingsData.storageClassOverrides or {})
+
+    local overrideCount = 0
+    for _ in pairs(self.settingsData.storageClassOverrides or {}) do overrideCount = overrideCount + 1 end
+    Log:info("SETTINGS_SYNC_RUN: Applied server settings (%d global, %d fillTypes, %d overrides)",
+        globalCount, ftCount, overrideCount)
 
     -- Notify open Settings Frame to refresh UI after sync
     -- Uses displayedInstance (the currently visible frame) instead of primaryInstance
@@ -172,6 +198,7 @@ end
 ---@param connection table Network connection
 function RmSettingsSyncEvent.sendToClient(connection)
     local settingsData = RmFreshSettings:getUserOverrides()
+    settingsData.storageClassOverrides = RmFreshSettings:getAllStorageClassOverrides()
     connection:sendEvent(RmSettingsSyncEvent.new(settingsData))
     Log:debug("SETTINGS_SYNC: Sent to client")
 end
@@ -180,6 +207,7 @@ end
 function RmSettingsSyncEvent.broadcastToClients()
     if g_server then
         local settingsData = RmFreshSettings:getUserOverrides()
+        settingsData.storageClassOverrides = RmFreshSettings:getAllStorageClassOverrides()
         g_server:broadcastEvent(RmSettingsSyncEvent.new(settingsData))
         Log:debug("SETTINGS_SYNC: Broadcast to all clients")
     end

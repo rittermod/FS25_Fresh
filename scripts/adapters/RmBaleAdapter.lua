@@ -70,6 +70,17 @@ function RmBaleAdapter:buildIdentityMatch(bale, fillTypeOverride, fillLevelOverr
 end
 
 -- =============================================================================
+-- STORAGE CLASS DETECTION (F-124-1)
+-- =============================================================================
+
+--- Detect storage class for a bale - always EXPOSED (outdoor weather exposure)
+---@param bale table Bale entity
+---@return number storageClass Storage class enum value
+function RmBaleAdapter.detectStorageClass(bale)
+    return RmFreshManager.STORAGE_CLASS.EXPOSED
+end
+
+-- =============================================================================
 -- FILL LEVEL MANIPULATION (for console commands)
 -- Uses containerId as identifier - adapter resolves entity internally
 -- =============================================================================
@@ -437,9 +448,11 @@ function RmBaleAdapter.doRegistration(bale, entityId, fermenting, fillTypeOverri
     if not baleFarmId or baleFarmId == 0 then
         baleFarmId = g_currentMission:getFarmId()
     end
+    local baleStorageClass = RmBaleAdapter.detectStorageClass(bale)
     local metadata = {
         location = "Bale",
-        farmId = baleFarmId
+        farmId = baleFarmId,
+        storageClass = baleStorageClass
     }
     if fermenting ~= nil then
         metadata.fermenting = fermenting

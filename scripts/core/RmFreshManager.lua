@@ -95,6 +95,52 @@ function RmFreshManager:getStorageClassByName(name)
     return nil
 end
 
+--- Get storage class override for a container
+--- Checks "items in world" first (bales, pallets), then uniqueId-based lookup
+---@param container table Container structure
+---@return number|nil Storage class override value, or nil if no override
+function RmFreshManager:getStorageClassOverride(container)
+    -- Check "items in world": entityType=="bale" OR metadata.isPallet
+    if container.entityType == "bale" or (container.metadata and container.metadata.isPallet) then
+        local override = RmFreshSettings:getStorageClassOverride("itemsInWorld")
+        Log:trace("OVERRIDE_LOOKUP: container=%s items_in_world -> %s",
+            container.id or "?", override and self.STORAGE_CLASS_NAMES[override] or "nil")
+        return override
+    end
+
+    -- All other entity types: use worldObject.uniqueId
+    local wo = container.identityMatch and container.identityMatch.worldObject
+    local uniqueId = wo and wo.uniqueId
+    if uniqueId then
+        local override = RmFreshSettings:getStorageClassOverride(uniqueId)
+        Log:trace("OVERRIDE_LOOKUP: container=%s uniqueId=%s -> %s",
+            container.id or "?", uniqueId, override and self.STORAGE_CLASS_NAMES[override] or "nil")
+        return override
+    end
+
+    return nil
+end
+
+--- Resolve full storage class info for a container (detected, override, effective, multiplier)
+--- Used by fStorages display and future HUD
+---@param container table Container structure
+---@return table { detected, override, effective, multiplier }
+function RmFreshManager:resolveStorageClassInfo(container)
+    local detected = container.metadata and container.metadata.storageClass or self.STORAGE_CLASS.SHELTERED
+    local override = self:getStorageClassOverride(container)
+    local base = override or detected
+    local maxBenefitClass = RmFreshSettings:getMaxBenefitClass(container.fillTypeIndex)
+    local effective = self:_resolveEffectiveClass(base, maxBenefitClass)
+    local multiplier = RmFreshSettings:getClassMultiplier(effective)
+    return {
+        detected = detected,
+        override = override,
+        effective = effective,
+        multiplier = multiplier,
+        maxBenefitClass = maxBenefitClass,
+    }
+end
+
 --- Resolve effective storage class by applying ceiling logic
 --- DISABLED (5) bypasses ceiling — always returns DISABLED (player opt-out)
 --- For all other classes: math.min(storageClass, maxBenefitClass) caps benefit
@@ -454,6 +500,18 @@ function RmFreshManager:registerContainer(entityType, identityMatch, runtimeEnti
         -- Capabilities are derived from current placeable structure, not saved data
         matchedContainer.playerCanFill = playerCanFill
         matchedContainer.playerCanEmpty = playerCanEmpty
+
+        -- Merge adapter-provided metadata into reconciled container
+        -- Runtime-detected fields (e.g. storageClass) are not persisted, so must be
+        -- re-applied from the adapter's metadata on every load
+        if metadata then
+            if not matchedContainer.metadata then
+                matchedContainer.metadata = {}
+            end
+            for k, v in pairs(metadata) do
+                matchedContainer.metadata[k] = v
+            end
+        end
 
         -- Move to active containers
         self.containers[matchedId] = matchedContainer
@@ -873,9 +931,10 @@ function RmFreshManager:onSave(savegameDir)
     Log:debug("SAVE_LOG: RmLossTracker.lossLog has %d entries", #RmLossTracker.lossLog)
     RmFreshIO:saveLog(savegameDir, RmLossTracker.lossLog)
 
-    -- Save user settings
+    -- Save user settings (includes storage class overrides)
     local settingsPath = savegameDir .. "/rm_FreshSettings.xml"
     local overrides = RmFreshSettings:getUserOverrides()
+    overrides.storageClassOverrides = RmFreshSettings:getAllStorageClassOverrides()
     RmFreshIO:saveSettings(settingsPath, overrides)
 end
 
@@ -894,6 +953,8 @@ function RmFreshManager:onLoad(savegameDir)
     local settingsData = RmFreshIO:loadSettings(settingsPath)
     RmFreshIO:migrateSettingsData(settingsData)
     RmFreshSettings:setUserOverrides(settingsData)
+    -- Restore storage class overrides (backward compat: missing = empty table)
+    RmFreshSettings:setAllStorageClassOverrides(settingsData.storageClassOverrides or {})
 
     local data = RmFreshIO:load(savegameDir)
     if data then
@@ -1613,27 +1674,26 @@ function RmFreshManager:_applyAging(hours)
                 -- Sync fillType for bales before aging (handles GRASS→SILAGE transformation)
                 self:syncBaleFillType(containerId, container)
 
-                -- Resolve storage class multiplier for this container
+                -- Resolve storage class multiplier for this container (with override support)
                 local storageMultiplier = 1.0
                 if RmFreshSettings.storageAgingEnabled then
-                    local storageClass = container.metadata and container.metadata.storageClass
-                        or self.STORAGE_CLASS.SHELTERED
-                    local maxBenefitClass = RmFreshSettings:getMaxBenefitClass(container.fillTypeIndex)
-                    local effectiveClass = self:_resolveEffectiveClass(storageClass, maxBenefitClass)
-                    storageMultiplier = RmFreshSettings:getClassMultiplier(effectiveClass)
+                    local info = self:resolveStorageClassInfo(container)
+                    storageMultiplier = info.multiplier
 
-                    Log:trace("    STORAGE: container=%s class=%s(%d) effective=%s(%d) mult=%.2f",
+                    Log:trace("    STORAGE: container=%s detected=%s(%d) override=%s effective=%s(%d) mult=%.2f",
                         containerId,
-                        self.STORAGE_CLASS_NAMES[storageClass] or "?", storageClass,
-                        self.STORAGE_CLASS_NAMES[effectiveClass] or "?", effectiveClass,
+                        self.STORAGE_CLASS_NAMES[info.detected] or "?", info.detected,
+                        info.override and (self.STORAGE_CLASS_NAMES[info.override] .. "(" .. info.override .. ")") or "none",
+                        self.STORAGE_CLASS_NAMES[info.effective] or "?", info.effective,
                         storageMultiplier)
 
                     if storageMultiplier ~= 1.0 then
-                        Log:debug("STORAGE_MULT: container=%s class=%s(%d) maxBenefit=%s(%d) effective=%s(%d) mult=%.2f",
+                        Log:debug("STORAGE_MULT: container=%s detected=%s(%d) override=%s maxBenefit=%s(%d) effective=%s(%d) mult=%.2f",
                             containerId,
-                            self.STORAGE_CLASS_NAMES[storageClass] or "?", storageClass,
-                            self.STORAGE_CLASS_NAMES[maxBenefitClass] or "?", maxBenefitClass,
-                            self.STORAGE_CLASS_NAMES[effectiveClass] or "?", effectiveClass,
+                            self.STORAGE_CLASS_NAMES[info.detected] or "?", info.detected,
+                            info.override and (self.STORAGE_CLASS_NAMES[info.override] .. "(" .. info.override .. ")") or "none",
+                            self.STORAGE_CLASS_NAMES[info.maxBenefitClass] or "?", info.maxBenefitClass,
+                            self.STORAGE_CLASS_NAMES[info.effective] or "?", info.effective,
                             storageMultiplier)
                     end
                 end
@@ -2400,6 +2460,17 @@ function RmFreshManager:getExpiringWithin(hours, farmId)
                         name = container.metadata.location
                     end
 
+                    -- Resolve storage class for display
+                    local classInfo = self:resolveStorageClassInfo(container)
+                    local storageClass = classInfo and classInfo.effective or nil
+                    local storageClassName = nil
+                    if storageClass ~= nil then
+                        local classKey = self.STORAGE_CLASS_NAMES[storageClass]
+                        if classKey then
+                            storageClassName = g_i18n:getText("fresh_class_" .. classKey)
+                        end
+                    end
+
                     table.insert(result.containers, {
                         containerId = containerId,
                         entityType = container.entityType,
@@ -2408,6 +2479,8 @@ function RmFreshManager:getExpiringWithin(hours, farmId)
                         expiresInHours = soonestExpiresInHours,
                         farmId = container.farmId,
                         name = name,
+                        storageClass = storageClass,
+                        storageClassName = storageClassName,
                     })
                     result.totalAmount = result.totalAmount + expiringAmount
                 end
