@@ -57,8 +57,12 @@ function RmSettingsChangeRequestEvent:writeStream(streamId, _connection)
             streamWriteUInt8(streamId, 2)  -- Type marker: number
             streamWriteFloat32(streamId, self.value or 0)
         end
+    elseif self.operation == "setStorageClassOverride" then
+        streamWriteUInt8(streamId, self.value or 0)
+    elseif self.operation == "setMaxBenefitClass" then
+        streamWriteUInt8(streamId, self.value or 0)
     end
-    -- setDoNotExpire and resetAll don't need additional value data
+    -- setDoNotExpire, clearMaxBenefitClass, clearStorageClassOverride, and resetAll don't need additional value data
 end
 
 --- Deserialize request from network
@@ -81,6 +85,10 @@ function RmSettingsChangeRequestEvent:readStream(streamId, connection)
         else
             self.value = streamReadFloat32(streamId)
         end
+    elseif self.operation == "setStorageClassOverride" then
+        self.value = streamReadUInt8(streamId)
+    elseif self.operation == "setMaxBenefitClass" then
+        self.value = streamReadUInt8(streamId)
     end
 
     self:run(connection)
@@ -139,10 +147,46 @@ function RmSettingsChangeRequestEvent:run(connection)
                     RmFreshSettings:clearRedundantOverrides()
                 end
             end
+            -- Apply storageAgingEnabled to direct property (not just userOverrides)
+            if self.key == "storageAgingEnabled" then
+                RmFreshSettings.storageAgingEnabled = (self.value == true)
+            end
             RmFreshSettings:setGlobal(self.key, self.value)
             success = true
             Log:debug("SETTINGS_REQUEST: setGlobal(%s, %s) from=%s",
                 self.key, tostring(self.value), userName)
+        end
+
+    elseif self.operation == "setStorageClassOverride" then
+        if self.key and self.value ~= nil then
+            RmFreshSettings:setStorageClassOverride(self.key, self.value)
+            success = true
+            Log:debug("SETTINGS_REQUEST: setStorageClassOverride(%s, %d) from=%s",
+                self.key, self.value, userName)
+        end
+
+    elseif self.operation == "clearStorageClassOverride" then
+        if self.key then
+            RmFreshSettings:clearStorageClassOverride(self.key)
+            success = true
+            Log:debug("SETTINGS_REQUEST: clearStorageClassOverride(%s) from=%s",
+                self.key, userName)
+        end
+
+    elseif self.operation == "setMaxBenefitClass" then
+        if self.key and self.value ~= nil then
+            RmFreshSettings:setMaxBenefitClassOverride(self.key, self.value)
+            success = true
+            Log:debug("SETTINGS_REQUEST: setMaxBenefitClass(%s, %d) from=%s",
+                self.key, self.value, userName)
+        end
+
+    elseif self.operation == "clearMaxBenefitClass" then
+        if self.key then
+            RmFreshSettings:clearMaxBenefitClassOverride(self.key)
+            success = true
+            Log:debug("SETTINGS_REQUEST: clearMaxBenefitClass(%s) from=%s",
+                self.key, userName)
         end
 
     elseif self.operation == "resetAll" then

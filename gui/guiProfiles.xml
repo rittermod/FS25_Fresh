@@ -17,6 +17,14 @@
         <position value="10px 0px"/>
     </Profile>
 
+    <!-- Detected storage class label in storage tab rows -->
+    <Profile name="rmFreshDetectedClassLabel" extends="baseReference" with="anchorTopLeft">
+        <textSize value="14px"/>
+        <textBold value="false"/>
+        <textColor value="0.6 0.6 0.6 1"/>
+        <textAlignment value="left"/>
+    </Profile>
+
     <!-- Readonly value text for preset-controlled fillTypes in settings -->
     <!-- Positioned to align with where MultiTextOption shows its value -->
     <Profile name="rmFreshSettingsReadonlyValue" extends="baseReference" with="anchorMiddleRight">

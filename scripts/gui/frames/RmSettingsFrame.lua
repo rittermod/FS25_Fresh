@@ -15,7 +15,7 @@ local modDirectory = g_currentModDirectory
 -- =============================================================================
 
 --- Sub-category page indices
-RmSettingsFrame.SUB_CATEGORY = { SETTINGS = 1, EXPIRATION = 2, DLCMOD = 3 }
+RmSettingsFrame.SUB_CATEGORY = { SETTINGS = 1, EXPIRATION = 2, MAXBENEFIT = 3, STORAGE = 4 }
 
 --- Preset option names (matches RmFreshSettings.PRESET_NAMES order)
 RmSettingsFrame.PRESET_OPTIONS = { "veryEasy", "easy", "normal", "hard", "custom" }
@@ -50,9 +50,8 @@ RmSettingsFrame.EXPIRATION_OPTIONS = {
 --- Map period values to EXPIRATION_OPTIONS indices for quick lookup
 RmSettingsFrame.PERIOD_TO_INDEX = {}
 
---- Data arrays for fillType rows (class-level, rebuilt each onFrameOpen)
-RmSettingsFrame.basegameFillTypes = nil
-RmSettingsFrame.dlcmodFillTypes = nil
+--- Data array for fillType rows (class-level, rebuilt each onFrameOpen)
+RmSettingsFrame.allPerishableFillTypes = nil
 
 --- Suppression flag to prevent callbacks during programmatic refresh
 RmSettingsFrame.isRefreshing = false
@@ -73,12 +72,34 @@ RmSettingsFrame.currentSubCategory = 1
 -- CONSTRUCTOR
 -- =============================================================================
 
+--- Storage class dropdown option names (state 1=Auto, 2-7=EXPOSED..DISABLED)
+RmSettingsFrame.STORAGE_CLASS_OPTIONS = { "auto", "exposed", "sheltered", "indoor", "cooled", "frozen", "disabled" }
+
+--- Max benefit class dropdown options (state 1=Default, 2-6=EXPOSED..FROZEN)
+--- No "Disabled" - that's a per-building opt-out from F-125-1, not a fillType ceiling
+RmSettingsFrame.MAXBENEFIT_OPTIONS = {
+    { value = nil,  label = "fresh_maxbenefit_default" },
+    { value = 0,    label = "fresh_class_exposed" },
+    { value = 1,    label = "fresh_class_sheltered" },
+    { value = 2,    label = "fresh_class_indoor" },
+    { value = 3,    label = "fresh_class_cooled" },
+    { value = 4,    label = "fresh_class_frozen" },
+}
+
+--- Sentinel value for "clear override" in pendingMaxBenefitChanges
+RmSettingsFrame.MAXBENEFIT_CLEAR = "CLEAR"
+
+--- Pending max benefit class changes accumulated during user interaction
+--- Flushed on frame close. Key: fillTypeName, Value: classValue (number) or MAXBENEFIT_CLEAR
+RmSettingsFrame.pendingMaxBenefitChanges = {}
+
 function RmSettingsFrame.new()
     local self = RmSettingsFrame:superClass().new(nil, RmSettingsFrame_mt)
     self.name = "RmSettingsFrame"
     self.isEvenRow = true
-    self.sc2Populated = false
+    self.expirationPopulated = false
     self.sc3Populated = false
+    self.sc4Populated = false
     return self
 end
 
@@ -167,12 +188,23 @@ function RmSettingsFrame:onFrameOpen()
     -- Initialize sub-category pages
     self:initializeSubCategoryPages()
 
-    -- Populate cloned pages (first open only)
-    if not self.sc2Populated then
-        self:populateSc2()
+    -- Populate cloned expiration page (first open only)
+    if not self.expirationPopulated then
+        self:populateExpirationTab()
     end
+
+    -- Populate cloned max benefit page (first open only)
     if not self.sc3Populated then
-        self:populateSc3()
+        self:populateMaxBenefitTab()
+    end
+
+    -- Populate cloned storage page (first open, or after dirty reset from menu open)
+    if RmSettingsFrame.sc4Dirty then
+        self.sc4Populated = false
+        RmSettingsFrame.sc4Dirty = false
+    end
+    if not self.sc4Populated then
+        self:populateStorageTab()
     end
 
     -- Load current settings values into all controls
@@ -210,6 +242,37 @@ function RmSettingsFrame:onFrameClose()
         RmSettingsFrame.pendingFillTypeChanges = {}
     end
 
+    -- Flush pending max benefit class changes before closing
+    if next(RmSettingsFrame.pendingMaxBenefitChanges) then
+        local count = 0
+        for _ in pairs(RmSettingsFrame.pendingMaxBenefitChanges) do count = count + 1 end
+        Log:debug("SETT FLUSH: applying %d pending maxBenefit changes", count)
+
+        local isClear = RmSettingsFrame.MAXBENEFIT_CLEAR
+        for fillTypeName, classValue in pairs(RmSettingsFrame.pendingMaxBenefitChanges) do
+            if g_server then
+                if classValue == isClear then
+                    RmFreshSettings:clearMaxBenefitClassOverride(fillTypeName)
+                else
+                    RmFreshSettings:setMaxBenefitClassOverride(fillTypeName, classValue)
+                end
+            else
+                if RmSettingsChangeRequestEvent then
+                    if classValue == isClear then
+                        g_client:getServerConnection():sendEvent(
+                            RmSettingsChangeRequestEvent.new("clearMaxBenefitClass", fillTypeName, nil)
+                        )
+                    else
+                        g_client:getServerConnection():sendEvent(
+                            RmSettingsChangeRequestEvent.new("setMaxBenefitClass", fillTypeName, classValue)
+                        )
+                    end
+                end
+            end
+        end
+        RmSettingsFrame.pendingMaxBenefitChanges = {}
+    end
+
     RmSettingsFrame:superClass().onFrameClose(self)
 
     if RmSettingsFrame.displayedInstance == self then
@@ -225,12 +288,7 @@ end
 function RmSettingsFrame:initializeSubCategoryPages()
     local subCategories = {}
 
-    -- Hide DLC & Mods tab when no DLC/mod fillTypes exist
-    local hideDlcTab = #(RmSettingsFrame.dlcmodFillTypes or {}) == 0
-
     for index, button in ipairs(self.subCategoryTabs) do
-        local visible = not (index == RmSettingsFrame.SUB_CATEGORY.DLCMOD and hideDlcTab)
-
         -- Make tab background respond to selection state
         button:getDescendantByName("background").getIsSelected = function()
             return index == tonumber(self.subCategoryPaging.texts[self.subCategoryPaging:getState()])
@@ -241,10 +299,8 @@ function RmSettingsFrame:initializeSubCategoryPages()
             return index == tonumber(self.subCategoryPaging.texts[self.subCategoryPaging:getState()])
         end
 
-        button:setVisible(visible)
-        if visible then
-            table.insert(subCategories, tostring(index))
-        end
+        button:setVisible(true)
+        table.insert(subCategories, tostring(index))
     end
 
     -- Configure paging selector
@@ -257,32 +313,12 @@ end
 -- FILLTYPE DATA BUILDING
 -- =============================================================================
 
---- Build categorized fillType data arrays for fillType rows
+--- Build fillType data array for expiration rows
 --- Called each onFrameOpen to catch late-registered DLC/mod fillTypes
 function RmSettingsFrame:buildFillTypeData()
-    local allFillTypes = self:getPerishableFillTypes()
-    RmSettingsFrame.basegameFillTypes = {}
-    RmSettingsFrame.dlcmodFillTypes = {}
+    RmSettingsFrame.allPerishableFillTypes = self:getPerishableFillTypes()
 
-    for _, ft in ipairs(allFillTypes) do
-        if self:isBasegameFillType(ft.name) then
-            table.insert(RmSettingsFrame.basegameFillTypes, ft)
-        else
-            table.insert(RmSettingsFrame.dlcmodFillTypes, ft)
-        end
-    end
-
-    Log:debug("SETT DATA: Categorized %d fillTypes - %d basegame, %d DLC/mod",
-        #allFillTypes, #RmSettingsFrame.basegameFillTypes, #RmSettingsFrame.dlcmodFillTypes)
-end
-
---- Detect fillType origin using source tracking hooks
---- Falls back to hudOverlayFilename heuristic if hooks missed the fillType
----@param fillTypeName string
----@return boolean True if basegame fillType
-function RmSettingsFrame:isBasegameFillType(fillTypeName)
-    local source = RmFreshSettings:getFillTypeSource(fillTypeName)
-    return source == "basegame"
+    Log:debug("SETT DATA: %d perishable fillTypes", #RmSettingsFrame.allPerishableFillTypes)
 end
 
 --- Get list of ALL visible fillTypes sorted alphabetically
@@ -442,20 +478,49 @@ function RmSettingsFrame:refreshData()
             end
         end
     end
+    if self.checkStorageAging then
+        local state = RmFreshSettings.storageAgingEnabled and 2 or 1
+        self.checkStorageAging:setState(state)
+    end
 
-    -- SC2/SC3: FillType row visibility and selector states
-    local sc2Visible = self:refreshFillTypeRows(self.sc2Rows)
-    local sc3Visible = self:refreshFillTypeRows(self.sc3Rows)
+    -- Update tab visibility based on storageAgingEnabled
+    self:updateStorageTabVisibility()
 
-    -- Toggle empty-state messages
-    if self.sc2NoRowsMsg then self.sc2NoRowsMsg:setVisible(sc2Visible == 0) end
-    if self.sc3NoRowsMsg then self.sc3NoRowsMsg:setVisible(sc3Visible == 0) end
+    -- Expiration tab: FillType row visibility and selector states
+    local visibleCount = self:refreshFillTypeRows(self.expirationRows)
 
-    -- Invalidate layouts so ScrollingLayout recalculates after row visibility changes
+    -- Toggle empty-state message
+    if self.sc2NoRowsMsg then self.sc2NoRowsMsg:setVisible(visibleCount == 0) end
+
+    -- Invalidate layout so ScrollingLayout recalculates after row visibility changes
     if self.sc2Layout then self.sc2Layout:invalidateLayout() end
-    if self.sc3Layout then self.sc3Layout:invalidateLayout() end
+
+    -- SC3: Max Benefit tab - update dropdown states from current override values
+    self:refreshMaxBenefitRows()
+    -- Clear pending max benefit changes during refresh (prevents stale local changes)
+    RmSettingsFrame.pendingMaxBenefitChanges = {}
+
+    -- SC4: Storage tab - update dropdown states from current override values
+    self:refreshStorageRows()
 
     RmSettingsFrame.isRefreshing = false
+end
+
+--- Refresh storage tab dropdown states from current override values
+--- Called during refreshData() - updates states only, no re-cloning
+function RmSettingsFrame:refreshStorageRows()
+    if not self.sc4Rows then return end
+
+    for _, rowData in ipairs(self.sc4Rows) do
+        if rowData and rowData.multiOption then
+            local override = RmFreshSettings:getStorageClassOverride(rowData.key)
+            if override ~= nil then
+                rowData.multiOption:setState(override + 2) -- classValue + 2 = state
+            else
+                rowData.multiOption:setState(1) -- Auto
+            end
+        end
+    end
 end
 
 --- Refresh fillType row visibility and selector states from current settings
@@ -494,26 +559,26 @@ function RmSettingsFrame:refreshFillTypeRows(rows)
 end
 
 -- =============================================================================
--- SC2 CLONE POPULATION
+-- EXPIRATION TAB CLONE POPULATION
 -- =============================================================================
 
---- Populate SC2 page by cloning one row per basegame fillType
-function RmSettingsFrame:populateSc2()
+--- Populate Expiration tab by cloning one row per perishable fillType
+function RmSettingsFrame:populateExpirationTab()
     local layout = self.sc2Layout
     local template = self.sc2RowTemplate
 
     if not template or not layout then return end
 
-    local fillTypes = RmSettingsFrame.basegameFillTypes or {}
+    local fillTypes = RmSettingsFrame.allPerishableFillTypes or {}
     if #fillTypes == 0 then
-        self.sc2Populated = true
+        self.expirationPopulated = true
         return
     end
 
     -- Save focus context as safety guard
     local savedFocusData = FocusManager.currentFocusData
 
-    self.sc2Rows = {}
+    self.expirationRows = {}
 
     for index, ft in ipairs(fillTypes) do
         local row = template:clone(layout)
@@ -560,7 +625,7 @@ function RmSettingsFrame:populateSc2()
             tooltipElement:setText(self:buildFillTypeTooltip(ft.name))
         end
 
-        self.sc2Rows[index] = { row = row, multiOption = multiOption, fillTypeName = ft.name }
+        self.expirationRows[index] = { row = row, multiOption = multiOption, fillTypeName = ft.name }
     end
 
     -- Restore focus context
@@ -573,19 +638,211 @@ function RmSettingsFrame:populateSc2()
     end
 
     layout:invalidateLayout()
-    self.sc2Populated = true
+    self.expirationPopulated = true
 
-    Log:trace("SETT CLONE SC2: %d rows cloned, template unlinked", #fillTypes)
+    Log:trace("SETT CLONE EXPIRATION: %d rows cloned, template unlinked", #fillTypes)
 end
 
---- Populate SC3 page by cloning one row per DLC/mod fillType
-function RmSettingsFrame:populateSc3()
+-- =============================================================================
+-- STORAGE TAB CLONE POPULATION
+-- =============================================================================
+
+--- Build dropdown option texts for storage class selector
+---@return table Array of localized strings
+function RmSettingsFrame:buildStorageClassOptionTexts()
+    local texts = {}
+    table.insert(texts, g_i18n:getText("fresh_storage_auto"))
+    for i = 0, 5 do
+        local name = RmFreshManager.STORAGE_CLASS_NAMES[i]
+        table.insert(texts, g_i18n:getText("fresh_class_" .. name))
+    end
+    return texts
+end
+
+--- Populate Storage tab by cloning one row per storage entity
+function RmSettingsFrame:populateStorageTab()
+    local layout = self.sc4Layout
+    local template = self.sc4RowTemplate
+
+    if not template or not layout then return end
+
+    -- Save focus context as safety guard
+    local savedFocusData = FocusManager.currentFocusData
+
+    -- If repopulating after dirty flag, delete old clones first
+    if self.sc4Rows then
+        for _, rowData in ipairs(self.sc4Rows) do
+            rowData.row:delete()
+        end
+    end
+
+    local storageList = RmFreshManager:getStorageListForSettings(self.farmId)
+    local optionTexts = self:buildStorageClassOptionTexts()
+    self.sc4Rows = {}
+
+    for index, entry in ipairs(storageList) do
+        local row = template:clone(layout)
+
+        -- Alternating row color
+        local isEven = (index % 2 == 0)
+        row:setImageColor(nil, table.unpack(InGameMenuSettingsFrame.COLOR_ALTERNATING[isEven]))
+
+        -- Set MultiTextOption texts and callback
+        local multiOption = row.elements[1]
+        if multiOption then
+            multiOption:setTexts(optionTexts)
+
+            -- Set current state from override value
+            local override = RmFreshSettings:getStorageClassOverride(entry.key)
+            if override ~= nil then
+                multiOption:setState(override + 2) -- classValue + 2 = state
+            else
+                multiOption:setState(1) -- Auto
+            end
+
+            -- Wire onClick closure (keep target intact per CLAUDE.md gotcha)
+            local key = entry.key
+            multiOption.onClickCallback = function(_target, state)
+                self:onStorageClassChanged(key, state)
+            end
+
+            -- Set tooltip (dedicated tooltip for Items in World)
+            local tooltipElement = multiOption:getDescendantByName("storageTooltip")
+            if tooltipElement then
+                local tooltipKey = entry.key == "itemsInWorld"
+                    and "fresh_storage_items_in_world_tooltip"
+                    or "fresh_storage_override_tooltip"
+                tooltipElement:setText(g_i18n:getText(tooltipKey))
+            end
+
+            -- Disable for non-admin
+            multiOption:setDisabled(not self:isAdmin())
+        end
+
+        -- Set entity icon
+        local iconElement = row.elements[2]
+        if iconElement then
+            if entry.key == "itemsInWorld" then
+                -- Use SQUAREBALE_GRASS icon for "Items in World"
+                local fillType = g_fillTypeManager:getFillTypeByName("SQUAREBALE_GRASS")
+                if fillType and fillType.hudOverlayFilename then
+                    iconElement:setImageFilename(fillType.hudOverlayFilename)
+                    iconElement:setVisible(true)
+                else
+                    iconElement:setVisible(false)
+                end
+            else
+                iconElement:setVisible(false)
+            end
+        end
+
+        -- Set entity name
+        local titleText = row.elements[3]
+        if titleText then
+            titleText:setText(entry.entityName)
+        end
+
+        -- Set detected class label
+        local detectedLabel = row.elements[4]
+        if detectedLabel then
+            local className = RmFreshManager.STORAGE_CLASS_NAMES[entry.detectedClass]
+            if className then
+                local localizedName = g_i18n:getText("fresh_class_" .. className)
+                detectedLabel:setText(string.format("%s: %s",
+                    g_i18n:getText("fresh_storage_detected"), localizedName))
+            else
+                detectedLabel:setText("")
+            end
+        end
+
+        self.sc4Rows[index] = { row = row, multiOption = multiOption, key = entry.key }
+    end
+
+    -- Restore focus context
+    FocusManager.currentFocusData = savedFocusData
+
+    -- Unlink template from layout (with parent guard for dual-instance safety)
+    if template.parent then
+        template:unlinkElement()
+        FocusManager:removeElement(template)
+    end
+
+    layout:invalidateLayout()
+    self.sc4Populated = true
+
+    Log:trace("SETT CLONE STORAGE: %d rows cloned, template unlinked", #storageList)
+end
+
+--- Handle storage class override dropdown change
+---@param key string uniqueId or "itemsInWorld"
+---@param state number Dropdown state (1=Auto, 2-7=class values)
+function RmSettingsFrame:onStorageClassChanged(key, state)
+    if RmSettingsFrame.isRefreshing then return end
+    if not self:isAdmin() then return end
+
+    if state == 1 then
+        -- Auto: clear override
+        if g_server then
+            RmFreshSettings:clearStorageClassOverride(key)
+        else
+            if RmSettingsChangeRequestEvent then
+                g_client:getServerConnection():sendEvent(
+                    RmSettingsChangeRequestEvent.new("clearStorageClassOverride", key, nil)
+                )
+            end
+        end
+    else
+        -- States 2-7 map to class values 0-5
+        local classValue = state - 2
+        if g_server then
+            RmFreshSettings:setStorageClassOverride(key, classValue)
+        else
+            if RmSettingsChangeRequestEvent then
+                g_client:getServerConnection():sendEvent(
+                    RmSettingsChangeRequestEvent.new("setStorageClassOverride", key, classValue)
+                )
+            end
+        end
+    end
+end
+
+-- =============================================================================
+-- MAX BENEFIT TAB CLONE POPULATION
+-- =============================================================================
+
+--- Build dropdown option texts for max benefit class selector
+---@return table Array of localized strings
+function RmSettingsFrame:buildMaxBenefitOptionTexts()
+    local texts = {}
+    for _, opt in ipairs(RmSettingsFrame.MAXBENEFIT_OPTIONS) do
+        table.insert(texts, g_i18n:getText(opt.label))
+    end
+    return texts
+end
+
+--- Get the default class label for a fillType (from config defaults)
+---@param fillTypeName string
+---@return string Localized class name (e.g., "Indoor")
+function RmSettingsFrame:getDefaultClassLabel(fillTypeName)
+    local classValue = RmFreshSettings.maxBenefitClassDefaults[fillTypeName]
+    if classValue ~= nil then
+        local className = RmFreshManager.STORAGE_CLASS_NAMES[classValue]
+        if className then
+            return g_i18n:getText("fresh_class_" .. className)
+        end
+    end
+    -- Fallback: SHELTERED (the hardcoded default in getMaxBenefitClass)
+    return g_i18n:getText("fresh_class_sheltered")
+end
+
+--- Populate Max Benefit tab by cloning one row per fillType
+function RmSettingsFrame:populateMaxBenefitTab()
     local layout = self.sc3Layout
     local template = self.sc3RowTemplate
 
     if not template or not layout then return end
 
-    local fillTypes = RmSettingsFrame.dlcmodFillTypes or {}
+    local fillTypes = RmSettingsFrame.allPerishableFillTypes or {}
     if #fillTypes == 0 then
         self.sc3Populated = true
         return
@@ -594,26 +851,36 @@ function RmSettingsFrame:populateSc3()
     -- Save focus context as safety guard
     local savedFocusData = FocusManager.currentFocusData
 
+    local optionTexts = self:buildMaxBenefitOptionTexts()
     self.sc3Rows = {}
 
     for index, ft in ipairs(fillTypes) do
         local row = template:clone(layout)
 
-        -- Alternating row color (clone doesn't fire onCreate)
+        -- Alternating row color
         local isEven = (index % 2 == 0)
         row:setImageColor(nil, table.unpack(
             InGameMenuSettingsFrame.COLOR_ALTERNATING[isEven]))
 
-        -- Set MultiTextOption texts to expiration options
+        -- Set MultiTextOption texts to max benefit options
         local multiOption = row.elements[1]
-        if multiOption and self.optionTexts then
-            multiOption:setTexts(self.optionTexts)
+        if multiOption then
+            multiOption:setTexts(optionTexts)
 
             -- Wire onClick closure with captured fillTypeName
             local fillTypeName = ft.name
             multiOption.onClickCallback = function(_target, state)
-                self:onFillTypeOptionChangedByName(fillTypeName, state)
+                self:onMaxBenefitClassChanged(fillTypeName, state)
             end
+
+            -- Set tooltip
+            local tooltipElement = multiOption:getDescendantByName("maxBenefitTooltip")
+            if tooltipElement then
+                tooltipElement:setText(g_i18n:getText("fresh_maxbenefit_tooltip"))
+            end
+
+            -- Disable for non-admin
+            multiOption:setDisabled(not self:isAdmin())
         end
 
         -- Set fillType icon
@@ -629,25 +896,26 @@ function RmSettingsFrame:populateSc3()
             end
         end
 
-        -- Set title to fillType title
-        local titleText = row.elements[3]
+        -- Set default class label (read-only)
+        local defaultLabel = row.elements[3]
+        if defaultLabel then
+            defaultLabel:setText(string.format("%s: %s",
+                g_i18n:getText("fresh_maxbenefit_configDefault"), self:getDefaultClassLabel(ft.name)))
+        end
+
+        -- Set fillType title
+        local titleText = row.elements[4]
         if titleText then
             titleText:setText(ft.title)
         end
 
-        -- Set tooltip
-        local tooltipElement = row:getDescendantByName("fillTypeTooltip")
-        if tooltipElement then
-            tooltipElement:setText(self:buildFillTypeTooltip(ft.name))
-        end
-
-        self.sc3Rows[index] = { row = row, multiOption = multiOption, fillTypeName = ft.name }
+        self.sc3Rows[index] = { row = row, multiOption = multiOption, fillTypeName = ft.name, defaultLabel = defaultLabel }
     end
 
     -- Restore focus context
     FocusManager.currentFocusData = savedFocusData
 
-    -- Unlink template from layout and focus system
+    -- Unlink template from layout (with parent guard for dual-instance safety)
     if template.parent then
         template:unlinkElement()
         FocusManager:removeElement(template)
@@ -656,7 +924,41 @@ function RmSettingsFrame:populateSc3()
     layout:invalidateLayout()
     self.sc3Populated = true
 
-    Log:trace("SETT CLONE SC3: %d rows cloned, template unlinked", #fillTypes)
+    Log:trace("SETT CLONE MAXBENEFIT: %d rows cloned, template unlinked", #fillTypes)
+end
+
+--- Refresh max benefit tab dropdown states from current override values
+--- Called during refreshData() - updates states only, no re-cloning
+function RmSettingsFrame:refreshMaxBenefitRows()
+    if not self.sc3Rows then return end
+
+    for _, rowData in ipairs(self.sc3Rows) do
+        if rowData and rowData.multiOption then
+            local override = RmFreshSettings.maxBenefitClassOverrides[rowData.fillTypeName]
+            if override ~= nil then
+                -- States 2-6 map to class values 0-4
+                rowData.multiOption:setState(override + 2)
+            else
+                rowData.multiOption:setState(1) -- Default
+            end
+        end
+    end
+end
+
+--- Handle max benefit class dropdown change
+---@param fillTypeName string FillType name (captured in closure)
+---@param state number Dropdown state (1=Default, 2-6=class values 0-4)
+function RmSettingsFrame:onMaxBenefitClassChanged(fillTypeName, state)
+    if RmSettingsFrame.isRefreshing then return end
+    if not self:isAdmin() then return end
+
+    if state == 1 then
+        -- Default: clear override
+        RmSettingsFrame.pendingMaxBenefitChanges[fillTypeName] = RmSettingsFrame.MAXBENEFIT_CLEAR
+    else
+        -- States 2-6 map to class values 0-4
+        RmSettingsFrame.pendingMaxBenefitChanges[fillTypeName] = state - 2
+    end
 end
 
 -- =============================================================================
@@ -671,8 +973,12 @@ function RmSettingsFrame:onClickExpirationTab()
     self.subCategoryPaging:setState(RmSettingsFrame.SUB_CATEGORY.EXPIRATION, true)
 end
 
-function RmSettingsFrame:onClickDlcModTab()
-    self.subCategoryPaging:setState(RmSettingsFrame.SUB_CATEGORY.DLCMOD, true)
+function RmSettingsFrame:onClickMaxBenefitTab()
+    self.subCategoryPaging:setState(RmSettingsFrame.SUB_CATEGORY.MAXBENEFIT, true)
+end
+
+function RmSettingsFrame:onClickStorageTab()
+    self.subCategoryPaging:setState(RmSettingsFrame.SUB_CATEGORY.STORAGE, true)
 end
 
 -- =============================================================================
@@ -699,8 +1005,10 @@ function RmSettingsFrame:updateSubCategoryPages(state)
         layout = self.sc1Layout
     elseif idx == RmSettingsFrame.SUB_CATEGORY.EXPIRATION then
         layout = self.sc2Layout
-    elseif idx == RmSettingsFrame.SUB_CATEGORY.DLCMOD then
+    elseif idx == RmSettingsFrame.SUB_CATEGORY.MAXBENEFIT then
         layout = self.sc3Layout
+    elseif idx == RmSettingsFrame.SUB_CATEGORY.STORAGE then
+        layout = self.sc4Layout
     end
 
     if layout then
@@ -768,10 +1076,18 @@ function RmSettingsFrame:updateReadonlyState()
     if self.presetSelector then
         self.presetSelector:setDisabled(disabled)
     end
+    if self.checkStorageAging then
+        self.checkStorageAging:setDisabled(disabled)
+    end
 
     -- Disable fillType row selectors
-    self:updateFillTypeRowsDisabled(self.sc2Rows)
+    self:updateFillTypeRowsDisabled(self.expirationRows)
+
+    -- Disable max benefit tab row selectors
     self:updateFillTypeRowsDisabled(self.sc3Rows)
+
+    -- Disable storage tab row selectors
+    self:updateFillTypeRowsDisabled(self.sc4Rows)
 
     Log:debug("SETT: readonly=%s (isAdmin=%s)", tostring(disabled), tostring(isAdmin))
 end
@@ -815,6 +1131,7 @@ function RmSettingsFrame:onResetConfirmed(yes)
     if g_server then
         RmFreshSettings:resetAllOverrides()
         RmSettingsFrame.pendingFillTypeChanges = {}
+        RmSettingsFrame.pendingMaxBenefitChanges = {}
         self:refreshData()
         Log:info("SETT: Reset to defaults complete")
     else
@@ -927,6 +1244,68 @@ function RmSettingsFrame:onClickShowAgeDisplay(state)
                 RmSettingsChangeRequestEvent.new("setGlobal", "showAgeDisplay", enabled)
             )
         end
+    end
+end
+
+function RmSettingsFrame:onClickStorageAging(state)
+    if RmSettingsFrame.isRefreshing then return end
+    if not self:isAdmin() then return end
+
+    local enabled = (state == 2)
+
+    -- Set local property immediately for responsive UI
+    RmFreshSettings.storageAgingEnabled = enabled
+
+    if g_server then
+        RmFreshSettings:setGlobal("storageAgingEnabled", enabled)
+    else
+        if RmSettingsChangeRequestEvent then
+            g_client:getServerConnection():sendEvent(
+                RmSettingsChangeRequestEvent.new("setGlobal", "storageAgingEnabled", enabled)
+            )
+        end
+    end
+
+    -- Immediately update tab visibility
+    self:updateStorageTabVisibility()
+
+    -- Repopulate storage tab when enabling (building list may have changed while tab was hidden)
+    if enabled then
+        self.sc4Populated = false
+        self:populateStorageTab()
+    end
+end
+
+--- Update visibility of storage-related tabs based on storageAgingEnabled
+--- Hides/shows Max Benefit (SC3) and Storage (SC4) tab buttons, rebuilds paging selector
+function RmSettingsFrame:updateStorageTabVisibility()
+    local enabled = RmFreshSettings.storageAgingEnabled
+
+    -- Hide/show Max Benefit tab button (index 3) and Storage tab button (index 4)
+    local maxBenefitTabButton = self.subCategoryTabs[3]
+    if maxBenefitTabButton then
+        maxBenefitTabButton:setVisible(enabled)
+    end
+    local storageTabButton = self.subCategoryTabs[4]
+    if storageTabButton then
+        storageTabButton:setVisible(enabled)
+    end
+
+    -- Rebuild paging selector texts to match visible tabs
+    local subCategories = {}
+    for index, button in ipairs(self.subCategoryTabs) do
+        if button:getIsVisible() then
+            table.insert(subCategories, tostring(index))
+        end
+    end
+    self.subCategoryBox:invalidateLayout()
+    self.subCategoryPaging:setTexts(subCategories)
+    self.subCategoryPaging:setSize(self.subCategoryBox.maxFlowSize + 140 * g_pixelSizeScaledX)
+
+    -- If currently on a hidden tab, switch to General
+    if not enabled and (RmSettingsFrame.currentSubCategory == RmSettingsFrame.SUB_CATEGORY.MAXBENEFIT
+            or RmSettingsFrame.currentSubCategory == RmSettingsFrame.SUB_CATEGORY.STORAGE) then
+        self.subCategoryPaging:setState(1, true)
     end
 end
 

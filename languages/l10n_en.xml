@@ -61,7 +61,8 @@
         <!-- Sub-category tabs -->
         <text name="fresh_tab_settings" text="Settings"/>
         <text name="fresh_tab_expiration" text="Expiration"/>
-        <text name="fresh_tab_dlcmod" text="DLCs &amp; Mods"/>
+        <text name="fresh_tab_maxbenefit" text="Max Benefit"/>
+        <text name="fresh_tab_storage" text="Storage"/>
 
         <!-- Difficulty Preset -->
         <text name="fresh_settings_preset" text="Difficulty"/>
@@ -97,6 +98,18 @@
         <text name="fresh_warning_48h" text="48 hours"/>
         <text name="fresh_warning_72h" text="72 hours"/>
         <text name="fresh_settings_fillTypes" text="Expiration Times"/>
+        <text name="fresh_settings_maxBenefitHeader" text="Maximum Storage Benefit"/>
+        <text name="fresh_settings_storageHeader" text="Storage Class Overrides"/>
+        <text name="fresh_settings_storageAging" text="Storage Class Aging"/>
+        <text name="fresh_settings_storageAging_tooltip" text="When enabled, goods age at different rates depending on storage type. Exposed ages fastest, frozen slowest. When disabled, all storages age at the same baseline rate."/>
+        <text name="fresh_maxbenefit_default" text="Default"/>
+        <text name="fresh_maxbenefit_configDefault" text="Default"/>
+        <text name="fresh_maxbenefit_tooltip" text="Set the maximum storage class benefit for this product. Higher classes reduce aging but only up to this ceiling. To disable aging for specific buildings, use the Storage tab. Exposed=1.5x, Sheltered=1.0x, Indoor=0.8x, Cooled=0.3x, Frozen=0.05x"/>
+        <text name="fresh_storage_auto" text="Auto (detected)"/>
+        <text name="fresh_storage_override_tooltip" text="Override the storage class for this location. Auto uses the detected class. Exposed=1.5x, Sheltered=1.0x, Indoor=0.8x, Cooled=0.3x, Frozen=0.05x, Disabled=no aging."/>
+        <text name="fresh_storage_items_in_world" text="Items in World"/>
+        <text name="fresh_storage_items_in_world_tooltip" text="Covers bales, pallets, and bigbags not placed in a dedicated object storage."/>
+        <text name="fresh_storage_detected" text="Detected"/>
 
         <!-- Empty state message for preset-controlled tabs -->
         <text name="fresh_settings_presetActive" text="All products are managed by the selected preset. Switch to Custom to edit individually."/>

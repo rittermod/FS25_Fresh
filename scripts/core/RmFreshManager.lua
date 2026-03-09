@@ -708,6 +708,83 @@ function RmFreshManager:getAllContainers()
     return self.containers
 end
 
+--- Build a grouped, sorted list of storage entities for the Settings UI
+--- Groups containers by building/vehicle (uniqueId), separates bales/pallets into "Items in World"
+---@param farmId number|nil Filter by farm ownership (nil = all farms)
+---@return table Array of { uniqueId, entityName, entityType, detectedClass, containerCount, key }
+function RmFreshManager:getStorageListForSettings(farmId)
+    local buildingMap = {}   -- uniqueId → { ... }
+    local hasItemsInWorld = false
+
+    for _, container in pairs(self.containers) do
+        -- Filter by farm if specified; always exclude unowned/spectator (farmId 0)
+        if (farmId == nil or container.farmId == farmId)
+            and (container.farmId or 0) ~= FarmManager.SPECTATOR_FARM_ID then
+            -- Separate bales/pallets into "items in world"
+            if container.entityType == "bale" or (container.metadata and container.metadata.isPallet) then
+                hasItemsInWorld = true
+            else
+                -- Group by uniqueId
+                local wo = container.identityMatch and container.identityMatch.worldObject
+                local uniqueId = wo and wo.uniqueId
+                if uniqueId then
+                    if not buildingMap[uniqueId] then
+                        local detected = container.metadata and container.metadata.storageClass
+                            or self.STORAGE_CLASS.SHELTERED
+                        buildingMap[uniqueId] = {
+                            uniqueId = uniqueId,
+                            entityName = (container.metadata and container.metadata.location) or uniqueId,
+                            entityType = container.entityType,
+                            detectedClass = detected,
+                            containerCount = 1,
+                            key = uniqueId,
+                        }
+                    else
+                        buildingMap[uniqueId].containerCount = buildingMap[uniqueId].containerCount + 1
+                    end
+                end
+            end
+        end
+    end
+
+    -- Separate placeables and vehicles
+    local placeables = {}
+    local vehicles = {}
+    for _, entry in pairs(buildingMap) do
+        if entry.entityType == "vehicle" then
+            table.insert(vehicles, entry)
+        else
+            table.insert(placeables, entry)
+        end
+    end
+
+    -- Sort alphabetically within groups
+    local function sortByName(a, b) return a.entityName:lower() < b.entityName:lower() end
+    table.sort(placeables, sortByName)
+    table.sort(vehicles, sortByName)
+
+    -- Combine: placeables first, then vehicles
+    local result = {}
+    for _, entry in ipairs(placeables) do table.insert(result, entry) end
+    for _, entry in ipairs(vehicles) do table.insert(result, entry) end
+
+    -- Append "Items in World" at end (only if bale/pallet containers exist)
+    if hasItemsInWorld then
+        table.insert(result, {
+            uniqueId = "itemsInWorld",
+            entityName = g_i18n:getText("fresh_storage_items_in_world"),
+            entityType = "itemsInWorld",
+            detectedClass = self.STORAGE_CLASS.EXPOSED,
+            containerCount = 0,
+            key = "itemsInWorld",
+        })
+    end
+
+    Log:debug("STORAGE_LIST: %d entries (%d placeables, %d vehicles, itemsInWorld=%s) farmId=%s",
+        #result, #placeables, #vehicles, tostring(hasItemsInWorld), tostring(farmId))
+    return result
+end
+
 --- Get container ID by entity reference
 --- NETWORK SAFE: Uses direct object reference lookup (not uniqueId or node ID)
 --- Used by adapter display hooks to find container for an entity
@@ -931,10 +1008,11 @@ function RmFreshManager:onSave(savegameDir)
     Log:debug("SAVE_LOG: RmLossTracker.lossLog has %d entries", #RmLossTracker.lossLog)
     RmFreshIO:saveLog(savegameDir, RmLossTracker.lossLog)
 
-    -- Save user settings (includes storage class overrides)
+    -- Save user settings (includes storage class and max benefit class overrides)
     local settingsPath = savegameDir .. "/rm_FreshSettings.xml"
     local overrides = RmFreshSettings:getUserOverrides()
     overrides.storageClassOverrides = RmFreshSettings:getAllStorageClassOverrides()
+    overrides.maxBenefitClassOverrides = RmFreshSettings:getAllMaxBenefitClassOverrides()
     RmFreshIO:saveSettings(settingsPath, overrides)
 end
 
@@ -955,6 +1033,8 @@ function RmFreshManager:onLoad(savegameDir)
     RmFreshSettings:setUserOverrides(settingsData)
     -- Restore storage class overrides (backward compat: missing = empty table)
     RmFreshSettings:setAllStorageClassOverrides(settingsData.storageClassOverrides or {})
+    -- Restore max benefit class overrides (backward compat: missing = empty table)
+    RmFreshSettings:setAllMaxBenefitClassOverrides(settingsData.maxBenefitClassOverrides or {})
 
     local data = RmFreshIO:load(savegameDir)
     if data then
@@ -2474,10 +2554,10 @@ function RmFreshManager:getExpiringWithin(hours, farmId)
                         name = container.metadata.location
                     end
 
-                    -- Use already-resolved classInfo for display
+                    -- Use already-resolved classInfo for display (gated on storageAgingEnabled)
                     local storageClass = classInfo and classInfo.effective or nil
                     local storageClassName = nil
-                    if storageClass ~= nil then
+                    if RmFreshSettings.storageAgingEnabled and storageClass ~= nil then
                         local classKey = self.STORAGE_CLASS_NAMES[storageClass]
                         if classKey then
                             storageClassName = g_i18n:getText("fresh_class_" .. classKey)
@@ -2710,6 +2790,17 @@ function RmFreshManager:getLossLogRecent(farmId, count)
                 -- Formatted datetime for display: YY-PP-DD HH:00
                 dateTimeDisplay = string.format("%02d-%02d-%02d %02d:00", year, period, day, hour),
             }
+
+            -- Resolve storage class to localized display name (gated on storageAgingEnabled)
+            local storageClassName = nil
+            if RmFreshSettings.storageAgingEnabled and entry.storageClass ~= nil then
+                local classKey = self.STORAGE_CLASS_NAMES[entry.storageClass]
+                if classKey then
+                    storageClassName = g_i18n:getText("fresh_class_" .. classKey)
+                end
+            end
+            displayEntry.storageClassName = storageClassName
+
             table.insert(recent, displayEntry)
             Log:trace("LOSS_LOG_ENTRY: Y%d P%d D%d H%d %s %.0fL at %s",
                 year, period, day, hour,

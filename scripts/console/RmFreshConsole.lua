@@ -438,6 +438,20 @@ function RmFreshConsole:consoleCommandInspect(indexStr)
         print(string.format("  playerCanEmpty: %s", canEmpty == nil and "nil" or tostring(canEmpty)))
     end
 
+    -- Storage class info
+    local classInfo = RmFreshManager:resolveStorageClassInfo(container)
+    local classNames = RmFreshManager.STORAGE_CLASS_NAMES
+    local detectedName = classNames[classInfo.detected] or "?"
+    local effectiveName = classNames[classInfo.effective] or "?"
+    local maxBenefitName = classNames[classInfo.maxBenefitClass] or "?"
+    if classInfo.override then
+        local overrideName = classNames[classInfo.override] or "?"
+        print(string.format("  storageClass: %s (detected: %s, override: %s) x%.2f", effectiveName, detectedName, overrideName, classInfo.multiplier))
+    else
+        print(string.format("  storageClass: %s (detected: %s) x%.2f", effectiveName, detectedName, classInfo.multiplier))
+    end
+    print(string.format("  maxBenefitClass: %s", maxBenefitName))
+
     -- Flat batches at container root
     local batches = container.batches or {}
     local total = RmBatch.getTotalAmount(batches)
@@ -453,8 +467,7 @@ function RmFreshConsole:consoleCommandInspect(indexStr)
             and container.identityMatch.storage.fillTypeName
         local threshold = fillTypeName and RmFreshSettings:getExpiration(fillTypeName)
         if threshold then
-            local classInfo = RmFreshManager:resolveStorageClassInfo(container)
-            local multiplier = classInfo and classInfo.multiplier or 1.0
+            local multiplier = classInfo.multiplier
             expiresStr = string.format(", expires in %s", RmBatch.formatExpiresIn(oldest, threshold, daysPerPeriod, multiplier))
         end
     end

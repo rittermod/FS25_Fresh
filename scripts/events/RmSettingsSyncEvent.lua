@@ -91,7 +91,19 @@ function RmSettingsSyncEvent:writeStream(streamId, connection)
         Log:trace("    override: %s = %d", key, classValue)
     end
 
-    Log:debug("SETTINGS_SYNC_WRITE: %d global, %d fillTypes, %d overrides", #globals, #fillTypes, overrideCount)
+    -- Write max benefit class overrides (Epic F-125)
+    local mbOverrides = self.settingsData.maxBenefitClassOverrides or {}
+    local mbCount = 0
+    for _ in pairs(mbOverrides) do mbCount = mbCount + 1 end
+    streamWriteUInt16(streamId, mbCount)
+    for fillTypeName, classValue in pairs(mbOverrides) do
+        streamWriteString(streamId, fillTypeName)
+        streamWriteUInt8(streamId, classValue)
+        Log:trace("    maxBenefit: %s = %d", fillTypeName, classValue)
+    end
+
+    Log:debug("SETTINGS_SYNC_WRITE: %d global, %d fillTypes, %d overrides, %d maxBenefit",
+        #globals, #fillTypes, overrideCount, mbCount)
 end
 
 --- Deserialize settings from network
@@ -145,7 +157,18 @@ function RmSettingsSyncEvent:readStream(streamId, connection)
         Log:trace("    override: %s = %d", key, classValue)
     end
 
-    Log:debug("SETTINGS_SYNC_READ: %d global, %d fillTypes, %d overrides", globalCount, ftCount, overrideCount)
+    -- Read max benefit class overrides (Epic F-125)
+    local mbCount = streamReadUInt16(streamId)
+    self.settingsData.maxBenefitClassOverrides = {}
+    for _ = 1, mbCount do
+        local fillTypeName = streamReadString(streamId)
+        local classValue = streamReadUInt8(streamId)
+        self.settingsData.maxBenefitClassOverrides[fillTypeName] = classValue
+        Log:trace("    maxBenefit: %s = %d", fillTypeName, classValue)
+    end
+
+    Log:debug("SETTINGS_SYNC_READ: %d global, %d fillTypes, %d overrides, %d maxBenefit",
+        globalCount, ftCount, overrideCount, mbCount)
     self:run(connection)
 end
 
@@ -174,6 +197,13 @@ function RmSettingsSyncEvent:run(connection)
 
     RmFreshSettings:setUserOverrides(self.settingsData)
     RmFreshSettings:setAllStorageClassOverrides(self.settingsData.storageClassOverrides or {})
+    RmFreshSettings:setAllMaxBenefitClassOverrides(self.settingsData.maxBenefitClassOverrides or {})
+
+    -- Apply storageAgingEnabled from synced globals (direct property, not just userOverrides)
+    local syncedStorageAging = self.settingsData.global and self.settingsData.global["storageAgingEnabled"]
+    if syncedStorageAging ~= nil then
+        RmFreshSettings.storageAgingEnabled = syncedStorageAging
+    end
 
     local overrideCount = 0
     for _ in pairs(self.settingsData.storageClassOverrides or {}) do overrideCount = overrideCount + 1 end
@@ -199,6 +229,7 @@ end
 function RmSettingsSyncEvent.sendToClient(connection)
     local settingsData = RmFreshSettings:getUserOverrides()
     settingsData.storageClassOverrides = RmFreshSettings:getAllStorageClassOverrides()
+    settingsData.maxBenefitClassOverrides = RmFreshSettings:getAllMaxBenefitClassOverrides()
     connection:sendEvent(RmSettingsSyncEvent.new(settingsData))
     Log:debug("SETTINGS_SYNC: Sent to client")
 end
@@ -208,6 +239,7 @@ function RmSettingsSyncEvent.broadcastToClients()
     if g_server then
         local settingsData = RmFreshSettings:getUserOverrides()
         settingsData.storageClassOverrides = RmFreshSettings:getAllStorageClassOverrides()
+        settingsData.maxBenefitClassOverrides = RmFreshSettings:getAllMaxBenefitClassOverrides()
         g_server:broadcastEvent(RmSettingsSyncEvent.new(settingsData))
         Log:debug("SETTINGS_SYNC: Broadcast to all clients")
     end

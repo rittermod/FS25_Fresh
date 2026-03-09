@@ -20,7 +20,11 @@
                 <ThreePartBitmap profile="fs25_subCategorySelectorTabbedTabBg" name="background"/>
             </Button>
             <Button profile="fs25_subCategorySelectorTabbedTab" id="subCategoryTabs[3]"
-                    text="$l10n_fresh_tab_dlcmod" onClick="onClickDlcModTab">
+                    text="$l10n_fresh_tab_maxbenefit" onClick="onClickMaxBenefitTab">
+                <ThreePartBitmap profile="fs25_subCategorySelectorTabbedTabBg" name="background"/>
+            </Button>
+            <Button profile="fs25_subCategorySelectorTabbedTab" id="subCategoryTabs[4]"
+                    text="$l10n_fresh_tab_storage" onClick="onClickStorageTab">
                 <ThreePartBitmap profile="fs25_subCategorySelectorTabbedTabBg" name="background"/>
             </Button>
         </BoxLayout>
@@ -87,13 +91,24 @@
                         text="$l10n_fresh_settings_showAgeDisplay"/>
                 </Bitmap>
 
+                <!-- Storage Aging toggle -->
+                <Bitmap profile="fs25_multiTextOptionContainer" onCreate="onCreateSettingRow">
+                    <BinaryOption profile="fs25_settingsBinaryOption" id="checkStorageAging"
+                        onClick="onClickStorageAging">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore"
+                            text="$l10n_fresh_settings_storageAging_tooltip"/>
+                    </BinaryOption>
+                    <Text profile="fs25_settingsMultiTextOptionTitle"
+                        text="$l10n_fresh_settings_storageAging"/>
+                </Bitmap>
+
             </ScrollingLayout>
         </GuiElement>
 
-        <!-- Page 2: Expiration - basegame fill types (cloned at runtime) -->
+        <!-- Page 2: Expiration - all perishable fill types (cloned at runtime) -->
         <GuiElement profile="fs25_subCategorySelectorTabbedContainer" id="subCategoryPages[2]">
             <ScrollingLayout profile="fs25_settingsLayout" id="sc2Layout">
-                <Text profile="fs25_settingsSectionHeader" text="Basegame products"/>
+                <Text profile="fs25_settingsSectionHeader" text="$l10n_fresh_settings_fillTypes"/>
                 <Text profile="rmFreshSettingsInfoText" id="sc2NoRowsMsg"
                     text="$l10n_fresh_settings_presetActive" visible="false"/>
 
@@ -110,22 +125,42 @@
             </ScrollingLayout>
         </GuiElement>
 
-        <!-- Page 3: DLC & Mod fill types (cloned at runtime) -->
+        <!-- Page 3: Max Benefit - per-fillType class ceiling (cloned at runtime) -->
         <GuiElement profile="fs25_subCategorySelectorTabbedContainer" id="subCategoryPages[3]">
             <ScrollingLayout profile="fs25_settingsLayout" id="sc3Layout">
-                <Text profile="fs25_settingsSectionHeader" text="DLC &amp; Mod products"/>
-                <Text profile="rmFreshSettingsInfoText" id="sc3NoRowsMsg"
-                    text="$l10n_fresh_settings_presetActive" visible="false"/>
+                <Text profile="fs25_settingsSectionHeader" text="$l10n_fresh_settings_maxBenefitHeader"/>
 
                 <!-- Template: cloned per fillType, then unlinked -->
                 <Bitmap profile="fs25_multiTextOptionContainer" id="sc3RowTemplate" onCreate="onCreateSettingRow">
                     <MultiTextOption profile="fs25_settingsMultiTextOption">
-                        <Text profile="fs25_multiTextOptionTooltip" name="fillTypeTooltip"/>
+                        <Text profile="fs25_multiTextOptionTooltip" name="maxBenefitTooltip"/>
                     </MultiTextOption>
                     <Bitmap profile="rmFreshFillTypeIcon" position="10px -7px" size="30px 30px"
                         name="fillTypeIcon"/>
+                    <Text profile="rmFreshDetectedClassLabel" position="360px 0px"
+                        text="Default: Indoor"/>
                     <Text profile="fs25_settingsMultiTextOptionTitle" position="50px 0px"
                         text="Template Label"/>
+                </Bitmap>
+            </ScrollingLayout>
+        </GuiElement>
+
+        <!-- Page 4: Storage - per-building/vehicle class overrides (cloned at runtime) -->
+        <GuiElement profile="fs25_subCategorySelectorTabbedContainer" id="subCategoryPages[4]">
+            <ScrollingLayout profile="fs25_settingsLayout" id="sc4Layout">
+                <Text profile="fs25_settingsSectionHeader" text="$l10n_fresh_settings_storageHeader"/>
+
+                <!-- Template: cloned per storage entity, then unlinked -->
+                <Bitmap profile="fs25_multiTextOptionContainer" id="sc4RowTemplate" onCreate="onCreateSettingRow">
+                    <MultiTextOption profile="fs25_settingsMultiTextOption">
+                        <Text profile="fs25_multiTextOptionTooltip" name="storageTooltip"/>
+                    </MultiTextOption>
+                    <Bitmap profile="rmFreshFillTypeIcon" position="10px -7px" size="30px 30px"
+                        name="entityIcon"/>
+                    <Text profile="fs25_settingsMultiTextOptionTitle" position="50px 0px"
+                        text="Building Name"/>
+                    <Text profile="rmFreshDetectedClassLabel" position="360px 0px"
+                        text="Detected: Indoor"/>
                 </Bitmap>
             </ScrollingLayout>
         </GuiElement>

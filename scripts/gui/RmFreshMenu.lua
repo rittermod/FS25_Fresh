@@ -100,6 +100,10 @@ function RmFreshMenu:onOpen()
     RmFreshMenu:superClass().onOpen(self)
     self.isOpen = true
 
+    -- Mark storage tab dirty so it repopulates with current building/vehicle list
+    -- The instance's sc4Populated flag is reset here; populateStorageTab() runs in onFrameOpen
+    RmSettingsFrame.sc4Dirty = true
+
     -- Register toggle action on the menu itself so keybinding works while menu is open
     local _, actionEventId = g_inputBinding:registerActionEvent(
         "RM_FRESH_MENU",

@@ -104,6 +104,10 @@ RmFreshSettings.classMultipliers = {}
 --- Populated by loadStorageClasses() from XML maxBenefitClass attributes
 RmFreshSettings.maxBenefitClassDefaults = {}
 
+--- Per-fillType maximum benefit class user overrides (fillTypeName → classValue)
+--- Set by admin via settings UI, synced via RmSettingsSyncEvent
+RmFreshSettings.maxBenefitClassOverrides = {}
+
 -- =============================================================================
 -- FILL TYPE SOURCE TRACKING
 -- =============================================================================
@@ -410,12 +414,20 @@ end
 
 --- Get the maximum benefit class ceiling for a fillType
 --- Returns the highest storage class that provides aging benefit for this fillType
+--- Priority: user override → config default → SHELTERED fallback
 ---@param fillTypeIndex number Fill type index
 ---@return number Storage class value (fallback: SHELTERED)
 function RmFreshSettings:getMaxBenefitClass(fillTypeIndex)
     local fillTypeName = g_fillTypeManager:getFillTypeNameByIndex(fillTypeIndex)
-    if fillTypeName and self.maxBenefitClassDefaults[fillTypeName] then
-        return self.maxBenefitClassDefaults[fillTypeName]
+    if fillTypeName then
+        -- Layer 1: User override
+        if self.maxBenefitClassOverrides[fillTypeName] ~= nil then
+            return self.maxBenefitClassOverrides[fillTypeName]
+        end
+        -- Layer 2: Config default
+        if self.maxBenefitClassDefaults[fillTypeName] ~= nil then
+            return self.maxBenefitClassDefaults[fillTypeName]
+        end
     end
     return RmFreshManager.STORAGE_CLASS.SHELTERED
 end
@@ -732,15 +744,20 @@ end
 function RmFreshSettings:resetAllOverrides()
     local ftCount = self:tableCount(self.userOverrides.fillTypes)
     local globalCount = self:tableCount(self.userOverrides.global)
+    local scCount = self:tableCount(self.storageClassOverrides)
+    local mbCount = self:tableCount(self.maxBenefitClassOverrides)
 
-    -- Clear BOTH fillTypes AND global overrides
+    -- Clear ALL override dimensions
     self.userOverrides.fillTypes = {}
     self.userOverrides.global = {}
+    self.storageClassOverrides = {}
+    self.maxBenefitClassOverrides = {}
 
-    Log:debug("SETTINGS_RESET: Cleared %d fillType and %d global overrides", ftCount, globalCount)
+    Log:debug("SETTINGS_RESET: Cleared %d fillType, %d global, %d storageClass, %d maxBenefit overrides",
+        ftCount, globalCount, scCount, mbCount)
 
     -- Notify dependents and sync MP
-    if ftCount > 0 or globalCount > 0 then
+    if ftCount > 0 or globalCount > 0 or scCount > 0 or mbCount > 0 then
         self:onSettingsChanged()
     end
 end
@@ -849,6 +866,46 @@ function RmFreshSettings:setAllStorageClassOverrides(overrides)
 end
 
 -- =============================================================================
+-- MAX BENEFIT CLASS OVERRIDE API
+-- =============================================================================
+
+--- Set a maxBenefitClass override for a fillType
+---@param fillTypeName string Fill type name (e.g., "WHEAT")
+---@param classValue number Storage class enum value (0-4)
+function RmFreshSettings:setMaxBenefitClassOverride(fillTypeName, classValue)
+    self.maxBenefitClassOverrides[fillTypeName] = classValue
+    Log:info("MAXBENEFIT_OVERRIDE_SET: %s -> %s(%d)",
+        fillTypeName, RmFreshManager.STORAGE_CLASS_NAMES[classValue] or "?", classValue)
+    self:onSettingsChanged()
+end
+
+--- Clear a maxBenefitClass override for a fillType (reverts to config default)
+---@param fillTypeName string Fill type name
+function RmFreshSettings:clearMaxBenefitClassOverride(fillTypeName)
+    if self.maxBenefitClassOverrides[fillTypeName] ~= nil then
+        local oldClass = self.maxBenefitClassOverrides[fillTypeName]
+        self.maxBenefitClassOverrides[fillTypeName] = nil
+        Log:info("MAXBENEFIT_OVERRIDE_CLEAR: %s (was %s(%d))",
+            fillTypeName, RmFreshManager.STORAGE_CLASS_NAMES[oldClass] or "?", oldClass)
+        self:onSettingsChanged()
+    end
+end
+
+--- Get all maxBenefitClass overrides (for save/sync)
+---@return table overrides table keyed by fillTypeName → classValue
+function RmFreshSettings:getAllMaxBenefitClassOverrides()
+    return self.maxBenefitClassOverrides
+end
+
+--- Bulk set all maxBenefitClass overrides (from save/sync)
+--- Does NOT call onSettingsChanged() - caller is responsible
+---@param overrides table keyed by fillTypeName → classValue
+function RmFreshSettings:setAllMaxBenefitClassOverrides(overrides)
+    self.maxBenefitClassOverrides = overrides or {}
+    Log:debug("MAXBENEFIT_OVERRIDES_BULK: %d overrides loaded", self:tableCount(self.maxBenefitClassOverrides))
+end
+
+-- =============================================================================
 -- IO ACCESSORS (for RmFreshIO integration)
 -- =============================================================================
 
@@ -871,6 +928,11 @@ function RmFreshSettings:setUserOverrides(overrides)
     end
     if self.userOverrides.fillTypes == nil then
         self.userOverrides.fillTypes = {}
+    end
+
+    -- Sync direct properties from loaded globals
+    if self.userOverrides.global["storageAgingEnabled"] ~= nil then
+        self.storageAgingEnabled = self.userOverrides.global["storageAgingEnabled"]
     end
 
     Log:debug("SETTINGS: User overrides set (%d global, %d fillTypes)",

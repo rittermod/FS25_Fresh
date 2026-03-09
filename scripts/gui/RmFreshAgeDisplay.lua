@@ -297,9 +297,9 @@ function RmFreshAgeDisplay.buildRows(containers)
                 -- Get display name
                 local displayName = g_fillTypeManager:getFillTypeTitleByIndex(fillTypeIndex) or fillTypeName
 
-                -- Resolve storage class display name via l10n
+                -- Resolve storage class display name via l10n (gated on storageAgingEnabled)
                 local storageClassName = nil
-                if data.worstClass ~= nil then
+                if RmFreshSettings.storageAgingEnabled and data.worstClass ~= nil then
                     local classKey = RmFreshManager.STORAGE_CLASS_NAMES[data.worstClass]
                     if classKey then
                         storageClassName = g_i18n:getText("fresh_class_" .. classKey)

@@ -139,6 +139,10 @@ function RmFreshIO.registerSettingsSchema()
     schema:register(XMLValueType.STRING, "freshSettings.storageClassOverrides.override(?)#key", "Override key (uniqueId or itemsInWorld)")
     schema:register(XMLValueType.STRING, "freshSettings.storageClassOverrides.override(?)#class", "Storage class name")
 
+    -- Max benefit class overrides (Epic F-125)
+    schema:register(XMLValueType.STRING, "freshSettings.maxBenefitClassOverrides.override(?)#name", "FillType name")
+    schema:register(XMLValueType.STRING, "freshSettings.maxBenefitClassOverrides.override(?)#class", "Max benefit class name")
+
     RmFreshIO.settingsSchema = schema
     Log:debug("SCHEMA_REGISTER: Fresh settings format v%d schema registered", RmFreshIO.SETTINGS_VERSION)
 end
@@ -517,11 +521,29 @@ function RmFreshIO:loadSettings(filePath)
         end
     end)
 
+    -- Parse max benefit class overrides (Epic F-125, optional section)
+    result.maxBenefitClassOverrides = {}
+    xmlFile:iterate("freshSettings.maxBenefitClassOverrides.override", function(_, path)
+        local fillTypeName = xmlFile:getString(path .. "#name")
+        local classStr = xmlFile:getString(path .. "#class")
+        if fillTypeName and classStr then
+            local classValue = RmFreshManager:getStorageClassByName(classStr)
+            if classValue ~= nil then
+                result.maxBenefitClassOverrides[fillTypeName] = classValue
+                Log:trace("LOAD_SETTINGS: maxBenefitClassOverride %s = %s(%d)", fillTypeName, classStr, classValue)
+            else
+                Log:warning("LOAD_SETTINGS: Unknown max benefit class '%s' for fillType '%s', skipping",
+                    classStr, fillTypeName)
+            end
+        end
+    end)
+
     xmlFile:delete()
 
-    Log:debug("LOAD_SETTINGS: Loaded %d global, %d fillTypes, %d hidden categories, %d overrides from %s",
+    Log:debug("LOAD_SETTINGS: Loaded %d global, %d fillTypes, %d hidden categories, %d storage overrides, %d maxBenefit overrides from %s",
         self:countTable(result.global), self:countTable(result.fillTypes),
-        self:countTable(result.categories), self:countTable(result.storageClassOverrides), filePath)
+        self:countTable(result.categories), self:countTable(result.storageClassOverrides),
+        self:countTable(result.maxBenefitClassOverrides), filePath)
     return result
 end
 
@@ -580,10 +602,21 @@ function RmFreshIO:saveSettings(filePath, data)
         overrideIdx = overrideIdx + 1
     end
 
+    -- Write max benefit class overrides (Epic F-125)
+    local mbIdx = 0
+    for fillTypeName, classValue in pairs(data.maxBenefitClassOverrides or {}) do
+        local path = string.format("freshSettings.maxBenefitClassOverrides.override(%d)", mbIdx)
+        xmlFile:setString(path .. "#name", fillTypeName)
+        local className = RmFreshManager.STORAGE_CLASS_NAMES[classValue] or "sheltered"
+        xmlFile:setString(path .. "#class", string.upper(className))
+        mbIdx = mbIdx + 1
+    end
+
     xmlFile:save()
     xmlFile:delete()
 
-    Log:debug("SAVE_SETTINGS: Saved %d global, %d fillTypes, %d overrides to %s", globalIdx, ftIdx, overrideIdx, filePath)
+    Log:debug("SAVE_SETTINGS: Saved %d global, %d fillTypes, %d storage overrides, %d maxBenefit overrides to %s",
+        globalIdx, ftIdx, overrideIdx, mbIdx, filePath)
     return true
 end
 

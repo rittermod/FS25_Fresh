@@ -288,9 +288,13 @@ function RmStatsFrame:populateRecentCell(index, cell)
         valueElement:setText(entry.valueDisplay or "-")
     end
 
-    -- Storage location
+    -- Storage location (with class suffix when available)
     local storageElement = cell:getAttribute("storage")
     if storageElement then
-        storageElement:setText(entry.location or "")
+        local storageName = entry.location or ""
+        if entry.storageClassName then
+            storageName = storageName .. " (" .. entry.storageClassName .. ")"
+        end
+        storageElement:setText(storageName)
     end
 end
