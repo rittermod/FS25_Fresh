@@ -151,15 +151,15 @@
                 <Text profile="fs25_settingsSectionHeader" text="$l10n_fresh_settings_storageHeader"/>
 
                 <!-- Template: cloned per storage entity, then unlinked -->
-                <Bitmap profile="fs25_multiTextOptionContainer" id="sc4RowTemplate" onCreate="onCreateSettingRow">
+                <Bitmap profile="rmFreshStorageRowContainer" id="sc4RowTemplate" onCreate="onCreateSettingRow">
                     <MultiTextOption profile="fs25_settingsMultiTextOption">
                         <Text profile="fs25_multiTextOptionTooltip" name="storageTooltip"/>
                     </MultiTextOption>
-                    <Bitmap profile="rmFreshFillTypeIcon" position="10px -7px" size="30px 30px"
+                    <Bitmap profile="rmFreshFillTypeIcon" position="3px 13px" size="80px 80px"
                         name="entityIcon"/>
-                    <Text profile="fs25_settingsMultiTextOptionTitle" position="50px 0px"
+                    <Text profile="fs25_settingsMultiTextOptionTitle" position="100px 0px"
                         text="Building Name"/>
-                    <Text profile="rmFreshDetectedClassLabel" position="360px 0px"
+                    <Text profile="rmFreshStorageDetectedLabel" position="360px 0px"
                         text="Detected: Indoor"/>
                 </Bitmap>
             </ScrollingLayout>

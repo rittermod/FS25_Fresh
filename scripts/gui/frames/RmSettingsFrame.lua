@@ -768,12 +768,39 @@ function RmSettingsFrame:populateStorageTab()
                 local fillType = g_fillTypeManager:getFillTypeByName("SQUAREBALE_GRASS")
                 if fillType and fillType.hudOverlayFilename then
                     iconElement:setImageFilename(fillType.hudOverlayFilename)
+                    -- HUD overlay icons fill the whole image (no sky to crop),
+                    -- so use smaller size and center vertically in the row
+                    local iconW, iconH = getNormalizedScreenValues(48, 48)
+                    local posX, posY = getNormalizedScreenValues(19, -11)
+                    iconElement:setSize(iconW, iconH)
+                    iconElement:setPosition(posX, posY)
                     iconElement:setVisible(true)
                 else
                     iconElement:setVisible(false)
                 end
             else
-                iconElement:setVisible(false)
+                -- Resolve store image: try runtimeEntity first, fall back to placeable lookup
+                local imageFilename = nil
+                if entry.runtimeEntity and entry.runtimeEntity.getImageFilename then
+                    imageFilename = entry.runtimeEntity:getImageFilename()
+                end
+                -- Fallback for Object Storage: runtimeEntity is abstractObject (no getImageFilename),
+                -- find the parent placeable by uniqueId instead
+                if (not imageFilename or imageFilename == "") and entry.uniqueId
+                        and g_currentMission.placeableSystem then
+                    for _, placeable in ipairs(g_currentMission.placeableSystem.placeables) do
+                        if placeable.uniqueId == entry.uniqueId and placeable.getImageFilename then
+                            imageFilename = placeable:getImageFilename()
+                            break
+                        end
+                    end
+                end
+                if imageFilename and imageFilename ~= "" then
+                    iconElement:setImageFilename(imageFilename)
+                    iconElement:setVisible(true)
+                else
+                    iconElement:setVisible(false)
+                end
             end
         end
 

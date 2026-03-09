@@ -738,9 +738,14 @@ function RmFreshManager:getStorageListForSettings(farmId)
                             detectedClass = detected,
                             containerCount = 1,
                             key = uniqueId,
+                            runtimeEntity = container.runtimeEntity,
                         }
                     else
                         buildingMap[uniqueId].containerCount = buildingMap[uniqueId].containerCount + 1
+                        -- Backfill runtimeEntity if first container had nil
+                        if not buildingMap[uniqueId].runtimeEntity and container.runtimeEntity then
+                            buildingMap[uniqueId].runtimeEntity = container.runtimeEntity
+                        end
                     end
                 end
             end

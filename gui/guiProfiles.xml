@@ -25,6 +25,15 @@
         <textAlignment value="left"/>
     </Profile>
 
+    <!-- Taller row container for storage tab (70px vs 50px standard) -->
+    <Profile name="rmFreshStorageRowContainer" extends="fs25_multiTextOptionContainer">
+        <size value="815px 70px"/>
+    </Profile>
+
+    <!-- Detected class label for storage tab - vertically centered in taller row -->
+    <Profile name="rmFreshStorageDetectedLabel" extends="rmFreshDetectedClassLabel" with="anchorStretchingYLeft">
+    </Profile>
+
     <!-- Readonly value text for preset-controlled fillTypes in settings -->
     <!-- Positioned to align with where MultiTextOption shows its value -->
     <Profile name="rmFreshSettingsReadonlyValue" extends="baseReference" with="anchorMiddleRight">
