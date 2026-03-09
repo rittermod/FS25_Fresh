@@ -677,7 +677,7 @@ end
 -- =============================================================================
 -- MULTIPLAYER STREAM HOOKS
 -- =============================================================================
--- Bales use their own writeStream/readStream for MP sync, NOT NetworkUtil.
+-- Bales sync via writeStream/readStream, not NetworkUtil.
 -- We piggyback on this stream to sync containerId to clients.
 -- Adapter handles stream format, Manager owns data.
 

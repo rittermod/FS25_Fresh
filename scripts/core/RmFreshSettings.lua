@@ -40,7 +40,7 @@ RmFreshSettings.DEFAULT_THRESHOLDS = {
 RmFreshSettings.PRESET_MULTIPLIERS = { veryEasy = 4.0, easy = 2.0, normal = 1.0, hard = 0.5 }
 RmFreshSettings.PRESET_NAMES = { "veryEasy", "easy", "normal", "hard", "custom" }
 
---- Default storage class multipliers (Epic F-123)
+--- Default storage class multipliers
 --- Key: storage class value, Value: aging rate multiplier
 RmFreshSettings.DEFAULT_CLASS_MULTIPLIERS = {
     [0] = 1.5,  -- EXPOSED
@@ -86,7 +86,7 @@ RmFreshSettings.suppressNotify = false
 --- fillTypeName → { source = "basegame"|"dlc"|"mod"|"map", modName = string|nil }
 RmFreshSettings.fillTypeSourceMap = {}
 
---- Internal flag: true while inside FillTypeManager:loadModFillTypes()
+--- Internal flag: true during mod fill type loading phase
 RmFreshSettings._isLoadingModFillTypes = false
 
 --- Storage aging enabled toggle (loaded from XML storageClasses#enabled)

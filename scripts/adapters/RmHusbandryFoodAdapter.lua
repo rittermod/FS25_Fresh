@@ -389,7 +389,7 @@ end
 -- =============================================================================
 
 --- Hook food addition for fill tracking
---- CRITICAL: superFunc handles mixture expansion - ingredient calls follow
+--- CRITICAL: Call superFunc first - may trigger additional fill changes for mixed rations
 ---@param superFunc function Original addFood function
 ---@param farmId number Farm ID
 ---@param deltaFillLevel number Amount to add
@@ -400,7 +400,7 @@ function RmHusbandryFoodAdapter:addFood(superFunc, farmId, deltaFillLevel, fillT
     -- TRACE entry per 12.5 guidelines
     Log:trace(">>> addFood(farmId=%d, delta=%.1f, fillType=%d)", farmId, deltaFillLevel, fillTypeIndex)
 
-    -- Call superFunc first - it handles mixture expansion if applicable
+    -- Call superFunc first - may trigger additional fill changes for mixed rations
     local result = superFunc(self, farmId, deltaFillLevel, fillTypeIndex, ...)
 
     -- Server only - clients receive state via sync events

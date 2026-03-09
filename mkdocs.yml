@@ -1,0 +1,60 @@
+site_name: Fresh
+site_description: User documentation for the Fresh mod for Farming Simulator 25
+site_url: https://rittermod.github.io/FS25_Fresh/
+
+repo_url: https://github.com/rittermod/FS25_Fresh
+repo_name: FS25_Fresh
+
+docs_dir: docs/user-guide
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: teal
+      accent: light green
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: teal
+      accent: light green
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.tooltips
+
+plugins:
+  - search
+  - mermaid-to-svg:
+      renderer: mmdc
+      mermaid_config:
+        theme: base
+        themeVariables:
+          xyChart:
+            backgroundColor: "#f8f8f8"
+            titleColor: "#333333"
+            xAxisLabelColor: "#333333"
+            xAxisTitleColor: "#333333"
+            yAxisLabelColor: "#333333"
+            yAxisTitleColor: "#333333"
+            xAxisLineColor: "#666666"
+            yAxisLineColor: "#666666"
+
+markdown_extensions:
+  - admonition
+  - tables
+  - pymdownx.superfences
+
+nav:
+  - Home: index.md
+  - Overview: overview.md
+  - Guides:
+      - Storage Classes: guide-storage-classes.md
+  - Reference:
+      - Shelf Life Table: reference-shelf-life.md
+      - Settings: reference-settings.md
+  - FAQ: faq.md

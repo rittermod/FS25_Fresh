@@ -42,7 +42,7 @@ end
 
 --- Check if batch is near expiration (for warnings)
 --- Uses absolute hours remaining instead of percentage
---- Expired batches (negative remaining) return true — expired is a subset of "near expiration"
+--- Expired batches (negative remaining) return true - expired is a subset of "near expiration"
 ---@param batch table PerishableBatch
 ---@param warningHours number Hours threshold (e.g., 24)
 ---@param expirationThreshold number Expiration threshold in periods
@@ -123,7 +123,7 @@ end
 
 --- Format remaining time as compact string for HUD suffixes
 --- Same breakpoints as formatExpiresIn but uses abbreviated units (h/d/m)
---- No l10n needed — h/d/m are universal gaming abbreviations
+--- No l10n needed - h/d/m are universal gaming abbreviations
 ---@param remainingHours number Hours remaining until expiration
 ---@return string Compact time string (e.g., "24h", "3d", "2.1m")
 function RmBatch.formatRemainingShort(remainingHours)

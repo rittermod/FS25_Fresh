@@ -12,8 +12,7 @@ local Log = RmLogging.getLogger("Fresh")
 -- Store mod directory at source time (g_currentModDirectory is only valid during source())
 local modDirectory = g_currentModDirectory
 
--- Note: In FS25, controls are automatically exposed from XML element IDs.
--- No need to call registerControls() - this is handled by g_gui:loadGui()
+-- Note: In FS25, controls are auto-linked from XML element IDs. No registerControls() needed.
 
 function RmFreshMenu.new(target, custom_mt)
     local self = TabbedMenu.new(target, custom_mt or RmFreshMenu_mt)

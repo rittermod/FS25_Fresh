@@ -393,7 +393,7 @@ function RmObjectStorageAdapter:addObjectToObjectStorageHook(superFunc, object, 
     end
 
     -- Get source containerId AND batches BEFORE calling super (object still exists)
-    -- CRITICAL: superFunc virtualizes the object, which triggers adapter.onDelete()
+    -- CRITICAL: superFunc removes the original object (triggering onDelete on tracked entities)
     -- That unregisters the container. We must capture batches BEFORE that happens.
     local sourceContainerId = nil
     local sourceBatches = nil
@@ -426,7 +426,7 @@ function RmObjectStorageAdapter:addObjectToObjectStorageHook(superFunc, object, 
         end
     end
 
-    -- Call original function (creates abstractObject, virtualizes real object)
+    -- Call original function (stores object, removing original from world)
     -- WARNING: This triggers BaleAdapter/VehicleAdapter onDelete() which unregisters the source container!
     superFunc(self, object, loadedFromSavegame)
 
@@ -869,7 +869,7 @@ function RmObjectStorageAdapter.buildIdentityFromAbstractObject(placeable, abstr
 end
 
 --- Build identity structure for container registration (legacy interface)
---- TODO: Remove or redirect to buildIdentityFromAbstractObject
+--- Legacy interface - delegates to buildIdentityFromAbstractObject internally
 ---@return table identityMatch
 function RmObjectStorageAdapter:buildIdentityMatch()
     return {

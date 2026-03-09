@@ -130,16 +130,16 @@ function RmFreshIO.registerSettingsSchema()
     schema:register(XMLValueType.STRING, "freshSettings.fillTypes.fillType(?)#hidden", "Hidden from UI")
     schema:register(XMLValueType.STRING, "freshSettings.fillTypes.fillType(?)#maxBenefitClass", "Max benefit class")
 
-    -- Storage class settings (Epic F-123)
+    -- Storage class settings
     schema:register(XMLValueType.STRING, "freshSettings.storageClasses#enabled", "Enable storage aging")
     schema:register(XMLValueType.STRING, "freshSettings.storageClasses.class(?)#name", "Class name")
     schema:register(XMLValueType.FLOAT, "freshSettings.storageClasses.class(?)#multiplier", "Class multiplier")
 
-    -- Storage class overrides (Epic F-124)
+    -- Storage class overrides
     schema:register(XMLValueType.STRING, "freshSettings.storageClassOverrides.override(?)#key", "Override key (uniqueId or itemsInWorld)")
     schema:register(XMLValueType.STRING, "freshSettings.storageClassOverrides.override(?)#class", "Storage class name")
 
-    -- Max benefit class overrides (Epic F-125)
+    -- Max benefit class overrides
     schema:register(XMLValueType.STRING, "freshSettings.maxBenefitClassOverrides.override(?)#name", "FillType name")
     schema:register(XMLValueType.STRING, "freshSettings.maxBenefitClassOverrides.override(?)#class", "Max benefit class name")
 
@@ -505,7 +505,7 @@ function RmFreshIO:loadSettings(filePath)
         end
     end)
 
-    -- Parse storage class overrides (Epic F-124, optional section)
+    -- Parse storage class overrides (optional section)
     result.storageClassOverrides = {}
     xmlFile:iterate("freshSettings.storageClassOverrides.override", function(_, path)
         local key = xmlFile:getString(path .. "#key")
@@ -521,7 +521,7 @@ function RmFreshIO:loadSettings(filePath)
         end
     end)
 
-    -- Parse max benefit class overrides (Epic F-125, optional section)
+    -- Parse max benefit class overrides (optional section)
     result.maxBenefitClassOverrides = {}
     xmlFile:iterate("freshSettings.maxBenefitClassOverrides.override", function(_, path)
         local fillTypeName = xmlFile:getString(path .. "#name")
@@ -592,7 +592,7 @@ function RmFreshIO:saveSettings(filePath, data)
         ftIdx = ftIdx + 1
     end
 
-    -- Write storage class overrides (Epic F-124)
+    -- Write storage class overrides
     local overrideIdx = 0
     for key, classValue in pairs(data.storageClassOverrides or {}) do
         local path = string.format("freshSettings.storageClassOverrides.override(%d)", overrideIdx)
@@ -602,7 +602,7 @@ function RmFreshIO:saveSettings(filePath, data)
         overrideIdx = overrideIdx + 1
     end
 
-    -- Write max benefit class overrides (Epic F-125)
+    -- Write max benefit class overrides
     local mbIdx = 0
     for fillTypeName, classValue in pairs(data.maxBenefitClassOverrides or {}) do
         local path = string.format("freshSettings.maxBenefitClassOverrides.override(%d)", mbIdx)

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <modDesc descVersion="106">
     <author>Ritter</author>
-    <version>0.10.0.1-dev</version>
+    <version>0.10.0.0-dev</version>
     <title>
         <en>Fresh</en>
         <it>Fresco</it>
@@ -16,11 +16,19 @@ Fresh Menu (Right Shift+F):
 - Inventory Overview: see all perishables with oldest ages
 - Loss Statistics: track what you've lost
 - Shelf Life: list all perishable products with their active shelf life
+- Storages: browse all storages with their class, fill status, and store icons
 - Settings: customize shelf lives for any product
+
+Storage Classes:
+- Storages auto-classified: Outdoor, Sheltered, Climate-Controlled, or Disabled (no aging)
+- Each class applies an aging speed multiplier - better storage means slower spoilage
+- Override storage class per-storage via Settings
+- Per-product max benefit class to cap storage class effectiveness
 
 Settings & Customization:
 - Difficulty presets (Very Easy/Easy/Normal/Hard) or Custom for individual control
 - Configure shelf life for any product (basegame, DLCs, maps/mods)
+- Per-product max benefit class to limit storage class effectiveness
 - Products organized by basegame vs DLC & Mods tabs
 - Reset all settings to defaults with one click
 - Configurable warning threshold (6h/12h/24h/48h/72h)
@@ -42,6 +50,16 @@ Documentation: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
 
+0.10.0.0-dev:
+- Added storage classes: storages auto-classified (Outdoor/Sheltered/Climate-Controlled) affecting aging speed
+- Added Storage tab to Fresh Menu with class, fill status, and store icons
+- Added per-storage class override via Settings
+- Added per-product max benefit class setting
+- Improved settings: consolidated into tabbed pages with per-product configuration
+- Fixed "Expires in" displays not applying storage class multiplier
+- Fixed empty food troughs not being registered on load
+- Fixed storages list showing other farms' storages in multiplayer
+
 0.9.0.0 (Beta):
 - Added Shelf Life tab to Fresh Menu
 - Added difficulty presets (Very Easy/Easy/Normal/Hard/Custom)
@@ -55,14 +73,6 @@ Changelog:
 0.8.1.0 (Beta):
 - Fixed products changed to "never expire" still showing as expiring in overview, HUD, and age display
 
-0.8.0.0 (Beta):
-- Reworked expiry warnings to use in-game time remaining
-- Added configurable warning threshold (6h/12h/24h/48h/72h)
-- Improved expiry display - all storage types show amount and time remaining
-- Added partial expiry display for vehicles
-- Improved time display breakpoints (hours/days/months)
-- Added Italian localization - contributed by @FirenzeIT
-
 Full changelog at https://github.com/rittermod/FS25_Fresh
         ]]>        </en>
         <it><![CDATA[
@@ -74,11 +84,19 @@ Fresh Menu (Shift Destro+F):
 - Panoramica inventario: visualizza tutti i deperibili con le età più alte
 - Statistiche perdite: tieni traccia di ciò che hai perso
 - Durata di conservazione: consulta la durata attiva di tutti i prodotti deperibili
+- Magazzini: sfoglia tutti i magazzini con classe, stato riempimento e icone negozio
 - Impostazioni: personalizza la durata di conservazione per qualsiasi prodotto
+
+Classi di stoccaggio:
+- I magazzini sono classificati automaticamente: Esterno, Coperto, Climatizzato o Disabilitato (nessun invecchiamento)
+- Ogni classe applica un moltiplicatore di velocità di invecchiamento
+- Sostituzione classe per singolo magazzino tramite Impostazioni
+- Classe beneficio massimo per prodotto per limitare l'efficacia della classe
 
 Impostazioni e personalizzazione:
 - Preset di difficoltà (Molto Facile/Facile/Normale/Difficile) o Personalizzato per controllo individuale
 - Configura la durata di conservazione per qualsiasi prodotto (gioco base, DLC, mappe/mod)
+- Classe beneficio massimo per prodotto per limitare l'efficacia della classe di stoccaggio
 - Prodotti organizzati per gioco base vs DLC e Mod
 - Ripristina tutte le impostazioni ai valori predefiniti con un clic
 - Soglia di avviso configurabile (6h/12h/24h/48h/72h)
@@ -94,11 +112,21 @@ Impostazioni e personalizzazione:
 - Le età vengono salvate nel salvataggio di gioco
 
 Note:
-- Accesso anticipato – feedback benvenuto
+- Accesso anticipato - feedback benvenuto
 
 Documentazione: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
+
+0.10.0.0-dev:
+- Aggiunte classi di stoccaggio: classificazione automatica (Esterno/Coperto/Climatizzato) che influenza la velocità di invecchiamento
+- Aggiunta scheda Stoccaggio al Fresh Menu con classe, stato riempimento e icone negozio
+- Aggiunta sostituzione classe di stoccaggio per singolo magazzino tramite Impostazioni o comandi console
+- Aggiunta impostazione classe beneficio massimo per prodotto
+- Migliorate impostazioni: consolidate in pagine a schede con configurazione per prodotto
+- Risolto "Scade tra" che non applicava il moltiplicatore classe di stoccaggio
+- Risolte mangiatoie vuote non registrate al caricamento
+- Risolta lista magazzini che mostrava magazzini di altre aziende in multiplayer
 
 0.9.0.0 (Beta):
 - Aggiunta scheda Durata di conservazione al Fresh Menu
@@ -112,14 +140,6 @@ Changelog:
 
 0.8.1.0 (Beta):
 - Risolto il problema dei prodotti impostati su "non scade mai" che continuavano a comparire come in scadenza nella panoramica, HUD e visualizzazione età
-
-0.8.0.0 (Beta):
-- Rielaborati gli avvisi di scadenza per utilizzare il tempo rimanente nel gioco
-- Aggiunta soglia di avviso configurabile (6h/12h/24h/48h/72h)
-- Migliorata la visualizzazione della scadenza – tutti i tipi di magazzino mostrano quantità e tempo rimanente
-- Aggiunta visualizzazione parziale della scadenza per i veicoli
-- Migliorati i punti di interruzione del tempo (ore/giorni/mesi)
-- Aggiunta localizzazione italiana - contributo di @FirenzeIT
 
 Changelog completo su https://github.com/rittermod/FS25_Fresh
         ]]>        </it>

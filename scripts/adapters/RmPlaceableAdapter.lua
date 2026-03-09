@@ -270,7 +270,7 @@ function RmPlaceableAdapter.discoverStorages(placeable)
         Log:trace("    found storage from spec_siloExtension")
     end
 
-    -- Husbandry: animal buildings (PlaceableHusbandry.lua uses Storage.new())
+    -- Husbandry: animal buildings
     -- NOTE: This is for general husbandry storage, NOT food - food is handled by HusbandryFoodAdapter
     if placeable.spec_husbandry ~= nil and placeable.spec_husbandry.storage ~= nil then
         table.insert(storages, {
@@ -280,7 +280,7 @@ function RmPlaceableAdapter.discoverStorages(placeable)
         Log:trace("    found storage from spec_husbandry")
     end
 
-    -- Factory: greenhouses, carpentry, etc. (PlaceableFactory.lua uses Storage.new())
+    -- Factory: greenhouses, carpentry, etc.
     if placeable.spec_factory ~= nil and placeable.spec_factory.storage ~= nil then
         table.insert(storages, {
             storage = placeable.spec_factory.storage,
@@ -289,7 +289,7 @@ function RmPlaceableAdapter.discoverStorages(placeable)
         Log:trace("    found storage from spec_factory")
     end
 
-    -- ProductionPoint: mills, BGA, etc. (ProductionPoint.lua uses Storage class)
+    -- ProductionPoint: mills, BGA, etc.
     -- NOTE: Triple-nested path requires explicit nil checks at each level
     if placeable.spec_productionPoint ~= nil and
         placeable.spec_productionPoint.productionPoint ~= nil and

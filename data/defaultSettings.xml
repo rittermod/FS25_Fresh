@@ -31,7 +31,7 @@
         <category name="HORSE" hidden="true"/>
     </categories>
 
-    <!-- Storage class aging multipliers (Epic F-123) -->
+    <!-- Storage class aging multipliers -->
     <!-- Higher class = better storage = slower aging. DISABLED is hardcoded at 0 (not configurable). -->
     <storageClasses enabled="true">
         <class name="exposed" multiplier="1.5" />

@@ -80,7 +80,7 @@ function RmSettingsSyncEvent:writeStream(streamId, connection)
         end
     end
 
-    -- Write storage class overrides (Epic F-124)
+    -- Write storage class overrides
     local overrides = self.settingsData.storageClassOverrides or {}
     local overrideCount = 0
     for _ in pairs(overrides) do overrideCount = overrideCount + 1 end
@@ -91,7 +91,7 @@ function RmSettingsSyncEvent:writeStream(streamId, connection)
         Log:trace("    override: %s = %d", key, classValue)
     end
 
-    -- Write max benefit class overrides (Epic F-125)
+    -- Write max benefit class overrides
     local mbOverrides = self.settingsData.maxBenefitClassOverrides or {}
     local mbCount = 0
     for _ in pairs(mbOverrides) do mbCount = mbCount + 1 end
@@ -147,7 +147,7 @@ function RmSettingsSyncEvent:readStream(streamId, connection)
         end
     end
 
-    -- Read storage class overrides (Epic F-124)
+    -- Read storage class overrides
     local overrideCount = streamReadUInt16(streamId)
     self.settingsData.storageClassOverrides = {}
     for _ = 1, overrideCount do
@@ -157,7 +157,7 @@ function RmSettingsSyncEvent:readStream(streamId, connection)
         Log:trace("    override: %s = %d", key, classValue)
     end
 
-    -- Read max benefit class overrides (Epic F-125)
+    -- Read max benefit class overrides
     local mbCount = streamReadUInt16(streamId)
     self.settingsData.maxBenefitClassOverrides = {}
     for _ = 1, mbCount do

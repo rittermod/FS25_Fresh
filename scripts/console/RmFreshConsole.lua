@@ -10,7 +10,7 @@ RmFreshConsole.targets = {} -- index -> containerId for command targeting
 local Log = RmLogging.getLogger("Fresh")
 
 -- ============================================================================
--- Type Resolution (AC: 7)
+-- Type Resolution
 -- ============================================================================
 
 --- Type aliases for convenience
@@ -86,7 +86,7 @@ function RmFreshConsole:getOldestBatch(container)
 end
 
 -- ============================================================================
--- Admin Access Control (AC: 1, 5, 8, 11)
+-- Admin Access Control
 -- ============================================================================
 
 --- Check if current user has admin access
@@ -115,7 +115,7 @@ function RmFreshConsole:requireAdmin(commandName)
 end
 
 -- ============================================================================
--- Console Command Registration (AC: 10)
+-- Console Command Registration
 -- ============================================================================
 
 --- Register console commands
@@ -149,7 +149,7 @@ function RmFreshConsole:registerCommands()
     addConsoleCommand("fClearLog", "Clear loss log (admin)", "consoleCommandClearLog", self)
     addConsoleCommand("fReconcile", "Reconcile with game state (admin)", "consoleCommandReconcile", self)
 
-    -- Storage class override commands (admin only, Epic F-124)
+    -- Storage class override commands (admin only)
     addConsoleCommand("fSetStorage", "Set storage class override (fSetStorage <#|items> <class>)", "consoleCommandSetStorage", self)
     addConsoleCommand("fClearStorage", "Clear storage class override (fClearStorage <#|items>)", "consoleCommandClearStorage", self)
 
@@ -193,7 +193,7 @@ function RmFreshConsole:unregisterCommands()
 end
 
 -- ============================================================================
--- fList Command (AC: 3, 4, 8)
+-- fList Command
 -- ============================================================================
 
 --- Console command: List containers from RmFreshManager
@@ -261,7 +261,7 @@ function RmFreshConsole:consoleCommandList(typeStr)
 end
 
 -- ============================================================================
--- fStorages Command (Epic F-123.3)
+-- fStorages Command
 -- ============================================================================
 
 --- Capitalize first letter of a string
@@ -390,7 +390,7 @@ function RmFreshConsole:formatStorageConfig()
 end
 
 -- ============================================================================
--- fInspect Command (AC: 5, 8)
+-- fInspect Command
 -- ============================================================================
 
 --- Console command: Show detailed container info
@@ -480,7 +480,7 @@ function RmFreshConsole:consoleCommandInspect(indexStr)
 end
 
 -- ============================================================================
--- fBatches Command (AC: 6, 8)
+-- fBatches Command
 -- ============================================================================
 
 --- Console command: Show batches for a container ---@param indexStr string Container index from fList
@@ -529,7 +529,7 @@ function RmFreshConsole:consoleCommandBatches(indexStr)
 end
 
 -- ============================================================================
--- Execute Methods (AC: 2, 3, 4, 6, 7, 9, 10, 12)
+-- Execute Methods
 -- Server-side execution for batch manipulation commands
 -- ============================================================================
 
@@ -702,7 +702,7 @@ function RmFreshConsole:executeSetAllAge(containerId, age)
 end
 
 -- ============================================================================
--- Time Simulation Execute Methods (AC: 2, 3, 4, 6, 14)
+-- Time Simulation Execute Methods
 -- ============================================================================
 
 --- Execute global time simulation
@@ -737,7 +737,7 @@ function RmFreshConsole:executeAgeContainer(containerId, hours)
 end
 
 -- ============================================================================
--- Force Expiration Execute Methods (AC: 8, 9, 10, 12, 13, 14)
+-- Force Expiration Execute Methods
 -- ============================================================================
 
 --- Execute single batch expiration ---@param containerId string Container ID
@@ -829,7 +829,7 @@ function RmFreshConsole:executeExpireAllTypes()
 end
 
 -- ============================================================================
--- Batch Manipulation Console Commands (AC: 13, 14, 15, 16)
+-- Batch Manipulation Console Commands
 -- ============================================================================
 
 --- Console command: Add batch to container --- Usage: fAddBatch <#> <amount> [age]
@@ -1026,7 +1026,7 @@ function RmFreshConsole:consoleCommandSetAllAge(indexStr, ageStr)
 end
 
 -- ============================================================================
--- Time/Expiration Console Commands (AC: 1, 5, 7, 11, 15, 16)
+-- Time/Expiration Console Commands
 -- ============================================================================
 
 --- Console command: Simulate time passing globally
@@ -1184,7 +1184,7 @@ function RmFreshConsole:consoleCommandExpire(indexStr, batchIdxStr)
 end
 
 -- ============================================================================
--- Statistics/Debug Console Commands (AC: 1-10)
+-- Statistics/Debug Console Commands
 -- Read-only commands - no admin required
 -- ============================================================================
 
@@ -1399,7 +1399,7 @@ function RmFreshConsole:consoleCommandDump()
 end
 
 -- ============================================================================
--- Admin Statistics/Debug Console Commands (AC: 11-15)
+-- Admin Statistics/Debug Console Commands
 -- Admin-only commands - require admin access
 -- ============================================================================
 
@@ -1510,7 +1510,7 @@ function RmFreshConsole:consoleCommandExpireAll(typeStr)
 end
 
 -- ============================================================================
--- fSetStorage / fClearStorage Commands (Epic F-124, AC: 1, 3, 5, 6)
+-- fSetStorage / fClearStorage Commands
 -- ============================================================================
 
 --- Resolve override key from index or "items" keyword

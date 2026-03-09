@@ -57,7 +57,7 @@ RmFreshManager = {}
 local Log = RmLogging.getLogger("Fresh")
 
 -- =============================================================================
--- STORAGE CLASS ENUM (Epic F-123)
+-- STORAGE CLASS ENUM
 -- =============================================================================
 
 --- Storage class values for differential aging rates
@@ -142,7 +142,7 @@ function RmFreshManager:resolveStorageClassInfo(container)
 end
 
 --- Resolve effective storage class by applying ceiling logic
---- DISABLED (5) bypasses ceiling — always returns DISABLED (player opt-out)
+--- DISABLED (5) bypasses ceiling - always returns DISABLED (player opt-out)
 --- For all other classes: math.min(storageClass, maxBenefitClass) caps benefit
 ---@param storageClass number Storage class value (0-5)
 ---@param maxBenefitClass number Maximum benefit class for this fillType
@@ -152,7 +152,7 @@ function RmFreshManager:_resolveEffectiveClass(storageClass, maxBenefitClass)
         storageClass, self.STORAGE_CLASS_NAMES[storageClass] or "?",
         maxBenefitClass, self.STORAGE_CLASS_NAMES[maxBenefitClass] or "?")
 
-    -- DISABLED bypasses ceiling — player opt-out always honored
+    -- DISABLED bypasses ceiling - player opt-out always honored
     if storageClass == self.STORAGE_CLASS.DISABLED then
         Log:trace("<<< _resolveEffectiveClass = %d (DISABLED overrides ceiling)", self.STORAGE_CLASS.DISABLED)
         return self.STORAGE_CLASS.DISABLED

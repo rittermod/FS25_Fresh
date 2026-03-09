@@ -15,11 +15,11 @@ RmFreshAgeDisplay = {}
 RmFreshAgeDisplay.box = nil
 
 --- Pending vehicle for drawable (set in showInfo, drawn in draw())
---- showInfo is data-population phase, not render phase - can't call showNextFrame there
+--- showInfo runs before rendering - box display must happen in draw()
 RmFreshAgeDisplay.pendingVehicle = nil
 
 --- Pending bale for drawable (set in showInfoHook, drawn in draw())
---- Same two-phase pattern as vehicles: showInfo is update phase, draw() is render phase
+--- Same pattern: showInfo prepares data, draw() displays it
 RmFreshAgeDisplay.pendingBale = nil
 
 --- Install hooks for HUD display
@@ -116,7 +116,7 @@ end
 -- =============================================================================
 
 --- Store bale for drawing (called from RmBaleAdapter.showInfoHook)
---- showInfo is data-population phase - can't call showNextFrame there
+--- showInfo runs before rendering - box display must happen in draw()
 ---@param bale table The bale entity
 function RmFreshAgeDisplay.drawForBale(bale)
     -- Check if feature is enabled
@@ -134,7 +134,7 @@ end
 -- =============================================================================
 
 --- Store vehicle for drawing (called from RmVehicleAdapter.showInfo)
---- showInfo is data-population phase - can't call showNextFrame there
+--- showInfo runs before rendering - box display must happen in draw()
 ---@param vehicle table The vehicle
 ---@param box table The info box (unused, kept for API compatibility)
 function RmFreshAgeDisplay.drawForVehicle(vehicle, box)
