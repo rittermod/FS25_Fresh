@@ -25,9 +25,9 @@
         <textAlignment value="left"/>
     </Profile>
 
-    <!-- Taller row container for storage tab (70px vs 50px standard) -->
+    <!-- Taller row container for storage tab (75px vs 50px standard) -->
     <Profile name="rmFreshStorageRowContainer" extends="fs25_multiTextOptionContainer">
-        <size value="815px 70px"/>
+        <size value="815px 75px"/>
     </Profile>
 
     <!-- Detected class label for storage tab - vertically centered in taller row -->

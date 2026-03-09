@@ -155,9 +155,9 @@
                     <MultiTextOption profile="fs25_settingsMultiTextOption">
                         <Text profile="fs25_multiTextOptionTooltip" name="storageTooltip"/>
                     </MultiTextOption>
-                    <Bitmap profile="rmFreshFillTypeIcon" position="3px 13px" size="80px 80px"
+                    <Bitmap profile="rmFreshFillTypeIcon" position="3px -3px" size="70px 70px"
                         name="entityIcon"/>
-                    <Text profile="fs25_settingsMultiTextOptionTitle" position="100px 0px"
+                    <Text profile="fs25_settingsMultiTextOptionTitle" position="80px 0px"
                         text="Building Name"/>
                     <Text profile="rmFreshStorageDetectedLabel" position="360px 0px"
                         text="Detected: Indoor"/>

@@ -774,7 +774,7 @@ function RmSettingsFrame:populateStorageTab()
                     -- HUD overlay icons fill the whole image (no sky to crop),
                     -- so use smaller size and center vertically in the row
                     local iconW, iconH = getNormalizedScreenValues(48, 48)
-                    local posX, posY = getNormalizedScreenValues(19, -11)
+                    local posX, posY = getNormalizedScreenValues(14, -14)
                     iconElement:setSize(iconW, iconH)
                     iconElement:setPosition(posX, posY)
                     iconElement:setVisible(true)
