@@ -189,6 +189,9 @@ function RmSettingsFrame:onFrameOpen()
     RmSettingsFrame.pendingFillTypeChanges = {}
     RmSettingsFrame.pendingStorageChanges = {}
 
+    -- Filter storages list to current player's farm (matches Overview/Stats pattern)
+    self.farmId = g_currentMission:getFarmId()
+
     -- Build fillType data arrays (rebuilt each open to catch late DLC/mod fillTypes)
     self:buildFillTypeData()
     self.optionTexts = self:buildOptionTexts()
