@@ -193,10 +193,10 @@ function RmHusbandryFoodAdapter.doRegistration(placeable, entityId)
     Log:debug("HUSBANDRY_FOOD_LOAD: uniqueId=%s name=%s",
         entityId or "?", placeable:getName() or "unknown")
 
-    -- Register containers for existing perishable food
+    -- Register containers for all perishable food slots (including empty troughs, F-130)
     local registered = 0
     for fillTypeIndex, fillLevel in pairs(husbandryFoodSpec.fillLevels) do
-        if fillLevel > 0 and RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
+        if RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
             -- Skip mixtures - they expand to ingredients when dumped
             local mixture = g_currentMission.animalFoodSystem:getMixtureByFillType(fillTypeIndex)
             if mixture == nil then
@@ -227,10 +227,9 @@ function RmHusbandryFoodAdapter.rescanForPerishables()
             if hfSpec and hfSpec.fillLevels then
                 for fillTypeIndex, fillLevel in pairs(hfSpec.fillLevels) do
                     local fillTypeName = g_fillTypeManager:getFillTypeNameByIndex(fillTypeIndex)
-                    -- Not already registered + now perishable + has fill + not a mixture
+                    -- Not already registered + now perishable + not a mixture
                     if fillTypeName
                         and spec.containerIds[fillTypeName] == nil
-                        and fillLevel > 0
                         and RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
                         local mixture = g_currentMission.animalFoodSystem:getMixtureByFillType(fillTypeIndex)
                         if mixture == nil then
