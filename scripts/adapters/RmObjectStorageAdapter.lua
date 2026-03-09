@@ -190,7 +190,7 @@ function RmObjectStorageAdapter.doLoadRegistration(placeable, entityId)
                     RmObjectStorageAdapter.ENTITY_TYPE,
                     identityMatch,
                     abstractObject, -- AbstractObject is the runtime entity for stored items
-                    { adapter = RmObjectStorageAdapter, farmId = farmId, storageClass = osStorageClass }
+                    { adapter = RmObjectStorageAdapter, farmId = farmId, storageClass = osStorageClass, location = placeable:getName() or "Object Storage" }
                 )
 
                 if containerId then
@@ -245,7 +245,7 @@ function RmObjectStorageAdapter.rescanForPerishables()
                                 local containerId = RmFreshManager:registerContainer(
                                     RmObjectStorageAdapter.ENTITY_TYPE,
                                     identityMatch, abstractObject,
-                                    { adapter = RmObjectStorageAdapter, farmId = farmId, storageClass = rescanOsClass }
+                                    { adapter = RmObjectStorageAdapter, farmId = farmId, storageClass = rescanOsClass, location = placeable:getName() or "Object Storage" }
                                 )
                                 if containerId then
                                     spec.abstractObjectContainers[abstractObject] = containerId
@@ -486,7 +486,7 @@ function RmObjectStorageAdapter:addObjectToObjectStorageHook(superFunc, object, 
         RmObjectStorageAdapter.ENTITY_TYPE,
         identityMatch,
         abstractObject, -- AbstractObject is the runtime entity for stored items
-        { adapter = RmObjectStorageAdapter, farmId = farmId, storageClass = entryStorageClass }
+        { adapter = RmObjectStorageAdapter, farmId = farmId, storageClass = entryStorageClass, location = self:getName() or "Object Storage" }
     )
 
     if not storedContainerId then
