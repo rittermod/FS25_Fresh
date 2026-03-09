@@ -93,6 +93,13 @@ RmSettingsFrame.MAXBENEFIT_CLEAR = "CLEAR"
 --- Flushed on frame close. Key: fillTypeName, Value: classValue (number) or MAXBENEFIT_CLEAR
 RmSettingsFrame.pendingMaxBenefitChanges = {}
 
+--- Sentinel value for "clear override" in pendingStorageChanges
+RmSettingsFrame.STORAGE_CLEAR = "CLEAR"
+
+--- Pending storage class changes accumulated during user interaction
+--- Flushed on frame close. Key: storage key, Value: classValue (number) or STORAGE_CLEAR
+RmSettingsFrame.pendingStorageChanges = {}
+
 function RmSettingsFrame.new()
     local self = RmSettingsFrame:superClass().new(nil, RmSettingsFrame_mt)
     self.name = "RmSettingsFrame"
@@ -180,6 +187,7 @@ function RmSettingsFrame:onFrameOpen()
 
     RmSettingsFrame.displayedInstance = self
     RmSettingsFrame.pendingFillTypeChanges = {}
+    RmSettingsFrame.pendingStorageChanges = {}
 
     -- Build fillType data arrays (rebuilt each open to catch late DLC/mod fillTypes)
     self:buildFillTypeData()
@@ -271,6 +279,37 @@ function RmSettingsFrame:onFrameClose()
             end
         end
         RmSettingsFrame.pendingMaxBenefitChanges = {}
+    end
+
+    -- Flush pending storage class changes before closing
+    if next(RmSettingsFrame.pendingStorageChanges) then
+        local count = 0
+        for _ in pairs(RmSettingsFrame.pendingStorageChanges) do count = count + 1 end
+        Log:debug("SETT FLUSH: applying %d pending storage changes", count)
+
+        local isClear = RmSettingsFrame.STORAGE_CLEAR
+        for key, classValue in pairs(RmSettingsFrame.pendingStorageChanges) do
+            if g_server then
+                if classValue == isClear then
+                    RmFreshSettings:clearStorageClassOverride(key)
+                else
+                    RmFreshSettings:setStorageClassOverride(key, classValue)
+                end
+            else
+                if RmSettingsChangeRequestEvent then
+                    if classValue == isClear then
+                        g_client:getServerConnection():sendEvent(
+                            RmSettingsChangeRequestEvent.new("clearStorageClassOverride", key, nil)
+                        )
+                    else
+                        g_client:getServerConnection():sendEvent(
+                            RmSettingsChangeRequestEvent.new("setStorageClassOverride", key, classValue)
+                        )
+                    end
+                end
+            end
+        end
+        RmSettingsFrame.pendingStorageChanges = {}
     end
 
     RmSettingsFrame:superClass().onFrameClose(self)
@@ -502,6 +541,8 @@ function RmSettingsFrame:refreshData()
 
     -- SC4: Storage tab - update dropdown states from current override values
     self:refreshStorageRows()
+    -- Clear pending storage changes during refresh (prevents stale local changes)
+    RmSettingsFrame.pendingStorageChanges = {}
 
     RmSettingsFrame.isRefreshing = false
 end
@@ -781,28 +822,11 @@ function RmSettingsFrame:onStorageClassChanged(key, state)
     if not self:isAdmin() then return end
 
     if state == 1 then
-        -- Auto: clear override
-        if g_server then
-            RmFreshSettings:clearStorageClassOverride(key)
-        else
-            if RmSettingsChangeRequestEvent then
-                g_client:getServerConnection():sendEvent(
-                    RmSettingsChangeRequestEvent.new("clearStorageClassOverride", key, nil)
-                )
-            end
-        end
+        -- Auto: mark for clearing override on flush
+        RmSettingsFrame.pendingStorageChanges[key] = RmSettingsFrame.STORAGE_CLEAR
     else
         -- States 2-7 map to class values 0-5
-        local classValue = state - 2
-        if g_server then
-            RmFreshSettings:setStorageClassOverride(key, classValue)
-        else
-            if RmSettingsChangeRequestEvent then
-                g_client:getServerConnection():sendEvent(
-                    RmSettingsChangeRequestEvent.new("setStorageClassOverride", key, classValue)
-                )
-            end
-        end
+        RmSettingsFrame.pendingStorageChanges[key] = state - 2
     end
 end
 
@@ -1132,6 +1156,7 @@ function RmSettingsFrame:onResetConfirmed(yes)
         RmFreshSettings:resetAllOverrides()
         RmSettingsFrame.pendingFillTypeChanges = {}
         RmSettingsFrame.pendingMaxBenefitChanges = {}
+        RmSettingsFrame.pendingStorageChanges = {}
         self:refreshData()
         Log:info("SETT: Reset to defaults complete")
     else
