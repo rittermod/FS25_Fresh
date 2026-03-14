@@ -9,18 +9,41 @@
             <Text profile="fs25_menuHeaderTitle" text="$l10n_fresh_shelflife_title"/>
         </GuiElement>
 
-        <!-- Single scrolling list of perishable fill types -->
-        <ScrollingLayout profile="fs25_settingsLayout" id="shelfLifeLayout">
+        <!-- Table header row (visible in table mode only) -->
+        <!-- X offset ~55px to align with ScrollingLayout content (fs25_settingsLayout uses pivotTopCenter + 90px absoluteSizeOffset) -->
+        <Bitmap profile="rmFreshTableList" id="tableHeaderRow" position="55px -70px" size="780px 30px">
+            <Text profile="rmFreshTableHeaderLeftAligned" position="45px 0px" size="200px 30px" text="$l10n_fresh_shelflife_product"/>
+            <Text profile="rmFreshTableHeaderCentered" position="250px 0px" size="105px 30px" text="$l10n_fresh_class_exposed"/>
+            <Text profile="rmFreshTableHeaderCentered" position="355px 0px" size="105px 30px" text="$l10n_fresh_class_sheltered"/>
+            <Text profile="rmFreshTableHeaderCentered" position="460px 0px" size="105px 30px" text="$l10n_fresh_class_indoor"/>
+            <Text profile="rmFreshTableHeaderCentered" position="565px 0px" size="105px 30px" text="$l10n_fresh_class_cooled"/>
+            <Text profile="rmFreshTableHeaderCentered" position="670px 0px" size="105px 30px" text="$l10n_fresh_class_frozen"/>
+            <ThreePartBitmap profile="fs25_lineSeparatorBottom" position="0px 2px"/>
+        </Bitmap>
+
+        <!-- Subheader row: "shelf life in months" (visible in table mode only) -->
+        <Text profile="rmFreshShelfLifeSubheader" id="subheaderRow" position="285px -100px" size="525px 20px" text="$l10n_fresh_shelflife_unit_months"/>
+
+        <!-- Scrolling list of perishable fill types -->
+        <ScrollingLayout profile="fs25_settingsLayout" id="shelfLifeLayout" position="0px -125px" absoluteSizeOffset="90px 90px">
             <!-- Row template: cloned per perishable fillType, then unlinked -->
             <Bitmap profile="fs25_multiTextOptionContainer" id="rowTemplate" onCreate="onCreateSettingRow">
-                <Text profile="rmFreshSettingsReadonlyValue" name="shelfLifeValue" text=""/>
+                <!-- Simple mode: single right-aligned value -->
+                <Text profile="rmFreshSettingsReadonlyValue" name="singleValue" text=""/>
+                <!-- Icon and name (both modes) -->
                 <Bitmap profile="rmFreshFillTypeIcon" position="10px -7px" size="30px 30px" name="fillTypeIcon"/>
-                <Text profile="fs25_settingsMultiTextOptionTitle" position="50px 0px" text="Template"/>
+                <Text profile="fs25_settingsMultiTextOptionTitle" position="45px 0px" size="200px 50px" name="titleText" text="Template"/>
+                <!-- Table mode: 5 storage class value columns -->
+                <Text profile="rmFreshTableRowCellCentered" position="250px 0px" size="105px 50px" name="classValue0" text=""/>
+                <Text profile="rmFreshTableRowCellCentered" position="355px 0px" size="105px 50px" name="classValue1" text=""/>
+                <Text profile="rmFreshTableRowCellCentered" position="460px 0px" size="105px 50px" name="classValue2" text=""/>
+                <Text profile="rmFreshTableRowCellCentered" position="565px 0px" size="105px 50px" name="classValue3" text=""/>
+                <Text profile="rmFreshTableRowCellCentered" position="670px 0px" size="105px 50px" name="classValue4" text=""/>
             </Bitmap>
         </ScrollingLayout>
 
         <!-- Empty state (shown when no perishable fill types) -->
-        <Text profile="rmFreshSettingsInfoText" id="emptyState" text="$l10n_fresh_shelflife_empty" visible="false" position="20px -80px" size="800px 40px"/>
+        <Text profile="rmFreshSettingsInfoText" id="emptyState" text="$l10n_fresh_shelflife_empty" visible="false" position="20px -150px" size="800px 40px"/>
     </GuiElement>
 
     <!-- Docked slider (same pattern as settings page) -->

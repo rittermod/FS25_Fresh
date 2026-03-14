@@ -150,6 +150,8 @@
         <!-- Shelf Life Frame -->
         <text name="fresh_shelflife_title" text="Shelf Life"/>
         <text name="fresh_shelflife_empty" text="No perishable products configured"/>
+        <text name="fresh_shelflife_product" text="Product"/>
+        <text name="fresh_shelflife_unit_months" text="shelf life in months"/>
 
         <!-- Statistics Frame -->
         <text name="fresh_stats_title" text="Loss Statistics"/>
