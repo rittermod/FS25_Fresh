@@ -16,7 +16,7 @@
         <text name="fresh_near_expiration" text="In scadenza"/>
 
         <!-- Daily loss notification (summary at day change) -->
-        <text name="fresh_dailyLossNotification" text="Perse %.0f unità a causa della scadenza dei prodotti"/>
+        <text name="fresh_dailyLossNotification" text="Perdita di %.0f unità per prodotti scaduti"/>
 
         <!-- Storage HUD (used by both placeable storage and husbandry feed) -->
         <text name="fresh_storage_expiring" text="-%d tra %s"/>
@@ -25,6 +25,14 @@
 
         <!-- Age Distribution HUD -->
         <text name="fresh_age_display_title" text="Freschezza"/>
+
+        <!-- Storage class labels -->
+        <text name="fresh_class_exposed" text="Esposto"/>
+        <text name="fresh_class_sheltered" text="Riparato"/>
+        <text name="fresh_class_indoor" text="Al coperto"/>
+        <text name="fresh_class_cooled" text="Refrigerato"/>
+        <text name="fresh_class_frozen" text="Congelato"/>
+        <text name="fresh_class_disabled" text="Disabilitato"/>
 
         <!-- Fresh Menu keybind -->
         <text name="input_RM_FRESH_MENU" text="Menu Freschezza"/>
@@ -50,6 +58,30 @@
         <text name="fresh_expire_3_years" text="3 anni"/>
         <text name="fresh_expire_5_years" text="5 anni"/>
 
+        <!-- Sub-category tabs -->
+        <text name="fresh_tab_settings" text="Impostazioni"/>
+        <text name="fresh_tab_expiration" text="Scadenza"/>
+        <text name="fresh_tab_maxbenefit" text="Beneficio massimo"/>
+        <text name="fresh_tab_storage" text="Deposito"/>
+
+        <!-- Difficulty Preset -->
+        <text name="fresh_settings_preset" text="Difficoltà"/>
+        <text name="fresh_settings_preset_tooltip" text="Regola tutte le durate di conservazione. Molto facile quadruplica, Facile raddoppia, Difficile dimezza. Personalizzato consente il controllo individuale."/>
+        <text name="fresh_preset_veryEasy" text="Molto facile (x4)"/>
+        <text name="fresh_preset_easy" text="Facile (x2)"/>
+        <text name="fresh_preset_normal" text="Normale"/>
+        <text name="fresh_preset_hard" text="Difficile (x0.5)"/>
+        <text name="fresh_preset_custom" text="Personalizzato"/>
+
+        <!-- Period format strings (for readonly preset value display) -->
+        <text name="fresh_period_months" text="%d mesi"/>
+        <text name="fresh_period_months_decimal" text="%.1f mesi"/>
+        <text name="fresh_period_years" text="%d anni"/>
+        <text name="fresh_period_years_decimal" text="%.1f anni"/>
+
+        <!-- DLC/Mod fillTypes section -->
+        <text name="fresh_settings_fillTypes_dlcmod" text="Tempi di scadenza (DLC e Mod)"/>
+
         <!-- Settings global section -->
         <text name="fresh_settings_global" text="Impostazioni globali"/>
         <text name="fresh_settings_enableExpiration" text="Abilita scadenza"/>
@@ -57,7 +89,7 @@
         <text name="fresh_settings_showWarnings" text="Mostra avvisi"/>
         <text name="fresh_settings_showWarnings_tooltip" text="Mostra notifiche nella finestra informazioni quando un prodotto sta per scadere."/>
         <text name="fresh_settings_showAgeDisplay" text="Mostra barra età"/>
-        <text name="fresh_settings_showAgeDisplay_tooltip" text="Mostra le barre di distribuzione dell'età quando vicino ai magazzini."/>
+        <text name="fresh_settings_showAgeDisplay_tooltip" text="Mostra le barre di distribuzione dell'età quando vicino ai depositi."/>
         <text name="fresh_settings_warningHours" text="Soglia di avviso"/>
         <text name="fresh_settings_warningHours_tooltip" text="Mostra un avviso quando un prodotto scade entro questo tempo. I prodotti con durata più breve potrebbero risultare sempre in scadenza."/>
         <text name="fresh_warning_6h" text="6 ore"/>
@@ -66,6 +98,21 @@
         <text name="fresh_warning_48h" text="48 ore"/>
         <text name="fresh_warning_72h" text="72 ore"/>
         <text name="fresh_settings_fillTypes" text="Tempi di scadenza"/>
+        <text name="fresh_settings_maxBenefitHeader" text="Beneficio massimo di deposito"/>
+        <text name="fresh_settings_storageHeader" text="Override classe di deposito"/>
+        <text name="fresh_settings_storageAging" text="Invecchiamento per classe di deposito"/>
+        <text name="fresh_settings_storageAging_tooltip" text="Se abilitato, i prodotti invecchiano a velocità diverse in base al tipo di deposito. Esposto invecchia più velocemente, Congelato più lentamente. Se disabilitato, tutti i depositi invecchiano alla stessa velocità di base."/>
+        <text name="fresh_maxbenefit_default" text="Predefinito"/>
+        <text name="fresh_maxbenefit_configDefault" text="Predefinito"/>
+        <text name="fresh_maxbenefit_tooltip" text="Imposta il beneficio massimo della classe di deposito per questo prodotto. Le classi superiori riducono l'invecchiamento ma solo fino a questo limite. Per disabilitare l'invecchiamento per edifici specifici, usa la scheda Deposito. Esposto=1.5x, Riparato=1.0x, Al coperto=0.8x, Refrigerato=0.3x, Congelato=0.05x"/>
+        <text name="fresh_storage_auto" text="Automatico (rilevato)"/>
+        <text name="fresh_storage_override_tooltip" text="Sovrascrivi la classe di deposito per questa posizione. Automatico usa la classe rilevata. Esposto=1.5x, Riparato=1.0x, Al coperto=0.8x, Refrigerato=0.3x, Congelato=0.05x, Disabilitato=nessun invecchiamento."/>
+        <text name="fresh_storage_items_in_world" text="Oggetti nel mondo"/>
+        <text name="fresh_storage_items_in_world_tooltip" text="Comprende balle, pallet e bigbag non posizionati in un deposito dedicato."/>
+        <text name="fresh_storage_detected" text="Rilevato"/>
+
+        <!-- Empty state message for preset-controlled tabs -->
+        <text name="fresh_settings_presetActive" text="Tutti i prodotti sono gestiti dal preset selezionato. Passa a Personalizzato per modificarli singolarmente."/>
 
         <!-- Settings reset button -->
         <text name="fresh_settings_resetDefaults" text="Ripristina predefiniti"/>
@@ -94,11 +141,17 @@
         <text name="fresh_expires_24h" text="24 ore"/>
         <text name="fresh_expires_48h" text="48 ore"/>
         <text name="fresh_expires_72h" text="72 ore"/>
-        <text name="fresh_column_storage" text="Magazzino"/>
+        <text name="fresh_column_storage" text="Deposito"/>
         <text name="fresh_column_timeleft" text="Prossima scadenza"/>
         <text name="fresh_expiring_empty" text="Niente in scadenza a breve"/>
         <text name="fresh_expiring_summary" text="%d elementi (%.0f L totali)"/>
         <text name="fresh_expires_soon" text="&lt; 1 ora"/>
+
+        <!-- Shelf Life Frame -->
+        <text name="fresh_shelflife_title" text="Durata di conservazione"/>
+        <text name="fresh_shelflife_empty" text="Nessun prodotto deperibile configurato"/>
+        <text name="fresh_shelflife_product" text="Prodotto"/>
+        <text name="fresh_shelflife_unit_months" text="durata in mesi"/>
 
         <!-- Statistics Frame -->
         <text name="fresh_stats_title" text="Statistiche perdite"/>
