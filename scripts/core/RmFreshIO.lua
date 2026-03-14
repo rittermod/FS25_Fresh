@@ -252,6 +252,8 @@ function RmFreshIO:save(savegameDir, containers, statistics, settings)
     local containerIndex = 0
     containers = containers or {}
     for containerId, container in pairs(containers) do
+        -- Skip empty containers - pre-registered empties recreated on next load
+        if container.batches and #container.batches > 0 then
         local containerPath = string.format("freshData.containers.container(%d)", containerIndex)
 
         -- Container identity attributes
@@ -324,6 +326,7 @@ function RmFreshIO:save(savegameDir, containers, statistics, settings)
         end
 
         containerIndex = containerIndex + 1
+        end -- if #batches > 0
     end
     Log:trace("SAVE: wrote %d containers", containerIndex)
 

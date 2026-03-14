@@ -413,7 +413,7 @@ function RmObjectStorageAdapter:addObjectToObjectStorageHook(superFunc, object, 
             Log:trace("    source (bale): containerId=%s", sourceContainerId or "nil")
         elseif object.spec_fillUnit then
             -- Vehicle (pallet) - fillUnit 1 for standard pallets
-            sourceContainerId = RmVehicleAdapter:getContainerIdForFillUnit(object, 1)
+            sourceContainerId = RmVehicleAdapter:getContainerIdForFillUnit(object, 1, object:getFillUnitFillType(1))
             Log:trace("    source (vehicle): containerId=%s", sourceContainerId or "nil")
         end
 

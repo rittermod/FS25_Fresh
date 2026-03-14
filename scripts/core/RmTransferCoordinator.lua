@@ -92,7 +92,7 @@ function RmTransferCoordinator.loadingStationAddFillLevel(station, superFunc, fi
     end
 
     -- Resolve destination first (vehicle fillUnit)
-    local destContainerId = RmVehicleAdapter:getContainerIdForFillUnit(fillableObject, fillUnitIndex)
+    local destContainerId = RmVehicleAdapter:getContainerIdForFillUnit(fillableObject, fillUnitIndex, fillType)
 
     -- Resolve source: iterate station.sourceStorages (v1 pattern)
     -- LoadingStation can have multiple source storages - find first with fill
@@ -182,7 +182,7 @@ function RmTransferCoordinator.dischargeToObject(vehicle, superFunc, dischargeNo
 
     -- Resolve source (vehicle's discharge fillUnit)
     local sourceFillUnitIndex = dischargeNode.fillUnitIndex
-    local sourceContainerId = RmVehicleAdapter:getContainerIdForFillUnit(vehicle, sourceFillUnitIndex)
+    local sourceContainerId = RmVehicleAdapter:getContainerIdForFillUnit(vehicle, sourceFillUnitIndex, fillType)
 
     -- Resolve destination (complex - v1 has extensive resolution logic)
     -- Target can be: Vehicle, Storage, UnloadTrigger→Storage, UnloadTrigger→UnloadingStation→Storage
@@ -266,7 +266,7 @@ function RmTransferCoordinator.resolveDischargeTarget(object, targetFillUnitInde
 
     -- Pattern 1: Target is a vehicle with FillUnit spec
     if object.spec_fillUnit ~= nil and targetFillUnitIndex then
-        return RmVehicleAdapter:getContainerIdForFillUnit(object, targetFillUnitIndex)
+        return RmVehicleAdapter:getContainerIdForFillUnit(object, targetFillUnitIndex, fillType)
     end
 
     -- Pattern 2: Target is a Storage object (has getFillLevel)

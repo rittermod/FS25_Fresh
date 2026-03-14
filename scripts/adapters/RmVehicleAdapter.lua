@@ -21,13 +21,19 @@ end
 --- Called during registration to create identityMatch for Manager
 ---@param vehicle table Vehicle entity
 ---@param fillUnitIndex number Fill unit index (1-based)
+---@param fillTypeName string Explicit fill type name (e.g., "WHEAT") - required for pre-registration of empty fill units
 ---@return table identityMatch structure for registerContainer
-function RmVehicleAdapter:buildIdentityMatch(vehicle, fillUnitIndex)
+function RmVehicleAdapter:buildIdentityMatch(vehicle, fillUnitIndex, fillTypeName)
     local fillUnit = vehicle.spec_fillUnit.fillUnits[fillUnitIndex]
-    local fillTypeName = g_fillTypeManager:getFillTypeNameByIndex(fillUnit.fillType)
+    -- Only report fill level if the fill unit currently holds this type
+    local fillLevel = 0
+    local fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(fillTypeName)
+    if fillUnit.fillType == fillTypeIndex then
+        fillLevel = fillUnit.fillLevel or 0
+    end
 
     Log:trace("BUILD_IDENTITY: vehicle=%s fu=%d fillType=%s amount=%.1f",
-        vehicle.uniqueId or "?", fillUnitIndex, fillTypeName or "?", fillUnit.fillLevel or 0)
+        vehicle.uniqueId or "?", fillUnitIndex, fillTypeName or "?", fillLevel)
 
     return {
         worldObject = {
@@ -35,7 +41,7 @@ function RmVehicleAdapter:buildIdentityMatch(vehicle, fillUnitIndex)
         },
         storage = {
             fillTypeName = fillTypeName,
-            amount = fillUnit.fillLevel,
+            amount = fillLevel,
             fillUnitHint = fillUnitIndex,  -- Hint only, not for identity matching
         },
     }
@@ -90,11 +96,18 @@ function RmVehicleAdapter:getFillLevel(containerId)
     local spec = vehicle[RmVehicleAdapter.SPEC_TABLE_NAME]
     if not spec or not spec.containerIds then return 0, 0 end
 
-    for fillUnitIndex, cId in pairs(spec.containerIds) do
-        if cId == containerId then
-            local fillLevel = vehicle:getFillUnitFillLevel(fillUnitIndex)
-            local fillType = vehicle:getFillUnitFillType(fillUnitIndex)
-            return fillLevel, fillType
+    for fillUnitIndex, fuMap in pairs(spec.containerIds) do
+        if type(fuMap) == "table" then
+            for _, cId in pairs(fuMap) do
+                if cId == containerId then
+                    -- Only return fill level if fill unit currently holds this container's fill type
+                    local currentFillType = vehicle:getFillUnitFillType(fillUnitIndex)
+                    if currentFillType == container.fillTypeIndex then
+                        return vehicle:getFillUnitFillLevel(fillUnitIndex), currentFillType
+                    end
+                    return 0, container.fillTypeIndex
+                end
+            end
         end
     end
 
@@ -120,16 +133,20 @@ function RmVehicleAdapter:addFillLevel(containerId, delta)
     local spec = vehicle[RmVehicleAdapter.SPEC_TABLE_NAME]
     if not spec or not spec.containerIds then return false end
 
-    for fillUnitIndex, cId in pairs(spec.containerIds) do
-        if cId == containerId then
-            vehicle:addFillUnitFillLevel(
-                vehicle:getOwnerFarmId(),
-                fillUnitIndex,
-                delta,
-                fillType,
-                ToolType.UNDEFINED
-            )
-            return true
+    for fillUnitIndex, fuMap in pairs(spec.containerIds) do
+        if type(fuMap) == "table" then
+            for _, cId in pairs(fuMap) do
+                if cId == containerId then
+                    vehicle:addFillUnitFillLevel(
+                        vehicle:getOwnerFarmId(),
+                        fillUnitIndex,
+                        delta,
+                        fillType,
+                        ToolType.UNDEFINED
+                    )
+                    return true
+                end
+            end
         end
     end
 
@@ -151,22 +168,27 @@ end
 -- LOOKUP API
 -- =============================================================================
 
---- Get containerId for a vehicle fillUnit
+--- Get containerId for a vehicle fillUnit and fillType
 --- Used by TransferCoordinator to resolve source/destination containers
 --- NETWORK SAFE: Works on both server and client (uses synced spec.containerIds)
 ---@param vehicle table Vehicle entity
 ---@param fillUnitIndex number Fill unit index (1-based)
+---@param fillTypeIndex number Fill type index (required - resolves to fillTypeName for nested lookup)
 ---@return string|nil containerId or nil if not registered
-function RmVehicleAdapter:getContainerIdForFillUnit(vehicle, fillUnitIndex)
-    if not vehicle then return nil end
+function RmVehicleAdapter:getContainerIdForFillUnit(vehicle, fillUnitIndex, fillTypeIndex)
+    if not vehicle or not fillTypeIndex then return nil end
 
     local spec = vehicle[RmVehicleAdapter.SPEC_TABLE_NAME]
     if not spec or not spec.containerIds then return nil end
 
-    local containerId = spec.containerIds[fillUnitIndex]
+    local fuMap = spec.containerIds[fillUnitIndex]
+    if not fuMap then return nil end
 
-    Log:trace("VEHICLE_LOOKUP: fu=%d -> containerId=%s",
-        fillUnitIndex or 0, containerId or "nil")
+    local fillTypeName = g_fillTypeManager:getFillTypeNameByIndex(fillTypeIndex)
+    local containerId = fuMap[fillTypeName]
+
+    Log:trace("VEHICLE_LOOKUP: fu=%d fillType=%s -> containerId=%s",
+        fillUnitIndex or 0, fillTypeName or "?", containerId or "nil")
 
     return containerId
 end
@@ -303,7 +325,8 @@ function RmVehicleAdapter.deferRegistration(vehicle)
 end
 
 --- Perform actual container registration
---- Creates one container per perishable fillUnit
+--- Pre-registers one container per perishable supported fillType per fillUnit
+--- Aligns with PlaceableAdapter pattern: iterate supportedFillTypes, register even when empty
 function RmVehicleAdapter.doRegistration(vehicle, entityId)
     local spec = vehicle[RmVehicleAdapter.SPEC_TABLE_NAME]
     if spec == nil then return end
@@ -317,39 +340,55 @@ function RmVehicleAdapter.doRegistration(vehicle, entityId)
     local storageClass = RmVehicleAdapter.detectStorageClass(vehicle)
 
     for fillUnitIndex, fillUnit in ipairs(fillUnits) do
-        local fillType = fillUnit.fillType
+        -- Iterate all supported fill types (not just current fillType)
+        local supportedFillTypes = vehicle:getFillUnitSupportedFillTypes(fillUnitIndex) or {}
 
-        -- Only track perishable fill types
-        if fillType ~= nil and RmFreshSettings:isPerishableByIndex(fillType) then
-            local identityMatch = RmVehicleAdapter:buildIdentityMatch(vehicle, fillUnitIndex)
+        for fillTypeIndex, _ in pairs(supportedFillTypes) do
+            if RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
+                local fillTypeName = g_fillTypeManager:getFillTypeNameByIndex(fillTypeIndex)
+                local identityMatch = RmVehicleAdapter:buildIdentityMatch(vehicle, fillUnitIndex, fillTypeName)
 
-            local containerId, wasReconciled = RmFreshManager:registerContainer(
-                "vehicle",
-                identityMatch,
-                vehicle,
-                { location = vehicle:getName() or "Vehicle", storageClass = storageClass, isPallet = vehicle.isPallet or false }
-            )
+                local containerId, wasReconciled = RmFreshManager:registerContainer(
+                    "vehicle",
+                    identityMatch,
+                    vehicle,
+                    { location = vehicle:getName() or "Vehicle", storageClass = storageClass, isPallet = vehicle.isPallet or false }
+                )
 
-            spec.containerIds[fillUnitIndex] = containerId
-
-            -- Add initial batch only for NEW containers (not reconciled from save)
-            if not wasReconciled then
-                local currentFill = fillUnit.fillLevel or 0
-                if currentFill > 0 and containerId then
-                    RmFreshManager:addBatch(containerId, currentFill, 0)
+                -- Create sub-table lazily (only when we have a perishable type)
+                if not spec.containerIds[fillUnitIndex] then
+                    spec.containerIds[fillUnitIndex] = {}
                 end
-            end
+                spec.containerIds[fillUnitIndex][fillTypeName] = containerId
 
-            Log:debug("VEHICLE_REGISTERED: fillType=%s containerId=%s reconciled=%s name=%s",
-                identityMatch.storage.fillTypeName, containerId or "nil", tostring(wasReconciled), vehicle:getName() or "unknown")
-            Log:debug("STORAGE_DETECT: container=%s type=vehicle class=%s(%d)",
-                containerId or "nil", RmFreshManager.STORAGE_CLASS_NAMES[storageClass], storageClass)
+                -- Add initial batch only for NEW containers with actual fill of this type
+                if not wasReconciled and containerId then
+                    local currentFill = 0
+                    if fillUnit.fillType == fillTypeIndex then
+                        currentFill = fillUnit.fillLevel or 0
+                    end
+                    if currentFill > 0 then
+                        RmFreshManager:addBatch(containerId, currentFill, 0)
+                    end
+                end
+
+                if identityMatch.storage.amount > 0 then
+                    Log:debug("VEHICLE_REGISTERED: fillType=%s containerId=%s reconciled=%s name=%s",
+                        fillTypeName, containerId or "nil", tostring(wasReconciled), vehicle:getName() or "unknown")
+                else
+                    Log:debug("VEHICLE_REGISTERED_EMPTY: fillType=%s containerId=%s name=%s (pre-registered)",
+                        fillTypeName, containerId or "nil", vehicle:getName() or "unknown")
+                end
+                Log:debug("STORAGE_DETECT: container=%s type=vehicle class=%s(%d)",
+                    containerId or "nil", RmFreshManager.STORAGE_CLASS_NAMES[storageClass], storageClass)
+            end
         end
     end
 end
 
 --- Rescan all vehicles for newly-perishable fillUnits
 --- Called when settings change makes a fillType perishable
+--- Iterates supportedFillTypes per fill unit (not just current fillType)
 ---@return number count Number of new containers registered
 function RmVehicleAdapter.rescanForPerishables()
     if not g_currentMission or not g_currentMission.vehicleSystem then return 0 end
@@ -358,37 +397,58 @@ function RmVehicleAdapter.rescanForPerishables()
     local count = 0
     for _, vehicle in ipairs(g_currentMission.vehicleSystem.vehicles) do
         local spec = vehicle[RmVehicleAdapter.SPEC_TABLE_NAME]
-        if spec and spec.containerIds then
+        if spec and spec.containerIds and vehicle.uniqueId then
             local fillUnits = vehicle.spec_fillUnit and vehicle.spec_fillUnit.fillUnits
             if fillUnits then
                 for fillUnitIndex, fillUnit in ipairs(fillUnits) do
-                    local fillType = fillUnit.fillType
-                    -- Clear stale adapter ref if Manager no longer has this container
-                    local existingId = spec.containerIds[fillUnitIndex]
-                    if existingId ~= nil and RmFreshManager.containers[existingId] == nil then
-                        Log:debug("RESCAN_STALE_REF: fu=%d containerId=%s (clearing)", fillUnitIndex, existingId)
-                        spec.containerIds[fillUnitIndex] = nil
-                    end
-                    if spec.containerIds[fillUnitIndex] == nil
-                       and fillType ~= nil
-                       and RmFreshSettings:isPerishableByIndex(fillType)
-                       and (fillUnit.fillLevel or 0) > 0 then
+                    spec.containerIds[fillUnitIndex] = spec.containerIds[fillUnitIndex] or {}
+                    local fuMap = spec.containerIds[fillUnitIndex]
 
-                        local identityMatch = RmVehicleAdapter:buildIdentityMatch(vehicle, fillUnitIndex)
-                        local rescanStorageClass = RmVehicleAdapter.detectStorageClass(vehicle)
-                        local containerId, wasReconciled = RmFreshManager:registerContainer(
-                            "vehicle", identityMatch, vehicle,
-                            { location = vehicle:getName() or "Vehicle", storageClass = rescanStorageClass, isPallet = vehicle.isPallet or false }
-                        )
-                        spec.containerIds[fillUnitIndex] = containerId
-                        if not wasReconciled and containerId and (fillUnit.fillLevel or 0) > 0 then
-                            RmFreshManager:addBatch(containerId, fillUnit.fillLevel, 0)
+                    -- Clear stale adapter refs in nested structure
+                    -- Collect stale keys first to avoid modifying table during pairs() iteration
+                    local staleKeys = {}
+                    for fillTypeName, existingId in pairs(fuMap) do
+                        if RmFreshManager.containers[existingId] == nil then
+                            Log:debug("RESCAN_STALE_REF: fu=%d fillType=%s containerId=%s (clearing)",
+                                fillUnitIndex, fillTypeName, existingId)
+                            staleKeys[#staleKeys + 1] = fillTypeName
                         end
-                        count = count + 1
+                    end
+                    for _, key in ipairs(staleKeys) do
+                        fuMap[key] = nil
+                    end
 
-                        Log:debug("RESCAN_VEHICLE: fillType=%s containerId=%s name=%s",
-                            identityMatch.storage.fillTypeName, containerId or "nil",
-                            vehicle:getName() or "unknown")
+                    -- Iterate all supported fill types for this fill unit
+                    local supportedFillTypes = vehicle:getFillUnitSupportedFillTypes(fillUnitIndex) or {}
+                    for fillTypeIndex, _ in pairs(supportedFillTypes) do
+                        if RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
+                            local fillTypeName = g_fillTypeManager:getFillTypeNameByIndex(fillTypeIndex)
+                            if fuMap[fillTypeName] == nil then
+                                local identityMatch = RmVehicleAdapter:buildIdentityMatch(vehicle, fillUnitIndex, fillTypeName)
+                                local rescanStorageClass = RmVehicleAdapter.detectStorageClass(vehicle)
+                                local containerId, wasReconciled = RmFreshManager:registerContainer(
+                                    "vehicle", identityMatch, vehicle,
+                                    { location = vehicle:getName() or "Vehicle", storageClass = rescanStorageClass, isPallet = vehicle.isPallet or false }
+                                )
+                                fuMap[fillTypeName] = containerId
+
+                                -- Add initial batch only if fill unit currently holds this type
+                                if not wasReconciled and containerId then
+                                    local currentFill = 0
+                                    if fillUnit.fillType == fillTypeIndex then
+                                        currentFill = fillUnit.fillLevel or 0
+                                    end
+                                    if currentFill > 0 then
+                                        RmFreshManager:addBatch(containerId, currentFill, 0)
+                                    end
+                                end
+                                count = count + 1
+
+                                Log:debug("RESCAN_VEHICLE: fillType=%s containerId=%s name=%s",
+                                    fillTypeName, containerId or "nil",
+                                    vehicle:getName() or "unknown")
+                            end
+                        end
                     end
                 end
             end
@@ -404,10 +464,14 @@ function RmVehicleAdapter:onDelete()
 
     local spec = self[RmVehicleAdapter.SPEC_TABLE_NAME]
     if spec and spec.containerIds then
-        for fillUnitIndex, containerId in pairs(spec.containerIds) do
-            if containerId and RmFreshManager then
-                RmFreshManager:unregisterContainer(containerId)
-                Log:debug("VEHICLE_DELETE: fu=%d containerId=%s", fillUnitIndex, containerId)
+        for fillUnitIndex, fuMap in pairs(spec.containerIds) do
+            if type(fuMap) == "table" then
+                for fillTypeName, containerId in pairs(fuMap) do
+                    if containerId and RmFreshManager then
+                        RmFreshManager:unregisterContainer(containerId)
+                        Log:debug("VEHICLE_DELETE: fu=%d fillType=%s containerId=%s", fillUnitIndex, fillTypeName, containerId)
+                    end
+                end
             end
         end
     end
@@ -422,15 +486,22 @@ function RmVehicleAdapter:onFillUnitFillLevelChanged(fillUnitIndex, fillLevelDel
     if fillUnitIndex <= 0 then return end  -- Invalid index guard
     if fillLevelDelta == 0 then return end
 
-    -- Guard against infinity (some mods report inf for initial fill)
-    if fillLevelDelta == math.huge or fillLevelDelta == -math.huge then
-        -- Try to get actual fill level instead
+    -- Guard against infinity
+    -- Negative infinity: FS25 fill type switch drain event (-math.huge drains old type)
+    -- Must be processed to consume old container's batches via pre-registered containers
+    if fillLevelDelta == -math.huge then
+        fillLevelDelta = -1000000000  -- Manager's consumeBatches caps at actual batch total
+        Log:debug("FILL_DELTA_NEG_INF: fu=%d replaced -inf with -1B (fill type switch drain)", fillUnitIndex)
+    end
+
+    -- Positive infinity: some mods report inf for initial fill
+    if fillLevelDelta == math.huge then
         local actualFill = self:getFillUnitFillLevel(fillUnitIndex) or 0
         if actualFill > 0 and actualFill < 1000000 then
             fillLevelDelta = actualFill
-            Log:debug("FILL_DELTA_INF_FIX: fu=%d replaced inf with actual=%.1f", fillUnitIndex, actualFill)
+            Log:debug("FILL_DELTA_POS_INF_FIX: fu=%d replaced +inf with actual=%.1f", fillUnitIndex, actualFill)
         else
-            Log:warning("FILL_DELTA_INF_SKIP: fu=%d delta=inf actualFill=%.1f (skipping)", fillUnitIndex, actualFill)
+            Log:warning("FILL_DELTA_POS_INF_SKIP: fu=%d delta=+inf actualFill=%.1f (skipping)", fillUnitIndex, actualFill)
             return
         end
     end
@@ -438,35 +509,38 @@ function RmVehicleAdapter:onFillUnitFillLevelChanged(fillUnitIndex, fillLevelDel
     local spec = self[RmVehicleAdapter.SPEC_TABLE_NAME]
     if spec == nil then return end
 
-    local containerId = spec.containerIds and spec.containerIds[fillUnitIndex]
+    local fillTypeName = g_fillTypeManager:getFillTypeNameByIndex(fillTypeIndex)
+    local fuMap = spec.containerIds and spec.containerIds[fillUnitIndex]
+    local containerId = fuMap and fuMap[fillTypeName]
 
     -- Clear stale adapter ref if Manager no longer has this container
     if containerId ~= nil and RmFreshManager.containers[containerId] == nil then
-        Log:debug("VEHICLE_STALE_REF: fu=%d containerId=%s (clearing)", fillUnitIndex, containerId)
-        spec.containerIds[fillUnitIndex] = nil
+        Log:debug("VEHICLE_STALE_REF: fu=%d fillType=%s containerId=%s (clearing)", fillUnitIndex, fillTypeName or "?", containerId)
+        fuMap[fillTypeName] = nil
         containerId = nil
     end
 
     -- Dynamic registration: if no container but fill is perishable and being added
     if containerId == nil and fillLevelDelta > 0 and RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
-        local identityMatch = RmVehicleAdapter:buildIdentityMatch(self, fillUnitIndex)
+        local identityMatch = RmVehicleAdapter:buildIdentityMatch(self, fillUnitIndex, fillTypeName)
         local dynStorageClass = RmVehicleAdapter.detectStorageClass(self)
         local wasReconciled
         containerId, wasReconciled = RmFreshManager:registerContainer(
             "vehicle", identityMatch, self,
             { location = self:getName() or "Vehicle", storageClass = dynStorageClass, isPallet = self.isPallet or false }
         )
-        spec.containerIds[fillUnitIndex] = containerId
+        spec.containerIds[fillUnitIndex] = spec.containerIds[fillUnitIndex] or {}
+        spec.containerIds[fillUnitIndex][fillTypeName] = containerId
 
         if wasReconciled then
             -- Reconciled from save - batches already loaded, skip fill change processing
             Log:debug("VEHICLE_RECONCILED: fillType=%s containerId=%s name=%s (skipping fill delta)",
-                identityMatch.storage.fillTypeName, containerId or "nil", self:getName() or "unknown")
+                fillTypeName, containerId or "nil", self:getName() or "unknown")
             return
         end
 
         Log:debug("VEHICLE_DYNAMIC_REG: fillType=%s containerId=%s name=%s",
-            identityMatch.storage.fillTypeName, containerId or "nil", self:getName() or "unknown")
+            fillTypeName, containerId or "nil", self:getName() or "unknown")
     end
 
     if containerId then
@@ -478,25 +552,34 @@ end
 -- MP STREAM SYNC (sync containerIds to joining clients)
 -- =============================================================================
 
---- Sync containerIds to joining client
+--- Sync containerIds to joining client (flat encoding: fillUnitIndex, fillTypeName, containerId)
 function RmVehicleAdapter:onWriteStream(streamId, connection)
     local spec = self[RmVehicleAdapter.SPEC_TABLE_NAME]
     local containerIds = spec and spec.containerIds or {}
 
-    -- Count containers
+    -- Count total entries across all fill units
     local count = 0
-    for _ in pairs(containerIds) do count = count + 1 end
+    for _, fuMap in pairs(containerIds) do
+        if type(fuMap) == "table" then
+            for _ in pairs(fuMap) do count = count + 1 end
+        end
+    end
 
     streamWriteUInt8(streamId, count)
     Log:trace("VEHICLE_WRITE_STREAM: sending %d containerIds", count)
 
-    for fillUnitIndex, containerId in pairs(containerIds) do
-        streamWriteUInt8(streamId, fillUnitIndex)
-        streamWriteString(streamId, containerId)
+    for fillUnitIndex, fuMap in pairs(containerIds) do
+        if type(fuMap) == "table" then
+            for fillTypeName, containerId in pairs(fuMap) do
+                streamWriteUInt8(streamId, fillUnitIndex)
+                streamWriteString(streamId, fillTypeName)
+                streamWriteString(streamId, containerId)
+            end
+        end
     end
 end
 
---- Receive containerIds on client join
+--- Receive containerIds on client join (reconstructs nested map)
 function RmVehicleAdapter:onReadStream(streamId, connection)
     local spec = self[RmVehicleAdapter.SPEC_TABLE_NAME]
     if spec == nil then
@@ -510,8 +593,11 @@ function RmVehicleAdapter:onReadStream(streamId, connection)
 
     for i = 1, count do
         local fillUnitIndex = streamReadUInt8(streamId)
+        local fillTypeName = streamReadString(streamId)
         local containerId = streamReadString(streamId)
-        spec.containerIds[fillUnitIndex] = containerId
+
+        spec.containerIds[fillUnitIndex] = spec.containerIds[fillUnitIndex] or {}
+        spec.containerIds[fillUnitIndex][fillTypeName] = containerId
 
         -- Register entity→containerId mapping for display hooks
         if RmFreshManager and RmFreshManager.registerClientEntity then
@@ -539,35 +625,39 @@ function RmVehicleAdapter:showInfo(superFunc, box)
     local warningHours = RmFreshSettings:getWarningHours()
     local byFillType = {} -- fillTypeIndex → { containerId, oldestAge, totalAmount, expiringAmount }
 
-    for _, containerId in pairs(spec.containerIds) do
-        local container = RmFreshManager:getContainer(containerId)
-        if container and container.batches and #container.batches > 0 then
-            local ftIndex = container.fillTypeIndex
-            local oldestAge = container.batches[1].ageInPeriods
+    for _, fuMap in pairs(spec.containerIds) do
+        if type(fuMap) == "table" then
+            for _, containerId in pairs(fuMap) do
+                local container = RmFreshManager:getContainer(containerId)
+                if container and container.batches and #container.batches > 0 then
+                    local ftIndex = container.fillTypeIndex
+                    local oldestAge = container.batches[1].ageInPeriods
 
-            if not byFillType[ftIndex] then
-                byFillType[ftIndex] = {
-                    containerId = containerId,
-                    oldestAge = oldestAge,
-                    totalAmount = 0,
-                    expiringAmount = 0,
-                }
-            elseif oldestAge > byFillType[ftIndex].oldestAge then
-                byFillType[ftIndex].containerId = containerId
-                byFillType[ftIndex].oldestAge = oldestAge
-            end
+                    if not byFillType[ftIndex] then
+                        byFillType[ftIndex] = {
+                            containerId = containerId,
+                            oldestAge = oldestAge,
+                            totalAmount = 0,
+                            expiringAmount = 0,
+                        }
+                    elseif oldestAge > byFillType[ftIndex].oldestAge then
+                        byFillType[ftIndex].containerId = containerId
+                        byFillType[ftIndex].oldestAge = oldestAge
+                    end
 
-            local entry = byFillType[ftIndex]
-            if RmFreshSettings:isPerishableByIndex(ftIndex) then
-                local config = RmFreshSettings:getThresholdByIndex(ftIndex)
-                -- Resolve storage class multiplier for accurate time calculations
-                local classInfo = RmFreshManager:resolveStorageClassInfo(container)
-                local multiplier = classInfo and classInfo.multiplier or 1.0
-                for _, batch in ipairs(container.batches) do
-                    entry.totalAmount = entry.totalAmount + batch.amount
-                    if batch.amount >= RmBatch.MIN_AMOUNT
-                        and RmBatch.isNearExpiration(batch, warningHours, config.expiration, daysPerPeriod, multiplier) then
-                        entry.expiringAmount = entry.expiringAmount + batch.amount
+                    local entry = byFillType[ftIndex]
+                    if RmFreshSettings:isPerishableByIndex(ftIndex) then
+                        local config = RmFreshSettings:getThresholdByIndex(ftIndex)
+                        -- Resolve storage class multiplier for accurate time calculations
+                        local classInfo = RmFreshManager:resolveStorageClassInfo(container)
+                        local multiplier = classInfo and classInfo.multiplier or 1.0
+                        for _, batch in ipairs(container.batches) do
+                            entry.totalAmount = entry.totalAmount + batch.amount
+                            if batch.amount >= RmBatch.MIN_AMOUNT
+                                and RmBatch.isNearExpiration(batch, warningHours, config.expiration, daysPerPeriod, multiplier) then
+                                entry.expiringAmount = entry.expiringAmount + batch.amount
+                            end
+                        end
                     end
                 end
             end
