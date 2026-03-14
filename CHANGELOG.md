@@ -1,14 +1,10 @@
 # Changelog
 
-0.10.0.0-dev:
-- Added storage classes: storages are auto-classified (Outdoor/Sheltered/Climate-Controlled) affecting aging speed
-- Added Storage tab to Fresh Menu showing all storages with their class and fill status
-- Added per-storage class override via Settings
-- Added per-product max benefit class setting to cap storage class effectiveness
-- Added store icons to Storage tab rows for easy identification
+0.10.0.0 (Beta - 2026-03-14):
+- Added storage classes: storages are auto-classified (Exposed/Sheltered/Indoor/Cooled/Frozen/Disabled) affecting aging speed — browse in new Storage tab, override per-storage, and cap per-product max benefit in Settings
+- Improved Shelf Life tab: shows effective shelf life across all storage classes in a table layout
+- Improved settings: consolidated into tabbed pages with per-product configuration
 - Added user guide documentation site
-- Improved settings: consolidated into tabbed pages with per-product max benefit class configuration
-- Fixed "Expires in" displays not applying storage class multiplier
 - Fixed empty food troughs not being registered on load
 - Fixed storages list showing other farms' storages in multiplayer
 

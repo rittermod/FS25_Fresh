@@ -163,7 +163,7 @@ Track what you've lost to spoilage:
 
 ### Shelf Life
 
-A read-only reference listing every perishable product and its current active shelf life in months. Useful for quickly checking how long something lasts without opening the settings.
+A read-only reference listing every perishable product with its active shelf life. When **Storage Class Aging** is enabled, the tab displays a table with columns for each storage class (Exposed through Frozen), showing the effective shelf life in months for every product in each class. Cells are left blank where a product's max benefit class is exceeded, making it easy to see at a glance which storage types actually help each product. When Storage Class Aging is disabled, a single shelf life value is shown per product.
 
 ### Settings
 

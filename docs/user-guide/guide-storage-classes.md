@@ -33,6 +33,8 @@ A product with a 6-month shelf life at Normal difficulty:
 
 The difference between leaving strawberries on an outdoor pallet versus putting them in cooled storage is dramatic.
 
+*You can view these effective shelf lives in-game: open the Fresh Menu → Shelf Life tab. When Storage Class Aging is enabled, it displays a table with per-storage-class values for every product.*
+
 ---
 
 ## How Storage Classes Are Assigned

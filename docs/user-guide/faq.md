@@ -155,6 +155,14 @@ See the [Storage Classes Guide](guide-storage-classes.md#max-benefit-class) for 
 
 ---
 
+## How can I see effective shelf life per storage class?
+
+Open the Fresh Menu (Right Shift + F) → Shelf Life tab. When **Storage Class Aging** is enabled, the tab displays a table with columns for each storage class (Exposed through Frozen), showing the effective shelf life in months for every product. Cells are blank where a product's max benefit class is exceeded, so you can immediately see which storage types benefit each product.
+
+When Storage Class Aging is disabled, the tab shows a single shelf life value per product.
+
+---
+
 ## Can I see what's about to expire?
 
 Yes, several ways:

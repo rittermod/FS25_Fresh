@@ -87,6 +87,8 @@ Each tracked storage shows:
 - The detected (automatic) storage class
 - An override dropdown to change the class
 
+Vehicles appear in the list as soon as they are on the map, even when empty. This lets you configure storage class overrides before loading any goods.
+
 A special **Items in World** entry covers all bales, pallets, and big bags not placed in a dedicated object storage. Overriding this entry applies to all loose items at once.
 
 Use this when automatic detection doesn't match your setup - for example, if a mod building provides refrigerated storage but Fresh detects it as Indoor.
@@ -115,6 +117,7 @@ Some settings depend on others:
 Enable Expiration → All other settings (only when Expiration is On)
 Difficulty Preset → Expiration tab (editable only when Custom)
 Storage Class Aging → Max Benefit tab + Storage tab (visible only when On)
+                    → Shelf Life tab display (per-class table when On, simple list when Off)
 ```
 
 *Dependent settings are greyed out or hidden when their parent setting is disabled.*
