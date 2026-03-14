@@ -5,6 +5,7 @@
 
 RmFreshConsole = {}
 RmFreshConsole.targets = {} -- index -> containerId for command targeting
+RmFreshConsole.storageTargets = {} -- index -> uniqueId for storage command targeting
 
 -- Get logger
 local Log = RmLogging.getLogger("Fresh")
@@ -139,6 +140,11 @@ function RmFreshConsole:registerCommands()
     addConsoleCommand("fExpire", "Force expire (fExpire <#> [batchIdx])", "consoleCommandExpire", self)
     addConsoleCommand("fExpireAll", "Expire all (fExpireAll <type|all>)", "consoleCommandExpireAll", self)
 
+    -- Inventory detail commands (read-only, all users)
+    addConsoleCommand("fFillDetail", "FillType detail (fFillDetail <fillType>)", "consoleCommandFillDetail", self)
+    addConsoleCommand("fStorageList", "Storage list (fStorageList)", "consoleCommandStorageList", self)
+    addConsoleCommand("fStorageDetail", "Storage detail (fStorageDetail <#>)", "consoleCommandStorageDetail", self)
+
     -- Statistics/debug commands (read-only, all users)
     addConsoleCommand("fStats", "Show statistics", "consoleCommandStats", self)
     addConsoleCommand("fStatus", "Expiring soon (fStatus [hours])", "consoleCommandStatus", self)
@@ -154,7 +160,7 @@ function RmFreshConsole:registerCommands()
     addConsoleCommand("fClearStorage", "Clear storage class override (fClearStorage <#|items>)", "consoleCommandClearStorage", self)
 
     Log:info(
-    "CONSOLE: fList, fInspect, fBatches, fStorages, fAddBatch, fRemBatch, fSetAge, fSetAllAge, fAge, fAgeContainer, fExpire, fExpireAll, fStats, fStatus, fLog, fDump, fClearLog, fReconcile, fSetStorage, fClearStorage commands registered")
+    "CONSOLE: fList, fInspect, fBatches, fStorages, fFillDetail, fStorageList, fStorageDetail, fAddBatch, fRemBatch, fSetAge, fSetAllAge, fAge, fAgeContainer, fExpire, fExpireAll, fStats, fStatus, fLog, fDump, fClearLog, fReconcile, fSetStorage, fClearStorage commands registered")
 end
 
 --- Unregister console commands
@@ -178,6 +184,11 @@ function RmFreshConsole:unregisterCommands()
     removeConsoleCommand("fExpire")
     removeConsoleCommand("fExpireAll")
 
+    -- Inventory detail commands
+    removeConsoleCommand("fFillDetail")
+    removeConsoleCommand("fStorageList")
+    removeConsoleCommand("fStorageDetail")
+
     -- Statistics/debug commands
     removeConsoleCommand("fStats")
     removeConsoleCommand("fStatus")
@@ -189,6 +200,7 @@ function RmFreshConsole:unregisterCommands()
     removeConsoleCommand("fClearStorage")
 
     self.targets = {}
+    self.storageTargets = {}
     Log:debug("CONSOLE: commands unregistered")
 end
 
@@ -1659,4 +1671,195 @@ function RmFreshConsole:executeClearStorage(overrideKey)
     RmFreshSettings:clearStorageClassOverride(overrideKey)
     local label = overrideKey == "itemsInWorld" and "Items in World" or overrideKey
     return string.format("Override cleared: %s (reverted to detected class)", label)
+end
+
+-- ============================================================================
+-- fFillDetail Command
+-- ============================================================================
+
+--- Console command: Show per-storage breakdown for a fillType
+--- Usage: fFillDetail [fillType]
+--- Without args: lists available perishable fillTypes
+--- With fillType name: shows per-storage detail with batches, class, expiry
+---@param fillTypeStr string|nil FillType name (e.g., "WHEAT")
+---@return string Console output message
+function RmFreshConsole:consoleCommandFillDetail(fillTypeStr)
+    -- Resolve farmId
+    local farmId = nil
+    if g_currentMission and g_currentMission.player and g_currentMission.player.farmId then
+        farmId = g_currentMission.player.farmId
+    elseif g_currentMission then
+        farmId = g_currentMission:getFarmId()
+    end
+
+    -- No argument: list available fillTypes
+    if fillTypeStr == nil then
+        local list = RmFreshManager:getInventoryList(farmId)
+        if #list == 0 then
+            return "No perishable inventory found"
+        end
+        print("=== Available Perishable FillTypes ===")
+        for _, entry in ipairs(list) do
+            print(string.format("  %s: %.0f L", entry.fillTypeName, entry.totalAmount))
+        end
+        return "Usage: fFillDetail <fillType>"
+    end
+
+    -- Resolve fillType name (case-insensitive)
+    local fillTypeName = string.upper(fillTypeStr)
+    local fillTypeIndex = g_fillTypeManager:getFillTypeIndexByName(fillTypeName)
+    if fillTypeIndex == nil then
+        return string.format("Unknown fillType '%s'", fillTypeStr)
+    end
+
+    -- Query detail from Manager
+    local detail = RmFreshManager:getFillTypeDetail(fillTypeName, farmId)
+
+    if #detail.containers == 0 then
+        return string.format("No containers with %s found", fillTypeName)
+    end
+
+    -- Sort by amount descending for stable display order
+    table.sort(detail.containers, function(a, b) return a.amount > b.amount end)
+
+    -- Print header
+    print(string.format("=== %s Detail ===", detail.fillTypeTitle))
+    print(string.format("Total: %.0f L | Threshold: %s | Containers: %d",
+        detail.totalAmount,
+        detail.threshold and string.format("%.2f periods", detail.threshold) or "N/A",
+        #detail.containers))
+    print("")
+
+    -- Populate targets and print per-container rows
+    self.targets = {}
+    for i, entry in ipairs(detail.containers) do
+        self.targets[i] = entry.containerId
+
+        local pct = detail.totalAmount > 0
+            and string.format("%.0f%%", entry.amount / detail.totalAmount * 100)
+            or "0%"
+
+        local classStr = entry.className and string.format(" [%s]", entry.className) or ""
+
+        print(string.format("#%d: %s \"%s\" %.0f L (%s)%s %s",
+            i,
+            entry.entityType,
+            entry.storageName,
+            entry.amount,
+            pct,
+            classStr,
+            entry.expiresInDisplay))
+    end
+
+    return string.format("\n%d containers with %s", #detail.containers, fillTypeName)
+end
+
+-- ============================================================================
+-- fStorageList Command
+-- ============================================================================
+
+--- Console command: Show all storages with totals and fillType counts
+--- Usage: fStorageList
+--- Populates self.storageTargets for follow-up fStorageDetail
+---@return string Console output message
+function RmFreshConsole:consoleCommandStorageList()
+    -- Resolve farmId
+    local farmId = nil
+    if g_currentMission and g_currentMission.player and g_currentMission.player.farmId then
+        farmId = g_currentMission.player.farmId
+    elseif g_currentMission then
+        farmId = g_currentMission:getFarmId()
+    end
+
+    local storages = RmFreshManager:getStorageList(farmId)
+
+    if #storages == 0 then
+        self.storageTargets = {}
+        return "No storages with perishable inventory found"
+    end
+
+    -- Sort alphabetically by entityName for stable display
+    table.sort(storages, function(a, b) return a.entityName:lower() < b.entityName:lower() end)
+
+    print("=== Storage Inventory ===")
+
+    self.storageTargets = {}
+    for i, entry in ipairs(storages) do
+        self.storageTargets[i] = entry.uniqueId
+
+        local classStr = entry.className and string.format(" [%s]", entry.className) or ""
+
+        print(string.format("#%d: \"%s\" [%s] %.0f L, %d fillType(s)%s",
+            i,
+            entry.entityName,
+            entry.entityType,
+            entry.totalAmount,
+            entry.fillTypeCount,
+            classStr))
+    end
+
+    return string.format("\n%d storages listed. Use fStorageDetail <#> for details.", #storages)
+end
+
+-- ============================================================================
+-- fStorageDetail Command
+-- ============================================================================
+
+--- Console command: Show per-fillType breakdown for a storage
+--- Usage: fStorageDetail <#>
+--- Requires fStorageList to have been run first (populates storageTargets)
+---@param indexStr string Storage index from fStorageList
+---@return string Console output message
+function RmFreshConsole:consoleCommandStorageDetail(indexStr)
+    if next(self.storageTargets) == nil then
+        return "No storages indexed. Run fStorageList first."
+    end
+
+    local index = tonumber(indexStr)
+    if index == nil or index < 1 or index > #self.storageTargets then
+        return string.format("Invalid index. Valid range: 1-%d", #self.storageTargets)
+    end
+
+    local uniqueId = self.storageTargets[index]
+
+    -- Resolve farmId
+    local farmId = nil
+    if g_currentMission and g_currentMission.player and g_currentMission.player.farmId then
+        farmId = g_currentMission.player.farmId
+    elseif g_currentMission then
+        farmId = g_currentMission:getFarmId()
+    end
+
+    local detail = RmFreshManager:getStorageDetail(uniqueId, farmId)
+
+    if #detail.fillTypes == 0 then
+        return string.format("No perishable goods in %s", detail.entityName)
+    end
+
+    -- Print header
+    print(string.format("=== %s ===", detail.entityName))
+    local classStr = detail.className and string.format(" | Class: %s", detail.className) or ""
+    print(string.format("Type: %s | Total: %.0f L%s",
+        detail.entityType, detail.totalAmount, classStr))
+    print("")
+
+    -- Print per-fillType rows
+    for _, entry in ipairs(detail.fillTypes) do
+        local pct = detail.totalAmount > 0
+            and string.format("%.0f%%", entry.amount / detail.totalAmount * 100)
+            or "0%"
+
+        local effectiveStr = entry.effectiveClassName
+            and string.format(" [%s]", entry.effectiveClassName) or ""
+
+        print(string.format("  %s: %.0f L (%s)%s %s (%d batches)",
+            entry.fillTypeTitle,
+            entry.amount,
+            pct,
+            effectiveStr,
+            entry.expiresInDisplay,
+            entry.batchCount))
+    end
+
+    return string.format("\n%d fillType(s) in %s", #detail.fillTypes, detail.entityName)
 end

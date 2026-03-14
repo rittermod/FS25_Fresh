@@ -790,6 +790,128 @@ function RmFreshManager:getStorageListForSettings(farmId)
     return result
 end
 
+--- Get all storages grouped by uniqueId with class info and totals for inventory detail views
+--- Groups containers by building/vehicle (uniqueId), separates bales/pallets into "Items in World"
+--- Unlike getStorageListForSettings, includes amount totals and fillType counts for display
+--- Returns unsorted array — caller is responsible for sorting
+---@param farmId number|nil Filter by farm ownership (nil returns empty)
+---@return table Array of { uniqueId, entityName, entityType, totalAmount, fillTypeCount, storageClass, className }
+function RmFreshManager:getStorageList(farmId)
+    -- farmId=nil or 0 means no farm context - return empty (matches getInventorySummary pattern)
+    if farmId == nil or farmId == 0 then
+        Log:trace("STORAGE_LIST_DETAIL: farmId=%s, returning empty", tostring(farmId))
+        return {}
+    end
+
+    local buildingMap = {}   -- uniqueId → group entry
+    local itemsInWorldAmount = 0
+    local itemsInWorldFillTypes = {} -- fillTypeName → true
+    local hasItemsInWorld = false
+
+    for _, container in pairs(self.containers) do
+        if container.farmId == farmId
+            and (container.farmId or 0) ~= FarmManager.SPECTATOR_FARM_ID then
+
+            local fillTypeName = container.identityMatch
+                and container.identityMatch.storage
+                and container.identityMatch.storage.fillTypeName
+
+            -- Sum batch amounts for this container
+            local containerAmount = 0
+            for _, batch in ipairs(container.batches) do
+                containerAmount = containerAmount + batch.amount
+            end
+
+            if container.entityType == "bale" or (container.metadata and container.metadata.isPallet) then
+                -- Bales/pallets → "Items in World" bucket
+                hasItemsInWorld = true
+                itemsInWorldAmount = itemsInWorldAmount + containerAmount
+                if fillTypeName then
+                    itemsInWorldFillTypes[fillTypeName] = true
+                end
+            else
+                -- Group by uniqueId
+                local wo = container.identityMatch and container.identityMatch.worldObject
+                local uniqueId = wo and wo.uniqueId
+                if uniqueId then
+                    if not buildingMap[uniqueId] then
+                        -- Resolve building operational class (override or detected — deterministic)
+                        local storageClass = nil
+                        local className = nil
+                        if RmFreshSettings.storageAgingEnabled then
+                            local classInfo = self:resolveStorageClassInfo(container)
+                            storageClass = classInfo.override or classInfo.detected
+                            local classKey = self.STORAGE_CLASS_NAMES[storageClass]
+                            if classKey then
+                                className = g_i18n:getText("fresh_class_" .. classKey)
+                            end
+                        end
+
+                        buildingMap[uniqueId] = {
+                            uniqueId = uniqueId,
+                            entityName = (container.metadata and container.metadata.location) or uniqueId,
+                            entityType = container.entityType,
+                            totalAmount = containerAmount,
+                            fillTypes = fillTypeName and { [fillTypeName] = true } or {},
+                            storageClass = storageClass,
+                            className = className,
+                        }
+                    else
+                        local group = buildingMap[uniqueId]
+                        group.totalAmount = group.totalAmount + containerAmount
+                        if fillTypeName then
+                            group.fillTypes[fillTypeName] = true
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    -- Build result array (skip groups with no actual inventory)
+    local result = {}
+    for _, group in pairs(buildingMap) do
+        if group.totalAmount > 0 then
+            -- Count distinct fillTypes
+            local fillTypeCount = 0
+            for _ in pairs(group.fillTypes) do fillTypeCount = fillTypeCount + 1 end
+            group.fillTypeCount = fillTypeCount
+            group.fillTypes = nil -- Don't expose internal tracking set
+            table.insert(result, group)
+        end
+    end
+
+    -- Append "Items in World" if any bale/pallet containers exist with inventory
+    if hasItemsInWorld and itemsInWorldAmount > 0 then
+        local fillTypeCount = 0
+        for _ in pairs(itemsInWorldFillTypes) do fillTypeCount = fillTypeCount + 1 end
+
+        local storageClass = nil
+        local className = nil
+        if RmFreshSettings.storageAgingEnabled then
+            local iwOverride = RmFreshSettings:getStorageClassOverride("itemsInWorld")
+            storageClass = iwOverride or self.STORAGE_CLASS.EXPOSED
+            local classKey = self.STORAGE_CLASS_NAMES[storageClass]
+            if classKey then
+                className = g_i18n:getText("fresh_class_" .. classKey)
+            end
+        end
+
+        table.insert(result, {
+            uniqueId = "itemsInWorld",
+            entityName = g_i18n:getText("fresh_storage_items_in_world"),
+            entityType = "itemsInWorld",
+            totalAmount = itemsInWorldAmount,
+            fillTypeCount = fillTypeCount,
+            storageClass = storageClass,
+            className = className,
+        })
+    end
+
+    Log:debug("STORAGE_LIST_DETAIL: %d entries farmId=%d", #result, farmId)
+    return result
+end
+
 --- Get container ID by entity reference
 --- NETWORK SAFE: Uses direct object reference lookup (not uniqueId or node ID)
 --- Used by adapter display hooks to find container for an entity
@@ -2751,6 +2873,302 @@ function RmFreshManager:getInventoryList(farmId, sortBy)
     end
 
     return list
+end
+
+--- Get per-storage batch breakdown for a specific fillType (inventory detail view)
+--- Returns all containers holding this fillType with batch refs, class info, and expiry display
+--- Batch references are shared (not copied) — callers must not mutate
+---@param fillTypeName string FillType name (e.g., "WHEAT")
+---@param farmId number|nil Filter by farm (nil returns empty)
+---@return table { fillTypeName, fillTypeIndex, fillTypeTitle, totalAmount, threshold, containers = [...] }
+function RmFreshManager:getFillTypeDetail(fillTypeName, farmId)
+    local emptyResult = {
+        fillTypeName = fillTypeName,
+        fillTypeIndex = nil,
+        fillTypeTitle = fillTypeName,
+        totalAmount = 0,
+        threshold = nil,
+        containers = {},
+    }
+
+    if farmId == nil or farmId == 0 or fillTypeName == nil then
+        Log:trace("FILLTYPE_DETAIL: farmId=%s fillType=%s, returning empty",
+            tostring(farmId), tostring(fillTypeName))
+        return emptyResult
+    end
+
+    local daysPerPeriod = (g_currentMission and g_currentMission.environment
+        and g_currentMission.environment.daysPerPeriod) or 1
+    local threshold = RmFreshSettings:getExpiration(fillTypeName)
+    local storageAgingEnabled = RmFreshSettings.storageAgingEnabled
+
+    local containers = {}
+    local totalAmount = 0
+    local resultFillTypeIndex = nil
+
+    for _, container in pairs(self.containers) do
+        if container.farmId == farmId
+            and (container.farmId or 0) ~= FarmManager.SPECTATOR_FARM_ID then
+
+            local containerFillTypeName = container.identityMatch
+                and container.identityMatch.storage
+                and container.identityMatch.storage.fillTypeName
+
+            if containerFillTypeName == fillTypeName
+                and RmFreshSettings:isPerishableByIndex(container.fillTypeIndex)
+                and #container.batches > 0 then
+
+                -- Capture fillTypeIndex from first matching container
+                if resultFillTypeIndex == nil then
+                    resultFillTypeIndex = container.fillTypeIndex
+                end
+
+                -- Sum batch amounts
+                local amount = 0
+                local oldestAge = 0
+                for _, batch in ipairs(container.batches) do
+                    amount = amount + batch.amount
+                    if batch.ageInPeriods > oldestAge then
+                        oldestAge = batch.ageInPeriods
+                    end
+                end
+
+                -- Resolve class info
+                local classInfo = self:resolveStorageClassInfo(container)
+                local effectiveClass = nil
+                local className = nil
+                local multiplier = classInfo.multiplier
+
+                if storageAgingEnabled then
+                    effectiveClass = classInfo.effective
+                    local classKey = self.STORAGE_CLASS_NAMES[effectiveClass]
+                    if classKey then
+                        className = g_i18n:getText("fresh_class_" .. classKey)
+                    end
+                else
+                    -- When storage aging disabled, force multiplier to 1.0
+                    multiplier = 1.0
+                end
+
+                -- Expiry display using oldest batch
+                local expiresInDisplay = ""
+                if threshold then
+                    expiresInDisplay = RmBatch.formatExpiresIn(
+                        { ageInPeriods = oldestAge }, threshold, daysPerPeriod, multiplier)
+                end
+
+                -- UniqueId for grouping context
+                local wo = container.identityMatch and container.identityMatch.worldObject
+                local uniqueId = wo and wo.uniqueId
+
+                table.insert(containers, {
+                    containerId = container.id,
+                    entityType = container.entityType,
+                    storageName = (container.metadata and container.metadata.location) or "Unknown",
+                    uniqueId = uniqueId,
+                    amount = amount,
+                    batches = container.batches, -- Direct reference, caller must not mutate
+                    effectiveClass = effectiveClass,
+                    className = className,
+                    multiplier = multiplier,
+                    expiresInDisplay = expiresInDisplay,
+                })
+
+                totalAmount = totalAmount + amount
+            end
+        end
+    end
+
+    local fillTypeTitle = fillTypeName
+    if resultFillTypeIndex then
+        fillTypeTitle = g_fillTypeManager:getFillTypeTitleByIndex(resultFillTypeIndex) or fillTypeName
+    end
+
+    Log:debug("FILLTYPE_DETAIL: fillType=%s containers=%d totalAmount=%.0f farmId=%d",
+        fillTypeName, #containers, totalAmount, farmId)
+
+    return {
+        fillTypeName = fillTypeName,
+        fillTypeIndex = resultFillTypeIndex,
+        fillTypeTitle = fillTypeTitle,
+        totalAmount = totalAmount,
+        threshold = threshold,
+        containers = containers,
+    }
+end
+
+--- Get per-fillType breakdown for a specific storage (inventory detail view)
+--- Two code paths: normal (by uniqueId) and "itemsInWorld" (by entityType/isPallet)
+--- Batch references are shared (not copied) — callers must not mutate
+---@param uniqueId string Storage uniqueId or "itemsInWorld"
+---@param farmId number|nil Filter by farm (nil returns empty)
+---@return table { uniqueId, entityName, entityType, storageClass, className, totalAmount, fillTypes = [...] }
+function RmFreshManager:getStorageDetail(uniqueId, farmId)
+    local emptyResult = {
+        uniqueId = uniqueId,
+        entityName = "Unknown",
+        entityType = "unknown",
+        storageClass = nil,
+        className = nil,
+        totalAmount = 0,
+        fillTypes = {},
+    }
+
+    if farmId == nil or farmId == 0 or uniqueId == nil then
+        Log:trace("STORAGE_DETAIL: farmId=%s uniqueId=%s, returning empty",
+            tostring(farmId), tostring(uniqueId))
+        return emptyResult
+    end
+
+    local isItemsInWorld = (uniqueId == "itemsInWorld")
+    local daysPerPeriod = (g_currentMission and g_currentMission.environment
+        and g_currentMission.environment.daysPerPeriod) or 1
+    local storageAgingEnabled = RmFreshSettings.storageAgingEnabled
+
+    -- Collect matching containers grouped by fillTypeName
+    local fillTypeMap = {}   -- fillTypeName → { containers = {}, amount, batches, ... }
+    local headerEntityName = nil
+    local headerEntityType = nil
+    local headerStorageClass = nil
+    local headerClassName = nil
+
+    for _, container in pairs(self.containers) do
+        if container.farmId == farmId
+            and (container.farmId or 0) ~= FarmManager.SPECTATOR_FARM_ID then
+
+            -- Match criteria depends on path
+            local matches = false
+            if isItemsInWorld then
+                matches = container.entityType == "bale"
+                    or (container.metadata and container.metadata.isPallet)
+            else
+                local wo = container.identityMatch and container.identityMatch.worldObject
+                matches = wo and wo.uniqueId == uniqueId
+            end
+
+            if matches and #container.batches > 0 then
+                local fillTypeName = container.identityMatch
+                    and container.identityMatch.storage
+                    and container.identityMatch.storage.fillTypeName
+
+                if fillTypeName then
+                    -- Capture header info from first container
+                    if headerEntityName == nil then
+                        if isItemsInWorld then
+                            headerEntityName = g_i18n:getText("fresh_storage_items_in_world")
+                            headerEntityType = "itemsInWorld"
+                        else
+                            headerEntityName = (container.metadata and container.metadata.location) or uniqueId
+                            headerEntityType = container.entityType
+                        end
+
+                        -- Header-level class: building operational class (override or detected)
+                        if storageAgingEnabled then
+                            if isItemsInWorld then
+                                local iwOverride = RmFreshSettings:getStorageClassOverride("itemsInWorld")
+                                headerStorageClass = iwOverride or self.STORAGE_CLASS.EXPOSED
+                            else
+                                local headerClassInfo = self:resolveStorageClassInfo(container)
+                                headerStorageClass = headerClassInfo.override or headerClassInfo.detected
+                            end
+                            local classKey = self.STORAGE_CLASS_NAMES[headerStorageClass]
+                            if classKey then
+                                headerClassName = g_i18n:getText("fresh_class_" .. classKey)
+                            end
+                        end
+                    end
+
+                    -- Initialize fillType group if needed
+                    if not fillTypeMap[fillTypeName] then
+                        fillTypeMap[fillTypeName] = {
+                            fillTypeName = fillTypeName,
+                            fillTypeIndex = container.fillTypeIndex,
+                            amount = 0,
+                            batches = {},
+                            oldestAge = 0,
+                            classInfo = nil, -- Will be set from first container
+                        }
+                    end
+
+                    local group = fillTypeMap[fillTypeName]
+
+                    -- Resolve class info per fillType (effective varies due to maxBenefitClass)
+                    if group.classInfo == nil then
+                        group.classInfo = self:resolveStorageClassInfo(container)
+                    end
+
+                    -- Accumulate batches and amounts
+                    for _, batch in ipairs(container.batches) do
+                        group.amount = group.amount + batch.amount
+                        table.insert(group.batches, batch) -- Shallow ref
+                        if batch.ageInPeriods > group.oldestAge then
+                            group.oldestAge = batch.ageInPeriods
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    -- Build fillTypes result array
+    local fillTypes = {}
+    local totalAmount = 0
+
+    for _, group in pairs(fillTypeMap) do
+        local classInfo = group.classInfo
+        local effectiveClass = nil
+        local effectiveClassName = nil
+        local multiplier = classInfo and classInfo.multiplier or 1.0
+
+        if storageAgingEnabled and classInfo then
+            effectiveClass = classInfo.effective
+            local classKey = self.STORAGE_CLASS_NAMES[effectiveClass]
+            if classKey then
+                effectiveClassName = g_i18n:getText("fresh_class_" .. classKey)
+            end
+        elseif not storageAgingEnabled then
+            multiplier = 1.0
+        end
+
+        -- Expiry display from oldest batch
+        local threshold = RmFreshSettings:getExpiration(group.fillTypeName)
+        local expiresInDisplay = ""
+        if threshold then
+            expiresInDisplay = RmBatch.formatExpiresIn(
+                { ageInPeriods = group.oldestAge }, threshold, daysPerPeriod, multiplier)
+        end
+
+        local fillTypeTitle = g_fillTypeManager:getFillTypeTitleByIndex(group.fillTypeIndex)
+            or group.fillTypeName
+
+        table.insert(fillTypes, {
+            fillTypeName = group.fillTypeName,
+            fillTypeIndex = group.fillTypeIndex,
+            fillTypeTitle = fillTypeTitle,
+            amount = group.amount,
+            batches = group.batches, -- Shallow concat of batch refs, caller must not mutate
+            effectiveClass = effectiveClass,
+            effectiveClassName = effectiveClassName,
+            multiplier = multiplier,
+            expiresInDisplay = expiresInDisplay,
+            batchCount = #group.batches,
+        })
+
+        totalAmount = totalAmount + group.amount
+    end
+
+    Log:debug("STORAGE_DETAIL: uniqueId=%s fillTypes=%d totalAmount=%.0f farmId=%d",
+        uniqueId, #fillTypes, totalAmount, farmId)
+
+    return {
+        uniqueId = uniqueId,
+        entityName = headerEntityName or "Unknown",
+        entityType = headerEntityType or "unknown",
+        storageClass = headerStorageClass,
+        className = headerClassName,
+        totalAmount = totalAmount,
+        fillTypes = fillTypes,
+    }
 end
 
 --- Get recent loss log entries for a specific farm
