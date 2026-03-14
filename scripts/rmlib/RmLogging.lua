@@ -18,7 +18,12 @@
 -- ============================================================================
 
 -- Idempotent initialization (safe to source multiple times)
-RmLogging = RmLogging or {}
+-- FS25 sandbox: _G is modEnv with setmetatable(modEnv, {__index = realGlobal})
+-- Both _G.X= and getfenv(0) write to modEnv. The metatable __index holds the real global.
+local _mt = getmetatable(_G)
+local _realG = _mt and _mt.__index or _G
+_realG.RmLogging = _realG.RmLogging or {}
+RmLogging = _realG.RmLogging
 
 -- Log level constants (preserve if already set)
 RmLogging.LOG_LEVEL = RmLogging.LOG_LEVEL or {
