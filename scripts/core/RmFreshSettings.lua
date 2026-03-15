@@ -47,7 +47,7 @@ RmFreshSettings.DEFAULT_CLASS_MULTIPLIERS = {
     [1] = 1.0,  -- SHELTERED (baseline)
     [2] = 0.8,  -- INDOOR
     [3] = 0.3,  -- COOLED
-    [4] = 0.05, -- FROZEN
+    [4] = 0.10, -- FROZEN
     [5] = 0,    -- DISABLED (hardcoded, not configurable)
 }
 
