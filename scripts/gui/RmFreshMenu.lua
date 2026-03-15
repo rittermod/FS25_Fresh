@@ -25,7 +25,10 @@ function RmFreshMenu.setupGui()
     -- 1. Load profiles first (use stored modDirectory, not g_currentModDirectory)
     g_gui:loadProfiles(Utils.getFilename("gui/guiProfiles.xml", modDirectory))
 
-    -- 2. Load frames (must be before menu XML for FrameReference resolution)
+    -- 2. Register custom icon texture (must be before frame XML load so imageSliceId resolves)
+    g_overlayManager:addTextureConfigFile(Utils.getFilename("gui/menu_icons.xml", modDirectory), "fresh")
+
+    -- 3. Load frames (must be before menu XML for FrameReference resolution)
     RmOverviewFrame.setupGui()
     RmFillTypeDetailFrame.setupGui()
     RmStorageDetailFrame.setupGui()
@@ -33,10 +36,10 @@ function RmFreshMenu.setupGui()
     RmShelfLifeFrame.setupGui()
     RmSettingsFrame.setupGui()
 
-    -- 3. Create menu instance
+    -- 4. Create menu instance
     g_freshMenu = RmFreshMenu.new()
 
-    -- 4. Load menu XML
+    -- 5. Load menu XML
     g_gui:loadGui(
         Utils.getFilename("gui/freshMenu.xml", modDirectory),
         "FreshMenu",
@@ -57,27 +60,27 @@ function RmFreshMenu:setupMenuPages()
 
     -- Register Overview page (first tab - default on menu open)
     self:registerPage(self.overviewFrame, 1, predicate)
-    self:addPageTab(self.overviewFrame, nil, nil, "gui.icon_ingameMenu_statistics")
+    self:addPageTab(self.overviewFrame, nil, nil, "fresh.icon_overview")
 
     -- Register FillType Detail page (second tab)
     self:registerPage(self.fillTypeDetailFrame, 2, predicate)
-    self:addPageTab(self.fillTypeDetailFrame, nil, nil, "gui.icon_ingameMenu_map")
+    self:addPageTab(self.fillTypeDetailFrame, nil, nil, "fresh.icon_product")
 
     -- Register Storage Detail page (third tab)
     self:registerPage(self.storageDetailFrame, 3, predicate)
-    self:addPageTab(self.storageDetailFrame, nil, nil, "gui.icon_construction_buildings")
+    self:addPageTab(self.storageDetailFrame, nil, nil, "fresh.icon_storage")
 
     -- Register Statistics page (fourth tab)
     self:registerPage(self.statsFrame, 4, predicate)
-    self:addPageTab(self.statsFrame, nil, nil, "gui.icon_ingameMenu_finances")
+    self:addPageTab(self.statsFrame, nil, nil, "fresh.icon_stats")
 
     -- Register Shelf Life page (fifth tab)
     self:registerPage(self.shelfLifeFrame, 5, predicate)
-    self:addPageTab(self.shelfLifeFrame, nil, nil, "gui.icon_ingameMenu_calendar")
+    self:addPageTab(self.shelfLifeFrame, nil, nil, "fresh.icon_shelflife")
 
     -- Register Settings page (sixth tab)
     self:registerPage(self.settingsFrame, 6, predicate)
-    self:addPageTab(self.settingsFrame, nil, nil, "gui.icon_options_generalSettings2")
+    self:addPageTab(self.settingsFrame, nil, nil, "fresh.icon_settings")
 
     Log:debug("Menu pages: overview (idx=1), fillTypeDetail (idx=2), storageDetail (idx=3), statistics (idx=4), shelfLife (idx=5), settings (idx=6)")
 end

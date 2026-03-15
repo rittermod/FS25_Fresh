@@ -4,7 +4,7 @@
         <!-- Header -->
         <GuiElement profile="fs25_menuHeaderPanel">
             <Bitmap profile="fs25_menuHeaderIconBg">
-                <Bitmap profile="fs25_menuHeaderIcon" imageSliceId="gui.icon_ingameMenu_calendar"/>
+                <Bitmap profile="fs25_menuHeaderIcon" imageSliceId="fresh.icon_shelflife"/>
             </Bitmap>
             <Text profile="fs25_menuHeaderTitle" text="$l10n_fresh_shelflife_title"/>
         </GuiElement>

@@ -43,7 +43,7 @@
         <!-- Page header -->
         <GuiElement profile="fs25_menuHeaderPanel" position="0px 74px">
             <Bitmap profile="fs25_menuHeaderIconBg">
-                <Bitmap profile="fs25_menuHeaderIcon" imageSliceId="gui.icon_ingameMenu_map"/>
+                <Bitmap profile="fs25_menuHeaderIcon" imageSliceId="fresh.icon_product"/>
             </Bitmap>
             <Text profile="fs25_menuHeaderTitle" text="$l10n_fresh_filltype_detail_title"/>
         </GuiElement>

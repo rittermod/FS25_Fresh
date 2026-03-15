@@ -4,7 +4,7 @@
         <!-- Header -->
         <GuiElement profile="fs25_menuHeaderPanel">
             <Bitmap profile="fs25_menuHeaderIconBg">
-                <Bitmap profile="fs25_menuHeaderIcon" imageSliceId="gui.icon_options_generalSettings2"/>
+                <Bitmap profile="fs25_menuHeaderIcon" imageSliceId="fresh.icon_settings"/>
             </Bitmap>
             <Text profile="fs25_menuHeaderTitle" text="$l10n_fresh_settings_title"/>
         </GuiElement>
