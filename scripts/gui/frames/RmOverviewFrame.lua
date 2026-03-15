@@ -447,7 +447,7 @@ function RmOverviewFrame:populateExpiringCell(index, cell)
     -- Amount (no color - time column shows urgency)
     local amountElement = cell:getAttribute("expiringAmount")
     if amountElement then
-        amountElement:setText(string.format("%.0f L", entry.expiringAmount))
+        amountElement:setText(g_i18n:formatNumber(entry.expiringAmount, 0) .. " L")
     end
 
     -- Time left

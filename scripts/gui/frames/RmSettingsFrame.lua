@@ -411,18 +411,18 @@ end
 ---@return string Tooltip text
 function RmSettingsFrame:buildFillTypeTooltip(fillTypeName)
     local parts = {}
-    table.insert(parts, string.format("Fill type: %s", fillTypeName))
+    table.insert(parts, string.format(g_i18n:getText("fresh_tooltip_filltype"), fillTypeName))
 
     -- Show source origin
     local source, modName = RmFreshSettings:getFillTypeSource(fillTypeName)
     if source == "dlc" and modName then
-        table.insert(parts, string.format("Source: DLC (%s)", modName))
+        table.insert(parts, string.format(g_i18n:getText("fresh_tooltip_source_dlc"), modName))
     elseif source == "mod" and modName then
-        table.insert(parts, string.format("Source: Mod (%s)", modName))
+        table.insert(parts, string.format(g_i18n:getText("fresh_tooltip_source_mod"), modName))
     elseif source == "map" then
-        table.insert(parts, "Source: Map")
+        table.insert(parts, g_i18n:getText("fresh_tooltip_source_map"))
     elseif source == "basegame" then
-        table.insert(parts, "Source: Base game")
+        table.insert(parts, g_i18n:getText("fresh_tooltip_source_basegame"))
     end
 
     return table.concat(parts, " | ")

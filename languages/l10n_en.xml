@@ -16,7 +16,7 @@
         <text name="fresh_near_expiration" text="Near Expiration"/>
 
         <!-- Daily loss notification (summary at day change) -->
-        <text name="fresh_dailyLossNotification" text="Lost %.0f units due to products expiring"/>
+        <text name="fresh_dailyLossNotification" text="Lost %.0f L to expired products"/>
 
         <!-- Storage HUD (used by both placeable storage and husbandry feed) -->
         <text name="fresh_storage_expiring" text="-%d in %s"/>
@@ -37,11 +37,8 @@
         <!-- Fresh Menu keybind -->
         <text name="input_RM_FRESH_MENU" text="Fresh Menu"/>
 
-        <!-- Overview tab -->
-        <text name="fresh_overview_title" text="Fresh Overview"/>
-
         <!-- Settings tab -->
-        <text name="fresh_settings_title" text="Fresh Settings"/>
+        <text name="fresh_settings_title" text="Settings"/>
 
         <!-- Settings expiration duration options -->
         <text name="fresh_expire_never" text="Do not expire"/>
@@ -61,7 +58,7 @@
         <!-- Sub-category tabs -->
         <text name="fresh_tab_settings" text="Settings"/>
         <text name="fresh_tab_expiration" text="Expiration"/>
-        <text name="fresh_tab_maxbenefit" text="Max Benefit"/>
+        <text name="fresh_tab_maxbenefit" text="Benefit Limit"/>
         <text name="fresh_tab_storage" text="Storage"/>
 
         <!-- Difficulty Preset -->
@@ -85,7 +82,7 @@
         <!-- Settings global section -->
         <text name="fresh_settings_global" text="Global Settings"/>
         <text name="fresh_settings_enableExpiration" text="Enable Expiration"/>
-        <text name="fresh_settings_enableExpiration_tooltip" text="When enabled, perishable goods will age over time and eventually expire if not sold or used."/>
+        <text name="fresh_settings_enableExpiration_tooltip" text="When enabled, perishable products will age over time and eventually expire if not sold or used."/>
         <text name="fresh_settings_showWarnings" text="Show Warnings"/>
         <text name="fresh_settings_showWarnings_tooltip" text="Show notifications in info box when produce is about to expire."/>
         <text name="fresh_settings_showAgeDisplay" text="Show Age Display"/>
@@ -98,18 +95,28 @@
         <text name="fresh_warning_48h" text="48 hours"/>
         <text name="fresh_warning_72h" text="72 hours"/>
         <text name="fresh_settings_fillTypes" text="Expiration Times"/>
-        <text name="fresh_settings_maxBenefitHeader" text="Maximum Storage Benefit"/>
+        <text name="fresh_settings_maxBenefitHeader" text="Benefit Limits"/>
         <text name="fresh_settings_storageHeader" text="Storage Class Overrides"/>
         <text name="fresh_settings_storageAging" text="Storage Class Aging"/>
         <text name="fresh_settings_storageAging_tooltip" text="When enabled, goods age at different rates depending on storage type. Exposed ages fastest, frozen slowest. When disabled, all storages age at the same baseline rate."/>
         <text name="fresh_maxbenefit_default" text="Default"/>
         <text name="fresh_maxbenefit_configDefault" text="Default"/>
-        <text name="fresh_maxbenefit_tooltip" text="Set the maximum storage class benefit for this product. Higher classes reduce aging but only up to this ceiling. To disable aging for specific buildings, use the Storage tab. Exposed=1.5x, Sheltered=1.0x, Indoor=0.8x, Cooled=0.3x, Frozen=0.05x"/>
+        <text name="fresh_maxbenefit_tooltip" text="Set the maximum storage class benefit for this product. Higher classes slow aging more. See the Shelf Life tab for exact values."/>
         <text name="fresh_storage_auto" text="Auto (detected)"/>
-        <text name="fresh_storage_override_tooltip" text="Override the storage class for this location. Auto uses the detected class. Exposed=1.5x, Sheltered=1.0x, Indoor=0.8x, Cooled=0.3x, Frozen=0.05x, Disabled=no aging."/>
-        <text name="fresh_storage_items_in_world" text="Items in World"/>
-        <text name="fresh_storage_items_in_world_tooltip" text="Covers bales, pallets, and bigbags not placed in a dedicated object storage."/>
+        <text name="fresh_storage_override_tooltip" text="Override the storage class for this location. Auto uses the detected class. Higher classes slow aging, Disabled stops aging entirely."/>
+        <text name="fresh_storage_items_in_world" text="Loose Items"/>
+        <text name="fresh_storage_items_in_world_tooltip" text="Covers bales, pallets, and bigbags not placed in a dedicated storage."/>
         <text name="fresh_storage_detected" text="Detected"/>
+
+        <!-- Tooltip format strings -->
+        <text name="fresh_tooltip_filltype" text="Fill type: %s"/>
+        <text name="fresh_tooltip_source_basegame" text="Source: Base game"/>
+        <text name="fresh_tooltip_source_dlc" text="Source: DLC (%s)"/>
+        <text name="fresh_tooltip_source_mod" text="Source: Mod (%s)"/>
+        <text name="fresh_tooltip_source_map" text="Source: Map"/>
+
+        <!-- Storage sidebar info -->
+        <text name="fresh_storage_sidebar_info" text="%s L, %d products"/>
 
         <!-- Empty state message for preset-controlled tabs -->
         <text name="fresh_settings_presetActive" text="All products are managed by the selected preset. Switch to Custom to edit individually."/>
@@ -120,19 +127,18 @@
         <text name="fresh_settings_reset" text="Settings reset to mod defaults"/>
 
         <!-- Status Frame / Inventory Overview -->
-        <text name="fresh_inventory_title" text="Inventory Overview"/>
+        <text name="fresh_inventory_title" text="Overview"/>
         <text name="fresh_inventory_summary" text="Total: %d product types in %d containers"/>
-        <text name="fresh_inventory_empty" text="No perishable items currently tracked"/>
+        <text name="fresh_inventory_empty" text="No perishable products currently tracked"/>
         <text name="fresh_no_farm" text="No farm selected. Join a farm to view inventory."/>
         <text name="fresh_column_type" text="Product"/>
         <text name="fresh_column_amount" text="Amount"/>
         <text name="fresh_column_expiring" text="Expiring"/>
-        <text name="fresh_column_age" text="Next Expiry"/>
         <text name="fresh_column_status" text="Status"/>
-        <text name="fresh_status_ok" text="OK"/>
+        <text name="fresh_status_ok" text="Fresh"/>
         <text name="fresh_status_expiring" text="Expiring"/>
         <text name="fresh_sort_label" text="Sort by"/>
-        <text name="fresh_sort_by_type" text="Type"/>
+        <text name="fresh_sort_by_type" text="Product"/>
         <text name="fresh_sort_by_expiring" text="Expiring amount"/>
         <text name="fresh_sort_by_age" text="Next expiry"/>
 
@@ -141,6 +147,7 @@
         <text name="fresh_expires_24h" text="24 hours"/>
         <text name="fresh_expires_48h" text="48 hours"/>
         <text name="fresh_expires_72h" text="72 hours"/>
+        <text name="fresh_column_class" text="Class"/>
         <text name="fresh_column_storage" text="Storage"/>
         <text name="fresh_column_timeleft" text="Next Expiry"/>
         <text name="fresh_expiring_empty" text="Nothing expiring soon"/>
@@ -149,7 +156,7 @@
 
         <!-- FillType Detail Tab -->
         <text name="fresh_filltype_detail_title" text="Product Details"/>
-        <text name="fresh_filltype_detail_empty" text="No perishable items currently tracked"/>
+        <text name="fresh_filltype_detail_empty" text="No perishable products currently tracked"/>
         <text name="fresh_filltype_detail_no_selection" text="Select a product to view details"/>
         <text name="fresh_filltype_detail_total" text="Total: %s"/>
         <text name="fresh_filltype_detail_percentage" text="%.1f%%"/>
@@ -165,7 +172,7 @@
 
         <!-- Storage Detail Tab -->
         <text name="fresh_storage_detail_title" text="Storage Details"/>
-        <text name="fresh_storage_detail_empty" text="No perishable items in this category"/>
+        <text name="fresh_storage_detail_empty" text="No perishable products in this category"/>
         <text name="fresh_storage_detail_no_selection" text="Select a storage to view details"/>
         <text name="fresh_storage_detail_total" text="Total: %s"/>
         <text name="fresh_category_placeables" text="Placeables"/>

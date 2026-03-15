@@ -16,7 +16,7 @@
         <text name="fresh_near_expiration" text="Nära utgång"/>
 
         <!-- Daily loss notification (summary at day change) -->
-        <text name="fresh_dailyLossNotification" text="Förlorade %.0f enheter på grund av utgångna produkter"/>
+        <text name="fresh_dailyLossNotification" text="Förlorade %.0f L på grund av utgångna produkter"/>
 
         <!-- Storage HUD (used by both placeable storage and husbandry feed) -->
         <text name="fresh_storage_expiring" text="-%d om %s"/>
@@ -29,11 +29,8 @@
         <!-- Fresh Menu keybind -->
         <text name="input_RM_FRESH_MENU" text="Fresh Meny"/>
 
-        <!-- Overview tab -->
-        <text name="fresh_overview_title" text="Fresh Översikt"/>
-
         <!-- Settings tab -->
-        <text name="fresh_settings_title" text="Fresh Inställningar"/>
+        <text name="fresh_settings_title" text="Inställningar"/>
 
         <!-- Settings expiration duration options -->
         <text name="fresh_expire_never" text="Går ej ut"/>
@@ -73,19 +70,18 @@
         <text name="fresh_settings_reset" text="Inställningar återställda till modets standardinställningar"/>
 
         <!-- Status Frame / Inventory Overview -->
-        <text name="fresh_inventory_title" text="Inventarieöversikt"/>
+        <text name="fresh_inventory_title" text="Översikt"/>
         <text name="fresh_inventory_summary" text="Totalt: %d varutyper i %d förvaringsenheter"/>
         <text name="fresh_inventory_empty" text="Inga färskvaror under bevakning just nu"/>
         <text name="fresh_no_farm" text="Ingen gård vald. Anslut till en gård för att se inventarielistan."/>
         <text name="fresh_column_type" text="Produkt"/>
         <text name="fresh_column_amount" text="Mängd"/>
         <text name="fresh_column_expiring" text="Går ut"/>
-        <text name="fresh_column_age" text="Nästa utgång"/>
         <text name="fresh_column_status" text="Status"/>
-        <text name="fresh_status_ok" text="OK"/>
+        <text name="fresh_status_ok" text="Färsk"/>
         <text name="fresh_status_expiring" text="Går ut"/>
         <text name="fresh_sort_label" text="Sortera enligt"/>
-        <text name="fresh_sort_by_type" text="Typ"/>
+        <text name="fresh_sort_by_type" text="Produkt"/>
         <text name="fresh_sort_by_expiring" text="Mängd som går ut"/>
         <text name="fresh_sort_by_age" text="Nästa utgång"/>
 
@@ -94,6 +90,7 @@
         <text name="fresh_expires_24h" text="24 timmar"/>
         <text name="fresh_expires_48h" text="48 timmar"/>
         <text name="fresh_expires_72h" text="72 timmar"/>
+        <text name="fresh_column_class" text="Klass"/>
         <text name="fresh_column_storage" text="Lagring"/>
         <text name="fresh_column_timeleft" text="Nästa utgång"/>
         <text name="fresh_expiring_empty" text="Ingenting som går ut i närtid"/>

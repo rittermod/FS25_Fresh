@@ -23,7 +23,7 @@
         <!-- Left table header -->
         <Bitmap profile="rmFreshTableList" id="expiringHeader" position="20px -120px" size="755px 40px">
             <Text profile="rmFreshTableHeaderLeftAligned" position="40px 0px" size="160px 40px" text="$l10n_fresh_column_type"/>
-            <Text profile="rmFreshTableHeaderLeftAligned" position="205px 0px" size="200px 40px" text="$l10n_fresh_column_storage"/>
+            <Text profile="rmFreshTableHeaderLeftAligned" position="205px 0px" size="200px 40px" text="$l10n_fresh_column_class"/>
             <Text profile="rmFreshTableHeaderRightAligned" position="415px 0px" size="120px 40px" text="$l10n_fresh_column_amount"/>
             <Text profile="rmFreshTableHeaderRightAligned" position="545px 0px" size="180px 40px" text="$l10n_fresh_column_timeleft"/>
             <ThreePartBitmap profile="fs25_lineSeparatorBottom" position="0px 2px"/>
@@ -70,7 +70,7 @@
             <Text profile="rmFreshTableHeaderLeftAligned" position="40px 0px" size="200px 40px" text="$l10n_fresh_column_type"/>
             <Text profile="rmFreshTableHeaderRightAligned" position="250px 0px" size="120px 40px" text="$l10n_fresh_column_amount"/>
             <Text profile="rmFreshTableHeaderRightAligned" position="380px 0px" size="120px 40px" text="$l10n_fresh_column_expiring"/>
-            <Text profile="rmFreshTableHeaderRightAligned" position="510px 0px" size="120px 40px" text="$l10n_fresh_column_age"/>
+            <Text profile="rmFreshTableHeaderRightAligned" position="510px 0px" size="120px 40px" text="$l10n_fresh_column_timeleft"/>
             <Text profile="rmFreshTableHeaderCentered" position="640px 0px" size="100px 40px" text="$l10n_fresh_column_status"/>
             <ThreePartBitmap profile="fs25_lineSeparatorBottom" position="0px 2px"/>
         </Bitmap>

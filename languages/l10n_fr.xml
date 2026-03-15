@@ -16,7 +16,7 @@
         <text name="fresh_near_expiration" text="Proche de la péremption"/>
 
         <!-- Daily loss notification (summary at day change) -->
-        <text name="fresh_dailyLossNotification" text="Perte de %.0f unités par péremption"/>
+        <text name="fresh_dailyLossNotification" text="Perte de %.0f L de produits périmés"/>
 
         <!-- Storage HUD (used by both placeable storage and husbandry feed) -->
         <text name="fresh_storage_expiring" text="-%d dans %s"/>
@@ -37,11 +37,8 @@
         <!-- Fresh Menu keybind -->
         <text name="input_RM_FRESH_MENU" text="Menu Fraîcheur"/>
 
-        <!-- Overview tab -->
-        <text name="fresh_overview_title" text="Vue d'ensemble Fraîcheur"/>
-
         <!-- Settings tab -->
-        <text name="fresh_settings_title" text="Paramètres Fraîcheur"/>
+        <text name="fresh_settings_title" text="Paramètres"/>
 
         <!-- Settings expiration duration options -->
         <text name="fresh_expire_never" text="Sans expiration"/>
@@ -61,7 +58,7 @@
         <!-- Sub-category tabs -->
         <text name="fresh_tab_settings" text="Paramètres"/>
         <text name="fresh_tab_expiration" text="Expiration"/>
-        <text name="fresh_tab_maxbenefit" text="Bénéfice max"/>
+        <text name="fresh_tab_maxbenefit" text="Limite de bénéfice"/>
         <text name="fresh_tab_storage" text="Stockage"/>
 
         <!-- Difficulty Preset -->
@@ -85,7 +82,7 @@
         <!-- Settings global section -->
         <text name="fresh_settings_global" text="Paramètres globaux"/>
         <text name="fresh_settings_enableExpiration" text="Activer l'expiration"/>
-        <text name="fresh_settings_enableExpiration_tooltip" text="Si activé, les denrées périssables vieilliront et périmeront si elles ne sont pas vendues ou utilisées."/>
+        <text name="fresh_settings_enableExpiration_tooltip" text="Si activé, les produits périssables vieilliront et périmeront si elles ne sont pas vendues ou utilisées."/>
         <text name="fresh_settings_showWarnings" text="Afficher les avertissements"/>
         <text name="fresh_settings_showWarnings_tooltip" text="Affiche des notifications quand un produit est sur le point de périmer."/>
         <text name="fresh_settings_showAgeDisplay" text="Afficher l'indicateur d'âge"/>
@@ -98,18 +95,28 @@
         <text name="fresh_warning_48h" text="48 heures"/>
         <text name="fresh_warning_72h" text="72 heures"/>
         <text name="fresh_settings_fillTypes" text="Durées d'expiration"/>
-        <text name="fresh_settings_maxBenefitHeader" text="Bénéfice maximal de stockage"/>
+        <text name="fresh_settings_maxBenefitHeader" text="Limites de bénéfice"/>
         <text name="fresh_settings_storageHeader" text="Remplacement de classe de stockage"/>
         <text name="fresh_settings_storageAging" text="Vieillissement par classe de stockage"/>
         <text name="fresh_settings_storageAging_tooltip" text="Si activé, les produits vieillissent à des vitesses différentes selon le type de stockage. Exposé vieillit le plus vite, Congelé le plus lentement. Si désactivé, tous les stockages vieillissent à la même vitesse de base."/>
         <text name="fresh_maxbenefit_default" text="Par défaut"/>
         <text name="fresh_maxbenefit_configDefault" text="Par défaut"/>
-        <text name="fresh_maxbenefit_tooltip" text="Définit le bénéfice maximal de la classe de stockage pour ce produit. Les classes supérieures réduisent le vieillissement mais seulement jusqu'à ce plafond. Pour désactiver le vieillissement pour des bâtiments spécifiques, utilisez l'onglet Stockage. Exposé=1.5x, Abrité=1.0x, Intérieur=0.8x, Réfrigéré=0.3x, Congelé=0.05x"/>
+        <text name="fresh_maxbenefit_tooltip" text="Définit le bénéfice maximal de la classe de stockage pour ce produit. Les classes supérieures ralentissent le vieillissement. Consultez l'onglet Durée de conservation pour les valeurs exactes."/>
         <text name="fresh_storage_auto" text="Auto (détecté)"/>
-        <text name="fresh_storage_override_tooltip" text="Remplacer la classe de stockage pour cet emplacement. Auto utilise la classe détectée. Exposé=1.5x, Abrité=1.0x, Intérieur=0.8x, Réfrigéré=0.3x, Congelé=0.05x, Désactivé=pas de vieillissement."/>
-        <text name="fresh_storage_items_in_world" text="Objets dans le monde"/>
+        <text name="fresh_storage_override_tooltip" text="Remplacer la classe de stockage pour cet emplacement. Auto utilise la classe détectée. Les classes supérieures ralentissent le vieillissement, Désactivé arrête le vieillissement."/>
+        <text name="fresh_storage_items_in_world" text="Objets en vrac"/>
         <text name="fresh_storage_items_in_world_tooltip" text="Comprend les balles, palettes et bigbags non placés dans un stockage dédié."/>
         <text name="fresh_storage_detected" text="Détecté"/>
+
+        <!-- Tooltip format strings -->
+        <text name="fresh_tooltip_filltype" text="Type : %s"/>
+        <text name="fresh_tooltip_source_basegame" text="Source : Jeu de base"/>
+        <text name="fresh_tooltip_source_dlc" text="Source : DLC (%s)"/>
+        <text name="fresh_tooltip_source_mod" text="Source : Mod (%s)"/>
+        <text name="fresh_tooltip_source_map" text="Source : Carte"/>
+
+        <!-- Storage sidebar info -->
+        <text name="fresh_storage_sidebar_info" text="%s L, %d produits"/>
 
         <!-- Empty state message for preset-controlled tabs -->
         <text name="fresh_settings_presetActive" text="Tous les produits sont gérés par le préréglage sélectionné. Passez à Personnalisé pour les modifier individuellement."/>
@@ -120,19 +127,18 @@
         <text name="fresh_settings_reset" text="Paramètres réinitialisés aux valeurs par défaut du mod"/>
 
         <!-- Status Frame / Inventory Overview -->
-        <text name="fresh_inventory_title" text="Aperçu de l'inventaire"/>
+        <text name="fresh_inventory_title" text="Aperçu"/>
         <text name="fresh_inventory_summary" text="Total : %d types de produits dans %d conteneurs"/>
         <text name="fresh_inventory_empty" text="Aucun produit périssable actuellement suivi"/>
         <text name="fresh_no_farm" text="Aucune ferme sélectionnée. Rejoignez une ferme pour voir l'inventaire."/>
         <text name="fresh_column_type" text="Produit"/>
         <text name="fresh_column_amount" text="Quantité"/>
         <text name="fresh_column_expiring" text="En péremption"/>
-        <text name="fresh_column_age" text="Prochaine expiration"/>
         <text name="fresh_column_status" text="État"/>
-        <text name="fresh_status_ok" text="OK"/>
+        <text name="fresh_status_ok" text="Frais"/>
         <text name="fresh_status_expiring" text="En péremption"/>
         <text name="fresh_sort_label" text="Trier par"/>
-        <text name="fresh_sort_by_type" text="Type"/>
+        <text name="fresh_sort_by_type" text="Produit"/>
         <text name="fresh_sort_by_expiring" text="Quantité en péremption"/>
         <text name="fresh_sort_by_age" text="Prochaine expiration"/>
 
@@ -141,6 +147,7 @@
         <text name="fresh_expires_24h" text="24 heures"/>
         <text name="fresh_expires_48h" text="48 heures"/>
         <text name="fresh_expires_72h" text="72 heures"/>
+        <text name="fresh_column_class" text="Classe"/>
         <text name="fresh_column_storage" text="Stockage"/>
         <text name="fresh_column_timeleft" text="Prochaine expiration"/>
         <text name="fresh_expiring_empty" text="Rien en péremption prochainement"/>
