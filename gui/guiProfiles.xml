@@ -102,6 +102,20 @@
         <textAlignment value="center"/>
     </Profile>
 
+    <!-- Color-coded age bucket column headers (FillType Detail tab) -->
+    <Profile name="rmFreshDetailHeaderFresh" extends="rmFreshTableHeaderRightAligned">
+        <textColor value="0.0742 0.4341 0.6939 1"/>
+    </Profile>
+    <Profile name="rmFreshDetailHeaderGood" extends="rmFreshTableHeaderRightAligned">
+        <textColor value="0.33716 0.55834 0.0003 1"/>
+    </Profile>
+    <Profile name="rmFreshDetailHeaderWarning" extends="rmFreshTableHeaderRightAligned">
+        <textColor value="0.8 0.4 0 1"/>
+    </Profile>
+    <Profile name="rmFreshDetailHeaderCritical" extends="rmFreshTableHeaderRightAligned">
+        <textColor value="0.8069 0.0097 0.0097 1"/>
+    </Profile>
+
     <!-- Table row cell profiles -->
     <Profile name="rmFreshTableRowCellLeftAligned" extends="baseReference" with="anchorStretchingYLeft">
         <textBold value="false"/>
@@ -147,5 +161,6 @@
         <textBold value="true"/>
         <textColor value="1 1 1 1"/>
     </Profile>
+
 
 </GUIProfiles>

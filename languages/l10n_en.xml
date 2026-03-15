@@ -147,6 +147,22 @@
         <text name="fresh_expiring_summary" text="%d items (%.0f L total)"/>
         <text name="fresh_expires_soon" text="&lt; 1 hour"/>
 
+        <!-- FillType Detail Tab -->
+        <text name="fresh_filltype_detail_title" text="Product Details"/>
+        <text name="fresh_filltype_detail_empty" text="No perishable items currently tracked"/>
+        <text name="fresh_filltype_detail_no_selection" text="Select a product to view details"/>
+        <text name="fresh_filltype_detail_total" text="Total: %s"/>
+        <text name="fresh_filltype_detail_percentage" text="%.1f%%"/>
+        <text name="fresh_detail_column_name" text="Name"/>
+        <text name="fresh_bucket_fresh" text="Fresh"/>
+        <text name="fresh_bucket_good" text="Good"/>
+        <text name="fresh_bucket_warning" text="Warning"/>
+        <text name="fresh_bucket_critical" text="Critical"/>
+        <text name="fresh_bucket_fresh_pct" text="75-100%"/>
+        <text name="fresh_bucket_good_pct" text="50-75%"/>
+        <text name="fresh_bucket_warning_pct" text="25-50%"/>
+        <text name="fresh_bucket_critical_pct" text="0-25%"/>
+
         <!-- Shelf Life Frame -->
         <text name="fresh_shelflife_title" text="Shelf Life"/>
         <text name="fresh_shelflife_empty" text="No perishable products configured"/>
