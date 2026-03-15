@@ -56,33 +56,58 @@ function RmFreshMenu:onGuiSetupFinished()
 end
 
 function RmFreshMenu:setupMenuPages()
-    local predicate = function() return g_currentMission ~= nil end
+    local basePredicate = function() return g_currentMission ~= nil end
+    local expirationPredicate = function()
+        return g_currentMission ~= nil and RmFreshSettings:getGlobal("enableExpiration") ~= false
+    end
 
     -- Register Overview page (first tab - default on menu open)
-    self:registerPage(self.overviewFrame, 1, predicate)
+    self:registerPage(self.overviewFrame, 1, expirationPredicate)
     self:addPageTab(self.overviewFrame, nil, nil, "fresh.icon_overview")
 
     -- Register FillType Detail page (second tab)
-    self:registerPage(self.fillTypeDetailFrame, 2, predicate)
+    self:registerPage(self.fillTypeDetailFrame, 2, expirationPredicate)
     self:addPageTab(self.fillTypeDetailFrame, nil, nil, "fresh.icon_product")
 
     -- Register Storage Detail page (third tab)
-    self:registerPage(self.storageDetailFrame, 3, predicate)
+    self:registerPage(self.storageDetailFrame, 3, expirationPredicate)
     self:addPageTab(self.storageDetailFrame, nil, nil, "fresh.icon_storage")
 
     -- Register Statistics page (fourth tab)
-    self:registerPage(self.statsFrame, 4, predicate)
+    self:registerPage(self.statsFrame, 4, expirationPredicate)
     self:addPageTab(self.statsFrame, nil, nil, "fresh.icon_stats")
 
     -- Register Shelf Life page (fifth tab)
-    self:registerPage(self.shelfLifeFrame, 5, predicate)
+    self:registerPage(self.shelfLifeFrame, 5, expirationPredicate)
     self:addPageTab(self.shelfLifeFrame, nil, nil, "fresh.icon_shelflife")
 
-    -- Register Settings page (sixth tab)
-    self:registerPage(self.settingsFrame, 6, predicate)
+    -- Register Settings page (sixth tab - always available)
+    self:registerPage(self.settingsFrame, 6, basePredicate)
     self:addPageTab(self.settingsFrame, nil, nil, "fresh.icon_settings")
 
     Log:debug("Menu pages: overview (idx=1), fillTypeDetail (idx=2), storageDetail (idx=3), statistics (idx=4), shelfLife (idx=5), settings (idx=6)")
+end
+
+--- Update top-level page/tab visibility based on current settings
+--- Called when enableExpiration changes while menu is open
+function RmFreshMenu:updatePageVisibility()
+    if not self.isOpen then return end
+
+    self:updatePages()
+
+    -- If current page was disabled, navigate to Settings
+    if self.currentPage ~= nil then
+        local stillEnabled = false
+        for _, page in ipairs(self.enabledPages) do
+            if page == self.currentPage then
+                stillEnabled = true
+                break
+            end
+        end
+        if not stillEnabled then
+            self:goToPage(self.settingsFrame, true)
+        end
+    end
 end
 
 function RmFreshMenu:setupMenuButtonInfo()

@@ -131,6 +131,10 @@ end
 function RmOverviewFrame:onFrameOpen()
     RmOverviewFrame:superClass().onFrameOpen(self)
     self:refreshData()
+
+    if self.expiringList then
+        FocusManager:setFocus(self.expiringList)
+    end
 end
 
 function RmOverviewFrame:onFrameClose()

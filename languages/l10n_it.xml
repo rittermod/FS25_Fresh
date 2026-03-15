@@ -38,10 +38,10 @@
         <text name="input_RM_FRESH_MENU" text="Menu Freschezza"/>
 
         <!-- Overview tab -->
-        <text name="fresh_overview_title" text="Panoramica Freschezza (anteprima)"/>
+        <text name="fresh_overview_title" text="Panoramica Freschezza"/>
 
         <!-- Settings tab -->
-        <text name="fresh_settings_title" text="Impostazioni Freschezza (anteprima)"/>
+        <text name="fresh_settings_title" text="Impostazioni Freschezza"/>
 
         <!-- Settings expiration duration options -->
         <text name="fresh_expire_never" text="Non scadere"/>
@@ -120,7 +120,7 @@
         <text name="fresh_settings_reset" text="Impostazioni ripristinate ai valori predefiniti del mod"/>
 
         <!-- Status Frame / Inventory Overview -->
-        <text name="fresh_inventory_title" text="Panoramica inventario (anteprima)"/>
+        <text name="fresh_inventory_title" text="Panoramica inventario"/>
         <text name="fresh_inventory_summary" text="Totale: %d tipi di prodotto in %d contenitori"/>
         <text name="fresh_inventory_empty" text="Nessun prodotto deperibile attualmente monitorato"/>
         <text name="fresh_no_farm" text="Nessuna fattoria selezionata. Unisciti a una fattoria per visualizzare l'inventario."/>

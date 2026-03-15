@@ -55,6 +55,10 @@ end
 function RmStatsFrame:onFrameOpen()
     RmStatsFrame:superClass().onFrameOpen(self)
     self:refreshData()
+
+    if self.breakdownList then
+        FocusManager:setFocus(self.breakdownList)
+    end
 end
 
 function RmStatsFrame:onFrameClose()

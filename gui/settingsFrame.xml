@@ -37,6 +37,17 @@
             <ScrollingLayout profile="fs25_settingsLayout" id="sc1Layout">
                 <Text profile="fs25_settingsSectionHeader" text="$l10n_fresh_settings_global"/>
 
+                <!-- Enable Expiration toggle (master switch) -->
+                <Bitmap profile="fs25_multiTextOptionContainer" onCreate="onCreateSettingRow">
+                    <BinaryOption profile="fs25_settingsBinaryOption" id="checkEnableExpiration"
+                        onClick="onClickEnableExpiration">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore"
+                            text="$l10n_fresh_settings_enableExpiration_tooltip"/>
+                    </BinaryOption>
+                    <Text profile="fs25_settingsMultiTextOptionTitle"
+                        text="$l10n_fresh_settings_enableExpiration"/>
+                </Bitmap>
+
                 <!-- Preset selector -->
                 <Bitmap profile="fs25_multiTextOptionContainer" onCreate="onCreateSettingRow">
                     <MultiTextOption profile="fs25_settingsMultiTextOption" id="presetSelector"
@@ -47,15 +58,15 @@
                     <Text profile="fs25_settingsMultiTextOptionTitle" text="$l10n_fresh_settings_preset"/>
                 </Bitmap>
 
-                <!-- Enable Expiration toggle -->
+                <!-- Storage Aging toggle -->
                 <Bitmap profile="fs25_multiTextOptionContainer" onCreate="onCreateSettingRow">
-                    <BinaryOption profile="fs25_settingsBinaryOption" id="checkEnableExpiration"
-                        onClick="onClickEnableExpiration">
+                    <BinaryOption profile="fs25_settingsBinaryOption" id="checkStorageAging"
+                        onClick="onClickStorageAging">
                         <Text profile="fs25_multiTextOptionTooltip" name="ignore"
-                            text="$l10n_fresh_settings_enableExpiration_tooltip"/>
+                            text="$l10n_fresh_settings_storageAging_tooltip"/>
                     </BinaryOption>
                     <Text profile="fs25_settingsMultiTextOptionTitle"
-                        text="$l10n_fresh_settings_enableExpiration"/>
+                        text="$l10n_fresh_settings_storageAging"/>
                 </Bitmap>
 
                 <!-- Show Warnings toggle -->
@@ -89,17 +100,6 @@
                     </BinaryOption>
                     <Text profile="fs25_settingsMultiTextOptionTitle"
                         text="$l10n_fresh_settings_showAgeDisplay"/>
-                </Bitmap>
-
-                <!-- Storage Aging toggle -->
-                <Bitmap profile="fs25_multiTextOptionContainer" onCreate="onCreateSettingRow">
-                    <BinaryOption profile="fs25_settingsBinaryOption" id="checkStorageAging"
-                        onClick="onClickStorageAging">
-                        <Text profile="fs25_multiTextOptionTooltip" name="ignore"
-                            text="$l10n_fresh_settings_storageAging_tooltip"/>
-                    </BinaryOption>
-                    <Text profile="fs25_settingsMultiTextOptionTitle"
-                        text="$l10n_fresh_settings_storageAging"/>
                 </Bitmap>
 
             </ScrollingLayout>

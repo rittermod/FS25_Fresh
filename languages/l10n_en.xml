@@ -38,10 +38,10 @@
         <text name="input_RM_FRESH_MENU" text="Fresh Menu"/>
 
         <!-- Overview tab -->
-        <text name="fresh_overview_title" text="Fresh Overview (preview)"/>
+        <text name="fresh_overview_title" text="Fresh Overview"/>
 
         <!-- Settings tab -->
-        <text name="fresh_settings_title" text="Fresh Settings (preview)"/>
+        <text name="fresh_settings_title" text="Fresh Settings"/>
 
         <!-- Settings expiration duration options -->
         <text name="fresh_expire_never" text="Do not expire"/>
@@ -120,7 +120,7 @@
         <text name="fresh_settings_reset" text="Settings reset to mod defaults"/>
 
         <!-- Status Frame / Inventory Overview -->
-        <text name="fresh_inventory_title" text="Inventory Overview (preview)"/>
+        <text name="fresh_inventory_title" text="Inventory Overview"/>
         <text name="fresh_inventory_summary" text="Total: %d product types in %d containers"/>
         <text name="fresh_inventory_empty" text="No perishable items currently tracked"/>
         <text name="fresh_no_farm" text="No farm selected. Join a farm to view inventory."/>

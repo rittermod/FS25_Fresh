@@ -30,10 +30,10 @@
         <text name="input_RM_FRESH_MENU" text="Fresh Meny"/>
 
         <!-- Overview tab -->
-        <text name="fresh_overview_title" text="Fresh Översikt (förhandstitt)"/>
+        <text name="fresh_overview_title" text="Fresh Översikt"/>
 
         <!-- Settings tab -->
-        <text name="fresh_settings_title" text="Fresh Inställningar (förhandstitt)"/>
+        <text name="fresh_settings_title" text="Fresh Inställningar"/>
 
         <!-- Settings expiration duration options -->
         <text name="fresh_expire_never" text="Går ej ut"/>
@@ -73,7 +73,7 @@
         <text name="fresh_settings_reset" text="Inställningar återställda till modets standardinställningar"/>
 
         <!-- Status Frame / Inventory Overview -->
-        <text name="fresh_inventory_title" text="Inventarieöversikt (förhandstitt)"/>
+        <text name="fresh_inventory_title" text="Inventarieöversikt"/>
         <text name="fresh_inventory_summary" text="Totalt: %d varutyper i %d förvaringsenheter"/>
         <text name="fresh_inventory_empty" text="Inga färskvaror under bevakning just nu"/>
         <text name="fresh_no_farm" text="Ingen gård vald. Anslut till en gård för att se inventarielistan."/>

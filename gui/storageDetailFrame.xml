@@ -23,6 +23,7 @@
                 <ListItem profile="fs25_subCategoryListItem">
                     <Bitmap profile="fs25_subCategoryListItemIcon" name="storageIcon"/>
                     <Text profile="fs25_subCategoryListItemName" name="storageName"/>
+                    <Text profile="fs25_subCategoryListItemName" name="storageInfo" position="100px -52px" textBold="false" textSize="14px" textUpperCase="false"/>
                 </ListItem>
             </SmoothList>
             <ThreePartBitmap profile="fs25_subCategoryListSliderBox" id="storageSliderBox">
@@ -55,7 +56,7 @@
         <Text profile="rmFreshDetailTotal" id="detailTotal" visible="false"/>
 
         <!-- Table header row 1: column labels -->
-        <Bitmap profile="rmFreshTableList" id="detailTableHeader" position="20px -70px" size="1160px 30px" visible="false" with="anchorTopLeft">
+        <Bitmap profile="rmFreshTableList" id="detailTableHeader" position="20px -80px" size="1160px 30px" visible="false" with="anchorTopLeft">
             <Text profile="rmFreshTableHeaderLeftAligned" position="10px 0px" size="260px 30px" text="$l10n_fresh_detail_column_name"/>
             <Text profile="rmFreshTableHeaderLeftAligned" position="270px 0px" size="110px 30px" name="classColumnHeader" text="$l10n_fresh_column_storage"/>
             <Text profile="rmFreshDetailHeaderFresh" position="380px 0px" size="160px 30px" text="$l10n_fresh_bucket_fresh"/>
@@ -67,7 +68,7 @@
         </Bitmap>
 
         <!-- Table header row 2: percentage sub-labels -->
-        <Bitmap profile="rmFreshTableList" id="detailSubHeader" position="20px -100px" size="1160px 20px" visible="false" with="anchorTopLeft">
+        <Bitmap profile="rmFreshTableList" id="detailSubHeader" position="20px -110px" size="1160px 20px" visible="false" with="anchorTopLeft">
             <Text profile="rmFreshDetailSubheader" position="380px 0px" size="160px 20px" text="$l10n_fresh_bucket_fresh_pct"/>
             <Text profile="rmFreshDetailSubheader" position="540px 0px" size="160px 20px" text="$l10n_fresh_bucket_good_pct"/>
             <Text profile="rmFreshDetailSubheader" position="700px 0px" size="160px 20px" text="$l10n_fresh_bucket_warning_pct"/>
@@ -75,7 +76,7 @@
         </Bitmap>
 
         <!-- Detail fillType list -->
-        <SmoothList profile="rmFreshTableList" id="detailList" position="20px -125px" size="1160px 600px"
+        <SmoothList profile="rmFreshTableList" id="detailList" position="20px -135px" size="1160px 590px"
                     visible="false" with="anchorTopLeft" focusChangeLeft="storageList">
             <ListItem profile="rmFreshTableListItem" size="1160px 48px">
                 <Bitmap profile="rmFreshFillTypeIcon" position="10px -9px" size="30px 30px" name="fillTypeIcon"/>

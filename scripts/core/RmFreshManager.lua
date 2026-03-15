@@ -837,7 +837,7 @@ function RmFreshManager:getStorageList(farmId)
                 -- Bales/pallets → "Items in World" bucket
                 hasItemsInWorld = true
                 itemsInWorldAmount = itemsInWorldAmount + containerAmount
-                if fillTypeName then
+                if fillTypeName and containerAmount > 0 then
                     itemsInWorldFillTypes[fillTypeName] = true
                 end
             else
@@ -863,14 +863,14 @@ function RmFreshManager:getStorageList(farmId)
                             entityName = (container.metadata and container.metadata.location) or uniqueId,
                             entityType = container.entityType,
                             totalAmount = containerAmount,
-                            fillTypes = fillTypeName and { [fillTypeName] = true } or {},
+                            fillTypes = (fillTypeName and containerAmount > 0) and { [fillTypeName] = true } or {},
                             storageClass = storageClass,
                             className = className,
                         }
                     else
                         local group = buildingMap[uniqueId]
                         group.totalAmount = group.totalAmount + containerAmount
-                        if fillTypeName then
+                        if fillTypeName and containerAmount > 0 then
                             group.fillTypes[fillTypeName] = true
                         end
                     end

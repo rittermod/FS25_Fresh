@@ -110,13 +110,13 @@
 
     <!-- Shared detail frame profiles (FillType Detail + Storage Detail) -->
     <Profile name="rmFreshDetailTotal" extends="fs25_textDefault" with="anchorTopLeft">
-        <position value="20px -45px"/>
+        <position value="30px -50px"/>
         <textSize value="16px"/>
         <textColor value="$preset_fs25_colorMainLight"/>
     </Profile>
 
     <Profile name="rmFreshDetailTitle" extends="fs25_textDefault" with="anchorTopLeft">
-        <position value="20px -20px"/>
+        <position value="30px -25px"/>
         <textSize value="20px"/>
         <textBold value="true"/>
         <textUpperCase value="true"/>

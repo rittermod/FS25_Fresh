@@ -526,7 +526,7 @@ function RmSettingsFrame:refreshData()
     end
 
     -- Update tab visibility based on storageAgingEnabled
-    self:updateStorageTabVisibility()
+    self:updateTabVisibility()
 
     -- Expiration tab: FillType row visibility and selector states
     local visibleCount = self:refreshFillTypeRows(self.expirationRows)
@@ -548,6 +548,14 @@ function RmSettingsFrame:refreshData()
     RmSettingsFrame.pendingStorageChanges = {}
 
     RmSettingsFrame.isRefreshing = false
+
+    -- Update disabled states based on admin + dependency chain
+    self:updateReadonlyState()
+
+    -- Update top-level menu tabs (handles sync events, reset, preset changes)
+    if g_freshMenu then
+        g_freshMenu:updatePageVisibility()
+    end
 end
 
 --- Refresh storage tab dropdown states from current override values
@@ -1107,31 +1115,39 @@ end
 -- READONLY STATE
 -- =============================================================================
 
---- Update disabled state of all controls based on admin status
+--- Update disabled state of all controls based on admin status and setting dependencies
 --- Non-admin clients get disabled controls (grayed out)
+--- Dependency chain: Enable Expiration → all other controls
+---                   Show Warnings → Warning Threshold
 function RmSettingsFrame:updateReadonlyState()
     local isAdmin = self:isAdmin()
-    local disabled = not isAdmin
+    local notAdmin = not isAdmin
+    local expirationEnabled = RmFreshSettings:getGlobal("enableExpiration") ~= false
+    local showWarnings = RmFreshSettings:getGlobal("showWarnings") ~= false
 
-    -- Disable SC1 global controls
+    -- Enable Expiration: master switch, only admin gating
     if self.checkEnableExpiration then
-        self.checkEnableExpiration:setDisabled(disabled)
+        self.checkEnableExpiration:setDisabled(notAdmin)
     end
-    if self.checkShowWarnings then
-        self.checkShowWarnings:setDisabled(disabled)
-    end
-    if self.checkShowAgeDisplay then
-        self.checkShowAgeDisplay:setDisabled(disabled)
-    end
-    if self.warningHoursSelector then
-        local showWarnings = RmFreshSettings:getGlobal("showWarnings") ~= false
-        self.warningHoursSelector:setDisabled(disabled or not showWarnings)
-    end
+
+    -- Child controls: disabled if not admin OR expiration off
+    local childDisabled = notAdmin or not expirationEnabled
+
     if self.presetSelector then
-        self.presetSelector:setDisabled(disabled)
+        self.presetSelector:setDisabled(childDisabled)
     end
     if self.checkStorageAging then
-        self.checkStorageAging:setDisabled(disabled)
+        self.checkStorageAging:setDisabled(childDisabled)
+    end
+    if self.checkShowWarnings then
+        self.checkShowWarnings:setDisabled(childDisabled)
+    end
+    if self.checkShowAgeDisplay then
+        self.checkShowAgeDisplay:setDisabled(childDisabled)
+    end
+    -- Warning Threshold: disabled if not admin OR expiration off OR warnings off
+    if self.warningHoursSelector then
+        self.warningHoursSelector:setDisabled(childDisabled or not showWarnings)
     end
 
     -- Disable fillType row selectors
@@ -1143,7 +1159,7 @@ function RmSettingsFrame:updateReadonlyState()
     -- Disable storage tab row selectors
     self:updateFillTypeRowsDisabled(self.sc4Rows)
 
-    Log:debug("SETT: readonly=%s (isAdmin=%s)", tostring(disabled), tostring(isAdmin))
+    Log:debug("SETT: readonly=%s expiration=%s (isAdmin=%s)", tostring(notAdmin), tostring(expirationEnabled), tostring(isAdmin))
 end
 
 --- Update disabled state on all fillType row selectors
@@ -1244,6 +1260,15 @@ function RmSettingsFrame:onClickEnableExpiration(state)
             )
         end
     end
+
+    -- Update child control disabled states and tab visibility
+    self:updateReadonlyState()
+    self:updateTabVisibility()
+
+    -- Update top-level menu tabs (hide/show Overview, Stats, etc.)
+    if g_freshMenu then
+        g_freshMenu:updatePageVisibility()
+    end
 end
 
 function RmSettingsFrame:onClickShowWarnings(state)
@@ -1262,9 +1287,8 @@ function RmSettingsFrame:onClickShowWarnings(state)
         end
     end
 
-    if self.warningHoursSelector then
-        self.warningHoursSelector:setDisabled(not enabled)
-    end
+    -- Update Warning Threshold disabled state
+    self:updateReadonlyState()
 end
 
 function RmSettingsFrame:onClickWarningHours(state)
@@ -1322,7 +1346,7 @@ function RmSettingsFrame:onClickStorageAging(state)
     end
 
     -- Immediately update tab visibility
-    self:updateStorageTabVisibility()
+    self:updateTabVisibility()
 
     -- Repopulate storage tab when enabling (building list may have changed while tab was hidden)
     if enabled then
@@ -1331,19 +1355,30 @@ function RmSettingsFrame:onClickStorageAging(state)
     end
 end
 
---- Update visibility of storage-related tabs based on storageAgingEnabled
---- Hides/shows Max Benefit (SC3) and Storage (SC4) tab buttons, rebuilds paging selector
-function RmSettingsFrame:updateStorageTabVisibility()
-    local enabled = RmFreshSettings.storageAgingEnabled
+--- Update visibility of sub-tabs based on setting dependencies
+--- Tab 1 (Settings): always visible
+--- Tab 2 (Expiration): visible when expiration enabled
+--- Tab 3 (Max Benefit): visible when expiration AND storage aging enabled
+--- Tab 4 (Storage): visible when expiration AND storage aging enabled
+function RmSettingsFrame:updateTabVisibility()
+    local expirationEnabled = RmFreshSettings:getGlobal("enableExpiration") ~= false
+    local storageAgingEnabled = RmFreshSettings.storageAgingEnabled
 
-    -- Hide/show Max Benefit tab button (index 3) and Storage tab button (index 4)
+    -- Tab 2: Expiration fillTypes — only when expiration is on
+    local expirationTabButton = self.subCategoryTabs[2]
+    if expirationTabButton then
+        expirationTabButton:setVisible(expirationEnabled)
+    end
+
+    -- Tabs 3+4: Max Benefit and Storage — only when both expiration and storage aging are on
+    local storageTabsVisible = expirationEnabled and storageAgingEnabled
     local maxBenefitTabButton = self.subCategoryTabs[3]
     if maxBenefitTabButton then
-        maxBenefitTabButton:setVisible(enabled)
+        maxBenefitTabButton:setVisible(storageTabsVisible)
     end
     local storageTabButton = self.subCategoryTabs[4]
     if storageTabButton then
-        storageTabButton:setVisible(enabled)
+        storageTabButton:setVisible(storageTabsVisible)
     end
 
     -- Rebuild paging selector texts to match visible tabs
@@ -1357,10 +1392,13 @@ function RmSettingsFrame:updateStorageTabVisibility()
     self.subCategoryPaging:setTexts(subCategories)
     self.subCategoryPaging:setSize(self.subCategoryBox.maxFlowSize + 140 * g_pixelSizeScaledX)
 
-    -- If currently on a hidden tab, switch to General
-    if not enabled and (RmSettingsFrame.currentSubCategory == RmSettingsFrame.SUB_CATEGORY.MAXBENEFIT
-            or RmSettingsFrame.currentSubCategory == RmSettingsFrame.SUB_CATEGORY.STORAGE) then
-        self.subCategoryPaging:setState(1, true)
+    -- If currently on a hidden tab, switch to Settings
+    local currentTab = RmSettingsFrame.currentSubCategory
+    if currentTab and currentTab ~= RmSettingsFrame.SUB_CATEGORY.SETTINGS then
+        local currentTabButton = self.subCategoryTabs[currentTab]
+        if currentTabButton and not currentTabButton:getIsVisible() then
+            self.subCategoryPaging:setState(1, true)
+        end
     end
 end
 

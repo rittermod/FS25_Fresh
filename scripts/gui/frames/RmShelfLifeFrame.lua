@@ -73,6 +73,10 @@ function RmShelfLifeFrame:onFrameOpen()
     else
         self:refreshValues()
     end
+
+    if self.shelfLifeLayout then
+        FocusManager:setFocus(self.shelfLifeLayout)
+    end
 end
 
 -- =============================================================================

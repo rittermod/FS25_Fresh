@@ -443,6 +443,14 @@ function RmStorageDetailFrame:populateStorageCell(index, cell)
     if nameElement then
         nameElement:setText(entry.entityName or "Unknown")
     end
+
+    -- Storage info (total amount + product count)
+    local infoElement = cell:getAttribute("storageInfo")
+    if infoElement then
+        local amount = g_i18n:formatNumber(entry.totalAmount or 0, 0) .. " L"
+        local products = tostring(entry.fillTypeCount or 0) .. " products"
+        infoElement:setText(amount .. ", " .. products)
+    end
 end
 
 -- =============================================================================
