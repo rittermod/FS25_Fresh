@@ -288,13 +288,22 @@ function RmStatsFrame:populateRecentCell(index, cell)
         valueElement:setText(entry.valueDisplay or "-")
     end
 
-    -- Storage location (with class suffix when available)
+    -- Storage class icon (only when storage aging is enabled)
+    local classIcon = cell:getAttribute("storageClassIcon")
+    if classIcon then
+        local sliceId = RmFreshSettings.storageAgingEnabled
+            and RmFreshManager:getStorageClassIconSliceId(entry.storageClass)
+        if sliceId then
+            classIcon:setImageSlice(nil, sliceId)
+            classIcon:setVisible(true)
+        else
+            classIcon:setVisible(false)
+        end
+    end
+
+    -- Storage location (class shown via icon, not text)
     local storageElement = cell:getAttribute("storage")
     if storageElement then
-        local storageName = entry.location or ""
-        if entry.storageClassName then
-            storageName = storageName .. " (" .. entry.storageClassName .. ")"
-        end
-        storageElement:setText(storageName)
+        storageElement:setText(entry.location or "")
     end
 end

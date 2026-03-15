@@ -2,10 +2,16 @@
 <GUIProfiles>
     <!-- Extend existing FS25 profiles for consistency -->
 
-    <!-- Fill type icon for settings frame -->
+    <!-- Fill type icon for settings frame (full-color images, no tinting on select) -->
     <Profile name="rmFreshFillTypeIcon" extends="emptyPanel" with="anchorTopLeft">
         <imageColor value="1 1 1 1"/>
         <imageSelectedColor value="1 1 1 1"/>
+    </Profile>
+
+    <!-- Storage class icon (monochrome outline, tints dark on select to match text) -->
+    <Profile name="rmFreshClassIcon" extends="emptyPanel" with="anchorTopLeft">
+        <imageColor value="$preset_fs25_colorMainLight"/>
+        <imageSelectedColor value="$preset_fs25_colorMainDark"/>
     </Profile>
 
     <!-- Informational message text for empty-state in settings tabs -->

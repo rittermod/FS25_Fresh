@@ -421,14 +421,23 @@ function RmOverviewFrame:populateExpiringCell(index, cell)
         productElement:setText(fillTypeTitle)
     end
 
-    -- Storage/location name (with class label if available)
+    -- Storage class icon (only when storage aging is enabled)
+    local classIcon = cell:getAttribute("expiringClassIcon")
+    if classIcon then
+        local sliceId = RmFreshSettings.storageAgingEnabled
+            and RmFreshManager:getStorageClassIconSliceId(entry.storageClass)
+        if sliceId then
+            classIcon:setImageSlice(nil, sliceId)
+            classIcon:setVisible(true)
+        else
+            classIcon:setVisible(false)
+        end
+    end
+
+    -- Storage/location name (class shown via icon, not text)
     local storageElement = cell:getAttribute("expiringStorage")
     if storageElement then
-        local storageName = entry.name or "Unknown"
-        if entry.storageClassName then
-            storageName = storageName .. " (" .. entry.storageClassName .. ")"
-        end
-        storageElement:setText(storageName)
+        storageElement:setText(entry.name or "Unknown")
     end
 
     -- Amount (no color - time column shows urgency)

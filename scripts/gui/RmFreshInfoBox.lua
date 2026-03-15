@@ -44,6 +44,13 @@ function RmFreshInfoBox.new(infoDisplay, uiScale)
     self.progressBar:setMiddlePart("gui.progressbar_middle", 0, 0)
     self.progressBar:setRightPart("gui.progressbar_right", 0, 0)
 
+    -- Storage class icon overlays (thick variants for HUD legibility)
+    self.classIconOverlays = {}
+    for classValue, name in pairs(RmFreshManager.STORAGE_CLASS_NAMES) do
+        local sliceId = "fresh.icon_" .. name .. "_sm"
+        self.classIconOverlays[classValue] = g_overlayManager:createOverlay(sliceId, 0, 0, 0, 0)
+    end
+
     self:storeScaledValues()
 
     Log:trace("FRESH_INFO_BOX: Created")
@@ -56,6 +63,11 @@ function RmFreshInfoBox:delete()
     if self.bgMiddle then self.bgMiddle:delete() end
     if self.bgBottom then self.bgBottom:delete() end
     if self.progressBar then self.progressBar:delete() end
+    if self.classIconOverlays then
+        for _, overlay in pairs(self.classIconOverlays) do
+            overlay:delete()
+        end
+    end
     Log:trace("FRESH_INFO_BOX: Deleted")
 end
 
@@ -83,6 +95,13 @@ function RmFreshInfoBox:storeScaledValues()
     self.barWidth = infoDisplay:scalePixelToScreenWidth(140)
     self.barHeight = infoDisplay:scalePixelToScreenHeight(6)
     self.barCapWidth = infoDisplay:scalePixelToScreenWidth(3)
+
+    -- Storage class icon dimensions (displayed before fill type name)
+    -- Use height for both to get pixel size, then derive width via aspect ratio for square appearance
+    local iconPx = 18
+    self.classIconH = infoDisplay:scalePixelToScreenHeight(iconPx)
+    self.classIconW = self.classIconH / g_screenAspectRatio
+    self.classIconGap = infoDisplay:scalePixelToScreenWidth(4)
 
     -- Padding
     self.paddingX = infoDisplay:scalePixelToScreenWidth(10)
@@ -129,12 +148,14 @@ end
 ---@param buckets table Array of {color, amount}
 ---@param total number Total amount
 ---@param storageClassName string|nil Storage class display name (e.g., "Indoor")
-function RmFreshInfoBox:addRow(fillTypeName, buckets, total, storageClassName)
+---@param storageClass number|nil Storage class value (0-5) for icon display
+function RmFreshInfoBox:addRow(fillTypeName, buckets, total, storageClassName, storageClass)
     table.insert(self.rows, {
         fillTypeName = fillTypeName,
         buckets = buckets,
         total = total,
         storageClassName = storageClassName,
+        storageClass = storageClass,
     })
 end
 
@@ -210,17 +231,27 @@ function RmFreshInfoBox:drawRow(leftX, rowY, row)
     -- Max text width (truncate to fit bar)
     local maxTextWidth = barX - textX - self.textBarGap
 
-    -- Draw fillType name (with storage class appended if available)
+    -- Draw storage class icon (only when storage aging is enabled)
+    local iconWidth = 0
+    local iconOverlay = RmFreshSettings.storageAgingEnabled
+        and row.storageClass and self.classIconOverlays[row.storageClass]
+    if iconOverlay then
+        local iconY = rowY + (self.rowHeight - self.classIconH) / 2
+        iconOverlay:setPosition(textX, iconY)
+        iconOverlay:setDimension(self.classIconW, self.classIconH)
+        iconOverlay:render()
+        iconWidth = self.classIconW + self.classIconGap
+    end
+
+    -- Draw fillType name (class shown via icon, not text)
     setTextBold(false)
     setTextAlignment(RenderText.ALIGN_LEFT)
     setTextColor(1, 1, 1, 1)
     local textY = rowY + (self.rowHeight - self.rowTextSize) / 2 + self.rowTextSize * 0.15
     local baseName = row.fillTypeName or "Unknown"
-    if row.storageClassName then
-        baseName = baseName .. " (" .. row.storageClassName .. ")"
-    end
-    local displayName = Utils.limitTextToWidth(baseName, self.rowTextSize, maxTextWidth, false, "...")
-    renderText(textX, textY, self.rowTextSize, displayName)
+    local availTextWidth = maxTextWidth - iconWidth
+    local displayName = Utils.limitTextToWidth(baseName, self.rowTextSize, availTextWidth, false, "...")
+    renderText(textX + iconWidth, textY, self.rowTextSize, displayName)
 
     -- Draw bar using ThreePartOverlay
     local bar = self.progressBar

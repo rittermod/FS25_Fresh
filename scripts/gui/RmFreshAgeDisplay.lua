@@ -105,7 +105,7 @@ function RmFreshAgeDisplay.onPlaceableDrawHook(placeable)
     box:clear()
     box:setTitle(g_i18n:getText("fresh_age_display_title"))
     for _, row in ipairs(rows) do
-        box:addRow(row.fillTypeName, row.buckets, row.total, row.storageClassName)
+        box:addRow(row.fillTypeName, row.buckets, row.total, row.storageClassName, row.storageClass)
     end
     box:showNextFrame()
 end
@@ -198,7 +198,7 @@ function RmFreshAgeDisplay:draw()
     box:clear()
     box:setTitle(g_i18n:getText("fresh_age_display_title"))
     for _, row in ipairs(rows) do
-        box:addRow(row.fillTypeName, row.buckets, row.total, row.storageClassName)
+        box:addRow(row.fillTypeName, row.buckets, row.total, row.storageClassName, row.storageClass)
     end
     box:showNextFrame()
 end
@@ -317,6 +317,7 @@ function RmFreshAgeDisplay.buildRows(containers)
                     buckets = buckets,
                     total = total,
                     storageClassName = storageClassName,
+                    storageClass = data.worstClass,
                 })
             end
         end

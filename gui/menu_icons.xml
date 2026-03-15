@@ -1,20 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Fresh mod icon sprite sheet (1024x1024, 128x128 grid)
-     Source SVGs: Lucide icons (stroke=1), see icons/lucide/originals/
-     Registered with prefix "fresh" via g_overlayManager -->
+     Source SVGs: Lucide icons, see icons/lucide/originals/
+     Registered with prefix "fresh" via g_overlayManager
+     Regular (stroke=1): menu tabs, headers, GUI frames
+     Thick (_sm, stroke=2): HUD overlays at small display sizes -->
 <texture>
     <meta>
         <filename>menu_icons.png</filename>
         <size width="1024" height="1024"/>
     </meta>
     <slices>
-        <!-- Row 0 -->
+        <!-- Row 0: Menu tab/header icons (stroke=1) -->
         <slice id="icon_overview"  uvs="0px 0px 128px 128px"/>
         <slice id="icon_product"   uvs="128px 0px 128px 128px"/>
         <slice id="icon_storage"   uvs="256px 0px 128px 128px"/>
         <slice id="icon_stats"     uvs="384px 0px 128px 128px"/>
-        <!-- Row 1 -->
+        <!-- Row 0 contd: Storage class icons (stroke=1) -->
+        <slice id="icon_exposed"   uvs="512px 0px 128px 128px"/>
+        <slice id="icon_sheltered" uvs="640px 0px 128px 128px"/>
+        <slice id="icon_indoor"    uvs="768px 0px 128px 128px"/>
+        <slice id="icon_cooled"    uvs="896px 0px 128px 128px"/>
+        <!-- Row 1: More menu + storage class icons (stroke=1) -->
         <slice id="icon_shelflife" uvs="0px 128px 128px 128px"/>
         <slice id="icon_settings"  uvs="128px 128px 128px 128px"/>
+        <slice id="icon_frozen"    uvs="256px 128px 128px 128px"/>
+        <slice id="icon_disabled"  uvs="384px 128px 128px 128px"/>
+        <!-- Row 1 contd: Storage class icons thick (stroke=2, for HUD) -->
+        <slice id="icon_exposed_sm"   uvs="512px 128px 128px 128px"/>
+        <slice id="icon_sheltered_sm" uvs="640px 128px 128px 128px"/>
+        <slice id="icon_indoor_sm"    uvs="768px 128px 128px 128px"/>
+        <slice id="icon_cooled_sm"    uvs="896px 128px 128px 128px"/>
+        <!-- Row 2: More thick icons -->
+        <slice id="icon_frozen_sm"    uvs="0px 256px 128px 128px"/>
+        <slice id="icon_disabled_sm"  uvs="128px 256px 128px 128px"/>
     </slices>
 </texture>

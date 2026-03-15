@@ -35,7 +35,8 @@
                 <ListItem profile="rmFreshTableListItem" name="expiringRowTemplate" size="755px 48px">
                     <Bitmap profile="rmFreshFillTypeIcon" position="5px -9px" size="30px 30px" name="expiringIcon"/>
                     <Text profile="rmFreshTableRowCellLeftAligned" position="40px 0px" size="160px 48px" name="expiringProduct" textLayoutMode="scrolling"/>
-                    <Text profile="rmFreshTableRowCellLeftAligned" position="205px 0px" size="200px 48px" name="expiringStorage" textLayoutMode="scrolling"/>
+                    <Bitmap profile="rmFreshClassIcon" position="205px -12px" size="24px 24px" name="expiringClassIcon"/>
+                    <Text profile="rmFreshTableRowCellLeftAligned" position="233px 0px" size="172px 48px" name="expiringStorage" textLayoutMode="scrolling"/>
                     <Text profile="rmFreshTableRowCellRightAligned" position="415px 0px" size="120px 48px" name="expiringAmount"/>
                     <Text profile="rmFreshTableRowCellRightAligned" position="545px 0px" size="180px 48px" name="expiringTimeLeft"/>
                 </ListItem>

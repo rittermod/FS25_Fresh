@@ -7,5 +7,6 @@ Lucide Icons (https://lucide.dev)
   as part of Feather (MIT). All other copyright (c) for Lucide are held
   by Lucide Contributors 2022.
 
-  Icons used: clipboard-list, wheat, warehouse, chart-column-decreasing,
-              calendar-clock, sliders-horizontal
+  Menu icons: clipboard-list, wheat, warehouse, chart-column-decreasing,
+             calendar-clock, sliders-horizontal
+  Storage class icons: cloud-rain, umbrella, house, thermometer, snowflake, circle-off

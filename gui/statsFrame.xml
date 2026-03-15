@@ -101,7 +101,8 @@
                     <Text profile="rmFreshTableRowCellLeftAligned" position="165px 0px" size="125px 48px" name="fillTypeName" textLayoutMode="scrolling"/>
                     <Text profile="rmFreshTableRowCellRightAligned" position="300px 0px" size="95px 48px" name="amount"/>
                     <Text profile="rmFreshTableRowCellRightAligned" position="405px 0px" size="95px 48px" name="value"/>
-                    <Text profile="rmFreshTableRowCellLeftAligned" position="510px 0px" size="250px 48px" name="storage" textLayoutMode="scrolling"/>
+                    <Bitmap profile="rmFreshClassIcon" position="510px -12px" size="24px 24px" name="storageClassIcon"/>
+                    <Text profile="rmFreshTableRowCellLeftAligned" position="538px 0px" size="222px 48px" name="storage" textLayoutMode="scrolling"/>
                 </ListItem>
             </SmoothList>
             <!-- Right scrollbar -->

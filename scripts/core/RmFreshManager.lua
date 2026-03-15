@@ -81,6 +81,17 @@ RmFreshManager.STORAGE_CLASS_NAMES = {
     [5] = "disabled",
 }
 
+--- Get the icon slice ID for a storage class value
+---@param classValue number|nil Storage class value (0-5)
+---@return string|nil Slice ID (e.g., "fresh.icon_indoor") or nil
+function RmFreshManager:getStorageClassIconSliceId(classValue)
+    local name = self.STORAGE_CLASS_NAMES[classValue]
+    if name then
+        return "fresh.icon_" .. name
+    end
+    return nil
+end
+
 --- Resolve a storage class name string to its numeric value (case-insensitive)
 ---@param name string|nil Storage class name (e.g., "cooled", "FROZEN")
 ---@return number|nil Storage class value, or nil if unknown/nil
@@ -3223,6 +3234,7 @@ function RmFreshManager:getLossLogRecent(farmId, count)
                 end
             end
             displayEntry.storageClassName = storageClassName
+            displayEntry.storageClass = entry.storageClass
 
             table.insert(recent, displayEntry)
             Log:trace("LOSS_LOG_ENTRY: Y%d P%d D%d H%d %s %.0fL at %s",
