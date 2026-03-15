@@ -28,6 +28,7 @@ function RmFreshMenu.setupGui()
     -- 2. Load frames (must be before menu XML for FrameReference resolution)
     RmOverviewFrame.setupGui()
     RmFillTypeDetailFrame.setupGui()
+    RmStorageDetailFrame.setupGui()
     RmStatsFrame.setupGui()
     RmShelfLifeFrame.setupGui()
     RmSettingsFrame.setupGui()
@@ -62,19 +63,23 @@ function RmFreshMenu:setupMenuPages()
     self:registerPage(self.fillTypeDetailFrame, 2, predicate)
     self:addPageTab(self.fillTypeDetailFrame, nil, nil, "gui.icon_ingameMenu_map")
 
-    -- Register Statistics page (third tab)
-    self:registerPage(self.statsFrame, 3, predicate)
+    -- Register Storage Detail page (third tab)
+    self:registerPage(self.storageDetailFrame, 3, predicate)
+    self:addPageTab(self.storageDetailFrame, nil, nil, "gui.icon_construction_buildings")
+
+    -- Register Statistics page (fourth tab)
+    self:registerPage(self.statsFrame, 4, predicate)
     self:addPageTab(self.statsFrame, nil, nil, "gui.icon_ingameMenu_finances")
 
-    -- Register Shelf Life page (fourth tab)
-    self:registerPage(self.shelfLifeFrame, 4, predicate)
+    -- Register Shelf Life page (fifth tab)
+    self:registerPage(self.shelfLifeFrame, 5, predicate)
     self:addPageTab(self.shelfLifeFrame, nil, nil, "gui.icon_ingameMenu_calendar")
 
-    -- Register Settings page (fifth tab)
-    self:registerPage(self.settingsFrame, 5, predicate)
+    -- Register Settings page (sixth tab)
+    self:registerPage(self.settingsFrame, 6, predicate)
     self:addPageTab(self.settingsFrame, nil, nil, "gui.icon_options_generalSettings2")
 
-    Log:debug("Menu pages: overview (idx=1), fillTypeDetail (idx=2), statistics (idx=3), shelfLife (idx=4), settings (idx=5)")
+    Log:debug("Menu pages: overview (idx=1), fillTypeDetail (idx=2), storageDetail (idx=3), statistics (idx=4), shelfLife (idx=5), settings (idx=6)")
 end
 
 function RmFreshMenu:setupMenuButtonInfo()

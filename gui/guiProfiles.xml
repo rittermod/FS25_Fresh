@@ -102,7 +102,29 @@
         <textAlignment value="center"/>
     </Profile>
 
-    <!-- Color-coded age bucket column headers (FillType Detail tab) -->
+    <!-- Shared detail frame profiles (FillType Detail + Storage Detail) -->
+    <Profile name="rmFreshDetailTotal" extends="fs25_textDefault" with="anchorTopLeft">
+        <position value="20px -45px"/>
+        <textSize value="16px"/>
+        <textColor value="$preset_fs25_colorMainLight"/>
+    </Profile>
+
+    <Profile name="rmFreshDetailTitle" extends="fs25_textDefault" with="anchorTopLeft">
+        <position value="20px -20px"/>
+        <textSize value="20px"/>
+        <textBold value="true"/>
+        <textUpperCase value="true"/>
+        <textColor value="$preset_colorWhite_50"/>
+    </Profile>
+
+    <Profile name="rmFreshDetailSubheader" extends="baseReference" with="anchorTopLeft">
+        <textSize value="14px"/>
+        <textBold value="false"/>
+        <textColor value="0.5 0.5 0.5 1"/>
+        <textAlignment value="right"/>
+    </Profile>
+
+    <!-- Color-coded age bucket column headers (FillType Detail + Storage Detail) -->
     <Profile name="rmFreshDetailHeaderFresh" extends="rmFreshTableHeaderRightAligned">
         <textColor value="0.0742 0.4341 0.6939 1"/>
     </Profile>

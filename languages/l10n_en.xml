@@ -163,6 +163,16 @@
         <text name="fresh_bucket_warning_pct" text="25-50%"/>
         <text name="fresh_bucket_critical_pct" text="0-25%"/>
 
+        <!-- Storage Detail Tab -->
+        <text name="fresh_storage_detail_title" text="Storage Details"/>
+        <text name="fresh_storage_detail_empty" text="No perishable items in this category"/>
+        <text name="fresh_storage_detail_no_selection" text="Select a storage to view details"/>
+        <text name="fresh_storage_detail_total" text="Total: %s"/>
+        <text name="fresh_category_placeables" text="Placeables"/>
+        <text name="fresh_category_husbandries" text="Husbandries"/>
+        <text name="fresh_category_vehicles" text="Vehicles"/>
+        <text name="fresh_category_bales_pallets" text="Bales &amp; Pallets"/>
+
         <!-- Shelf Life Frame -->
         <text name="fresh_shelflife_title" text="Shelf Life"/>
         <text name="fresh_shelflife_empty" text="No perishable products configured"/>

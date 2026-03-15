@@ -11,6 +11,7 @@
             id="pagingElement">
         <FrameReference ref="RmOverviewFrame" name="overviewFrame" id="overviewFrame"/>
         <FrameReference ref="RmFillTypeDetailFrame" name="fillTypeDetailFrame" id="fillTypeDetailFrame"/>
+        <FrameReference ref="RmStorageDetailFrame" name="storageDetailFrame" id="storageDetailFrame"/>
         <FrameReference ref="RmStatsFrame" name="statsFrame" id="statsFrame"/>
         <FrameReference ref="RmShelfLifeFrame" name="shelfLifeFrame" id="shelfLifeFrame"/>
         <FrameReference ref="RmSettingsFrame" name="settingsFrame" id="settingsFrame"/>
