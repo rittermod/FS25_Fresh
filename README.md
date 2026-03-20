@@ -2,7 +2,11 @@
 
 Fresh adds shelf life to your products - crops age over time and will spoil if not sold or used!
 
-Fresh brings perishable products to Farming Simulator 25. Your harvested crops, processed goods, and baled forage now have realistic shelf lives. Fresh vegetables spoil quickly, while canned products and grains last much longer. Bales of grass spoil within days, while silage stays fresh for months. Plan your logistics carefully - leave produce or bales sitting too long and they will expire and be lost! Customize shelf lives to match your playstyle via the in-game Settings menu.
+Fresh brings perishable products to Farming Simulator 25. Your harvested crops, processed goods, and baled forage now have realistic shelf lives - leafy vegetables spoil quickly, while grains and canned products last much longer. Leave produce sitting too long and it will expire and be lost! Customize shelf lives to match your playstyle via the Fresh Menu.
+
+Pre-release - testing and feedback welcome.
+
+**[User Guide](https://rittermod.github.io/FS25_Fresh/)**
 
 ## Why Fresh?
 
@@ -11,40 +15,51 @@ Vanilla FS25 lets you stockpile products indefinitely, waiting for the perfect p
 - **Strategic timing**: Sell before products expire or lose everything
 - **Active management**: Check ages, track losses, prioritize older stock
 - **Realistic farming**: Real farms don't have infinite shelf life
-- **Your rules**: Customize expiration times to match your playstyle
+- **Your rules**: Set expiration times to match your playstyle
 
-Fresh tracks your products using a batch system - each harvest or production run is tracked separately with its own age. Oldest stock expires first, just like real inventory management.
+## Usage
 
-## Notes
-
-- Beta release - testing and feedback welcome
-- Most storage types supported: vehicles, bales, silos, productions, husbandries
-- Supports products from basegame, DLCs, and maps/mods
-- Customize shelf lives via the Fresh Menu
+- Install the mod and play normally
+- Open Fresh Menu with Right Shift+F to view inventory, stats, and settings
+- Check expiry by looking at any vehicle, bale, or storage in the info box
+- Sell or process produce before expiration to avoid losses
+- Customize shelf lives in Settings if defaults don't suit your playstyle
 
 ## Features
 
-### Fresh Menu (Right Shift+F)
-- **Inventory Overview**: See all perishables at a glance with oldest ages
+### Fresh Menu
+- **Inventory Overview**: See all perishables at a glance with their oldest ages
+- **Product Details**: Drill into any product - per-storage age breakdown across Fresh/Good/Warning/Critical buckets
+- **Storage Details**: Drill into any storage - per-product breakdown with age distribution, storage class, expiry times, and category filter
 - **Loss Statistics**: Track what you've lost and when
 - **Shelf Life**: Browse all products with effective shelf life per storage class
-- **Storages**: Browse all storages with their class, fill status, and store icons
-- **Settings**: Customize shelf lives for any product
+- **Settings**: Customize shelf lives for any product and storage class benefits
 
 ### Storage Classes
 - Storages are auto-classified based on type: Exposed, Sheltered, Indoor, Cooled, Frozen, or Disabled (no aging)
-- Each class applies an aging speed multiplier — better storage means slower spoilage
+- Each class applies an aging speed multiplier - better storage means slower spoilage
 - Override storage class per-storage via Settings
 - Set per-product max benefit class to cap how much a storage class can help
 
+### Visual Feedback
+- Age distribution bars when near placeables, vehicles, and bales (color-coded: blue=fresh, green=good, orange=warning, red=critical)
+- Storage class icons in HUD, expiring soon table, and loss log
+- Expiry countdown on vehicles and bales ("Expires in: X hours/days")
+- Expiring amount and time remaining shown per fill type on placeables and husbandries (e.g., "-1,000 l in 24h")
+- Warning highlight when products near expiration (configurable threshold)
+- Notification when products expire and are removed
+
+### Perishable Products
+- 100+ products with realistic shelf lives (perishable produce spoils in days, grains last months, canned products up to 3 years)
+- 130+ non-expiring products pre-configured (animals, wood, fuel, manufactured goods, etc.)
+- 4 bale types: Fresh Grass (days), Hay (18 months), Straw (24 months), Silage (12 months)
+- Wrapped grass bales begin aging after fermentation completes
+
 ### Settings & Customization
-- Difficulty presets (Very Easy/Easy/Normal/Hard) - adjust all shelf lives at once, or use Custom for individual control
+- Difficulty presets (Very Easy/Easy/Normal/Hard) or Custom for individual control
 - Configure shelf life for any product (basegame, DLCs, maps/mods)
-- Per-product max benefit class to limit storage class effectiveness
-- Products organized by basegame vs DLC & Mods tabs
 - Enable/disable expiration globally or per-product
-- Configurable warning threshold (6h/12h/24h/48h/72h) - choose when expiry warnings appear
-- Toggle age distribution display on/off
+- Configurable warning threshold (6h/12h/24h/48h/72h)
 - Reset all settings to defaults with one click
 - Per-savegame settings
 - Multiplayer: host/admin controls settings for all players
@@ -54,46 +69,24 @@ Fresh tracks your products using a batch system - each harvest or production run
 - Daily notifications summarizing your farm's losses
 - View loss history in menu
 
-### Perishable products
-- 100+ products with realistic shelf lives (fresh produce spoils in days, grains last months, canned products up to 3 years)
-- 130+ non-expiring products pre-configured (animals, wood, fuel, manufactured goods, etc.)
-- 4 bale types: Fresh Grass (days), Hay (18 months), Straw (24 months), Silage (12 months)
-- Wrapped grass bales begin aging after fermentation completes
-
 ### Tracking Locations
 - Vehicles: trailers, tankers, combine tanks, etc.
 - Bales and pallets: on the ground and in storage buildings
 - Placeables: silos, productions, husbandries, object storage
 
-### Visual Feedback
-- Age distribution bars when near placeables, vehicles, and bales (color-coded: blue=fresh, green=good, orange=warning, red=critical)
-- Expiry countdown on vehicles and bales ("Expires in: X hours/days")
-- Expiring amount and time remaining shown per fill type on placeables and husbandries (e.g., "-1,000 l in 24h")
-- Warning highlight when products near expiration (configurable threshold)
-- Notification when products expire and are removed
-
-### Inventory Behavior
-- Oldest items retrieved first from storage
+### How It Works
+- Each harvest or production run is tracked as a separate batch with its own age
+- Oldest items retrieved first from storage (FIFO)
 - Expired products automatically removed
 - Batch ages preserved during transfers between containers
-
-### Technical
 - Multiplayer support (server-authoritative)
 - Ages saved with your game
 
-## Limitations
+## Limitations & Known Issues
 
-- No loose item tracking (loose grass, grains, etc on the ground)
-
-## Known Issues
-
-**General:**
+- No loose item tracking (loose grass, grains, etc. on the ground)
 - Store-bought pallets may show double the actual amount
-
-**Multiplayer:**
-- Clients may not see "Expires in" info when looking at bales
-
-**Edge Cases:**
+- Multiplayer: clients may not see "Expires in" info when looking at bales
 - Silo extensions are tracked separately rather than as a shared pool
 
 ## Installation
@@ -112,14 +105,6 @@ Fresh tracks your products using a batch system - each harvest or production run
 1. Clone or download this repository
 2. Copy the `FS25_Fresh` folder to your mods folder
 3. Enable the mod in-game
-
-## Usage
-
-- Install the mod and play normally
-- Open Fresh Menu with Right Shift+F to view inventory, stats, and settings
-- Check expiry by looking at any vehicle, bale, or storage in the info box
-- Sell or process produce before expiration to avoid losses
-- Customize shelf lives in Settings if defaults don't suit your playstyle
 
 ## Compatibility
 

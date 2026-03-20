@@ -1,65 +1,68 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <modDesc descVersion="106">
     <author>Ritter</author>
-    <version>0.10.0.0</version>
+    <version>1.0.0.0-dev.1</version>
     <title>
         <en>Fresh</en>
         <it>Fresco</it>
     </title>
     <description>
         <en><![CDATA[
-Fresh adds shelf life to your produce and bales - crops age over time and will spoil if not sold or used!
+Fresh adds shelf life to your products - crops age over time and will spoil if not sold or used!
 
-Your harvested crops, processed goods, and baled forage now have realistic shelf lives. Fresh vegetables spoil quickly, while canned goods last much longer. Customize shelf lives via the Fresh Menu!
+Your harvested crops, processed goods, and baled forage now have realistic shelf lives - leafy vegetables spoil quickly, while grains and canned products last much longer. Customize shelf lives via the Fresh Menu!
+
+Pre-release - testing and feedback welcome.
 
 Fresh Menu (Right Shift+F):
-- Inventory Overview: see all perishables with oldest ages
-- Loss Statistics: track what you've lost
-- Shelf Life: browse products with effective shelf life per storage class
-- Storages: browse all storages with class and fill status
-- Settings: customize shelf lives for any product
+- Inventory Overview: see all perishables with their oldest ages
+- Product Details: per-storage age breakdown with freshness buckets
+- Storage Details: per-product breakdown with age distribution and category filter
+- Loss Statistics: track what you've lost and when
+- Shelf Life: effective shelf life per storage class
+- Settings: customize shelf lives and storage class benefits
 
 Storage Classes:
 - Storages auto-classified: Exposed, Sheltered, Indoor, Cooled, Frozen, Disabled
 - Better storage = slower spoilage. Override per-storage in Settings
-- Per-product max benefit class caps storage effectiveness
+- Storage class icons in HUD, tables, and loss log
 
 Features:
 - Difficulty presets (Very Easy/Easy/Normal/Hard) or Custom per-product control
 - Configure any product (basegame, DLCs, maps/mods)
 - Configurable warning threshold (6h/12h/24h/48h/72h)
 - Age distribution bars (color-coded freshness)
-- 100+ products with realistic default shelf lives
-- 130+ non-expiring products pre-configured
-- 4 bale types with fermentation handling
-- Vehicles, bales, silos, productions, husbandries supported
-- Oldest items retrieved first, daily loss notifications
+- 100+ products with realistic shelf lives, 130+ non-expiring pre-configured
+- Vehicles, bales, silos, productions, husbandries tracked
+- Oldest items retrieved first (FIFO), daily loss notifications
 - Multiplayer support (server-authoritative)
-
-Notes:
-- Beta release - feedback welcome
 
 Documentation: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
 
+1.0.0.0-dev:
+- Added German localization - contributed by Roleplayboy
+- Updated all translations (French, Italian, Swedish, German) to cover new detail tabs and storage features
+- Added Storage Details tab - per-product breakdown with age distribution, storage class, expiry times, and 4-category filter with shop icons
+- Added Product Details tab - per-storage breakdown with age distribution across Fresh/Good/Warning/Critical buckets
+- Added storage class icons to HUD, expiring soon table, and loss log with thick stroke variants for small-size legibility
+- Added custom menu icons for all 6 tabs (Lucide icons)
+- Improved settings UX: master Enable switch greys out all other settings, dependency toggles hide/show related controls and sub-tabs
+- Improved menu polish: keyboard/controller navigation, table spacing, naming consistency, removed "(preview)" labels
+- Localized all remaining hardcoded English strings
+- Rebalanced frozen multiplier from 0.05 to 0.10 (20x to 10x life extension)
+- Adjusted shelf lives and storage class limits for 15+ products to better reflect real-world storage behavior
+- Fixed incorrect maxBenefitClass for Lettuce, Potatoes, Sugarcane, Salmon/Trout Fry, and Butter
+- Fixed storage list showing empty product entries for containers with zero fill level
+
 0.10.0.0 (Beta):
-- Added storage classes: storages auto-classified (Exposed/Sheltered/Indoor/Cooled/Frozen/Disabled) affecting aging speed — override per-storage and cap per-product max benefit in Settings
+- Added storage classes: storages auto-classified (Exposed/Sheltered/Indoor/Cooled/Frozen/Disabled) affecting aging speed - browse in new Storage tab, override per-storage, and cap per-product max benefit in Settings
 - Improved Shelf Life tab: shows effective shelf life across all storage classes in a table layout
 - Improved settings: consolidated into tabbed pages with per-product configuration
 - Added user guide documentation site
 - Fixed empty food troughs not being registered on load
 - Fixed storages list showing other farms' storages in multiplayer
-
-0.9.0.0 (Beta):
-- Added Shelf Life tab to Fresh Menu
-- Added difficulty presets (Very Easy/Easy/Normal/Hard/Custom)
-- Reorganized Settings into tabbed pages
-- Added "Reset to Defaults" button
-- Added fill type source detection in tooltips
-- Expanded default configuration with 130+ non-expiring fill types
-- Improved settings list by hiding irrelevant fill types
-- Added French and Swedish localization
 
 
 Full changelog at https://github.com/rittermod/FS25_Fresh
@@ -71,59 +74,64 @@ I tuoi raccolti, i prodotti lavorati e il foraggio imballato ora hanno una durat
 
 Fresh Menu (Shift Destro+F):
 - Panoramica inventario: visualizza tutti i deperibili con le età più alte
+- Dettagli prodotto: dettaglio per magazzino con distribuzione età (Fresco/Buono/Avviso/Critico)
 - Statistiche perdite: tieni traccia di ciò che hai perso
 - Durata di conservazione: consulta la durata attiva di tutti i prodotti deperibili
 - Magazzini: sfoglia tutti i magazzini con classe, stato riempimento e icone negozio
+- Dettagli magazzino: dettaglio per prodotto con distribuzione età, classe e filtro categorie
 - Impostazioni: personalizza la durata di conservazione per qualsiasi prodotto
 
 Classi di stoccaggio:
-- I magazzini sono classificati automaticamente: Esterno, Coperto, Climatizzato o Disabilitato (nessun invecchiamento)
+- I magazzini sono classificati automaticamente: Esterno, Coperto, Interno, Refrigerato, Congelato o Disabilitato
 - Ogni classe applica un moltiplicatore di velocità di invecchiamento
 - Sostituzione classe per singolo magazzino tramite Impostazioni
-- Classe beneficio massimo per prodotto per limitare l'efficacia della classe
+- Icone classe di stoccaggio in HUD, tabelle e registro perdite
 
 Impostazioni e personalizzazione:
+- Interruttore principale con controlli dipendenti per UX chiara
 - Preset di difficoltà (Molto Facile/Facile/Normale/Difficile) o Personalizzato per controllo individuale
 - Configura la durata di conservazione per qualsiasi prodotto (gioco base, DLC, mappe/mod)
 - Classe beneficio massimo per prodotto per limitare l'efficacia della classe di stoccaggio
 - Prodotti organizzati per gioco base vs DLC e Mod
-- Ripristina tutte le impostazioni ai valori predefiniti con un clic
 - Soglia di avviso configurabile (6h/12h/24h/48h/72h)
 - Barre di distribuzione dell'età (colori: blu=fresco, verde=buono, arancione=avviso, rosso=critico)
-- Quantità in scadenza e tempo rimanente per tipo di prodotto
 - Oltre 100 prodotti con durate predefinite realistiche
 - Oltre 130 prodotti non deperibili preconfigurati
-- 4 tipi di balle con gestione della fermentazione
 - Supporto per veicoli, balle, sili, produzioni e stalle
 - Gli elementi più vecchi vengono prelevati per primi dal magazzino
 - Notifiche giornaliere delle perdite
 - Supporto multiplayer (server-authoritative)
-- Le età vengono salvate nel salvataggio di gioco
+- Lingue: inglese, tedesco, francese, italiano, svedese
 
 Note:
-- Versione beta - feedback benvenuto
+- Pre-release - feedback benvenuto
 
 Documentazione: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
 
+1.0.0.0-dev:
+- Aggiunta localizzazione tedesca - contributo di Roleplayboy
+- Aggiornate tutte le traduzioni (francese, italiana, svedese, tedesca) per le nuove schede dettaglio e funzionalità magazzini
+- Aggiunta scheda Dettagli Magazzino - dettaglio per prodotto con distribuzione età, classe, scadenza e filtro a 4 categorie con icone negozio
+- Aggiunta scheda Dettagli Prodotto - dettaglio per magazzino con distribuzione età (Fresco/Buono/Avviso/Critico)
+- Aggiunte icone classe di stoccaggio a HUD, tabella in scadenza e registro perdite
+- Aggiunte icone personalizzate per tutte le 6 schede del menu (icone Lucide)
+- Migliorata UX impostazioni: interruttore principale Abilita disattiva tutte le altre impostazioni
+- Migliorata navigazione e coerenza del menu
+- Localizzate tutte le stringhe inglesi rimanenti
+- Ribilanciato moltiplicatore congelato da 0.05 a 0.10 (da 20x a 10x estensione vita)
+- Regolate durate e limiti classe stoccaggio per 15+ prodotti
+- Corretti maxBenefitClass per Lattuga, Patate, Canna da zucchero, Avannotti Salmone/Trota e Burro
+- Corretta lista magazzini che mostrava prodotti vuoti
+
 0.10.0.0 (Beta):
-- Aggiunte classi di stoccaggio: classificazione automatica (Esterno/Coperto/Interno/Refrigerato/Congelato/Disabilitato) — sostituzione per magazzino e limite beneficio massimo per prodotto nelle Impostazioni
+- Aggiunte classi di stoccaggio: classificazione automatica (Esterno/Coperto/Interno/Refrigerato/Congelato/Disabilitato) - sostituzione per magazzino e limite beneficio massimo per prodotto nelle Impostazioni
 - Migliorata scheda Durata di conservazione: mostra la durata effettiva per classe di stoccaggio in formato tabella
 - Migliorate impostazioni: consolidate in pagine a schede con configurazione per prodotto
 - Aggiunto sito documentazione guida utente
 - Risolte mangiatoie vuote non registrate al caricamento
 - Risolta lista magazzini che mostrava magazzini di altre aziende in multiplayer
-
-0.9.0.0 (Beta):
-- Aggiunta scheda Durata di conservazione al Fresh Menu
-- Aggiunti preset di difficoltà (Molto Facile/Facile/Normale/Difficile/Personalizzato)
-- Impostazioni riorganizzate in pagine a schede
-- Aggiunto pulsante "Ripristina valori predefiniti"
-- Aggiunto rilevamento origine tipo di prodotto nei tooltip
-- Configurazione predefinita espansa con oltre 130 tipi non deperibili
-- Migliorata la lista impostazioni nascondendo i tipi irrilevanti
-- Aggiunte localizzazioni francese e svedese
 
 
 Changelog completo su https://github.com/rittermod/FS25_Fresh

@@ -1,7 +1,22 @@
 # Changelog
 
+1.0.0.0-dev:
+- Added German localization  - contributed by Roleplayboy
+- Updated all translations (French, Italian, Swedish, German) to cover new detail tabs and storage features
+- Added Storage Details tab  - per-product breakdown with age distribution, storage class, expiry times, and 4-category filter with shop icons
+- Added Product Details tab  - per-storage breakdown with age distribution across Fresh/Good/Warning/Critical buckets
+- Added storage class icons to HUD, expiring soon table, and loss log with thick stroke variants for small-size legibility
+- Added custom menu icons for all 6 tabs (Lucide icons)
+- Improved settings UX: master Enable switch greys out all other settings, dependency toggles hide/show related controls and sub-tabs
+- Improved menu polish: keyboard/controller navigation, table spacing, naming consistency, removed "(preview)" labels
+- Localized all remaining hardcoded English strings
+- Rebalanced frozen multiplier from 0.05 to 0.10 (20x to 10x life extension)
+- Adjusted shelf lives and storage class limits for 15+ products to better reflect real-world storage behavior
+- Fixed incorrect maxBenefitClass for Lettuce, Potatoes, Sugarcane, Salmon/Trout Fry, and Butter
+- Fixed storage list showing empty product entries for containers with zero fill level
+
 0.10.0.0 (Beta - 2026-03-14):
-- Added storage classes: storages are auto-classified (Exposed/Sheltered/Indoor/Cooled/Frozen/Disabled) affecting aging speed — browse in new Storage tab, override per-storage, and cap per-product max benefit in Settings
+- Added storage classes: storages are auto-classified (Exposed/Sheltered/Indoor/Cooled/Frozen/Disabled) affecting aging speed  - browse in new Storage tab, override per-storage, and cap per-product max benefit in Settings
 - Improved Shelf Life tab: shows effective shelf life across all storage classes in a table layout
 - Improved settings: consolidated into tabbed pages with per-product configuration
 - Added user guide documentation site
