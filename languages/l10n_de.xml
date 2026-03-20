@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<l10n>
+    <texts>
+        <!-- Expires in display -->
+        <text name="fresh_expires_in" text="Läuft ab in"/>
+        <text name="fresh_expires_hour" text="1 Stunde"/>
+        <text name="fresh_expires_hours" text="%d Stunden"/>
+        <text name="fresh_expires_day" text="1 Tag"/>
+        <text name="fresh_expires_days" text="%d Tage"/>
+        <text name="fresh_expires_month" text="1 Monat"/>
+        <text name="fresh_expires_months" text="%.1f Monate"/>
+
+        <!-- Status messages -->
+        <text name="fresh_expired" text="Abgelaufen"/>
+        <text name="fresh_expires_never" text="Läuft nie ab"/>
+        <text name="fresh_near_expiration" text="Kurz vor Ablauf"/>
+
+        <!-- Daily loss notification -->
+        <text name="fresh_dailyLossNotification" text="%.0f Einheiten durch Ablauf verloren"/>
+
+        <!-- Storage HUD -->
+        <text name="fresh_storage_expiring" text="-%d in %s"/>
+        <text name="fresh_storage_expiring_volume" text="-%s in %s"/>
+        <text name="fresh_vehicle_expiring_volume" text="-%s"/>
+
+        <!-- Age Distribution HUD -->
+        <text name="fresh_age_display_title" text="Frische"/>
+
+        <!-- Storage class labels -->
+        <text name="fresh_class_exposed" text="Ungeschützt"/>
+        <text name="fresh_class_sheltered" text="Geschützt"/>
+        <text name="fresh_class_indoor" text="Innenraum"/>
+        <text name="fresh_class_cooled" text="Gekühlt"/>
+        <text name="fresh_class_frozen" text="Gefroren"/>
+        <text name="fresh_class_disabled" text="Deaktiviert"/>
+
+        <!-- Fresh Menu keybind -->
+        <text name="input_RM_FRESH_MENU" text="Frische-Menü"/>
+
+        <!-- Settings tab -->
+        <text name="fresh_settings_title" text="Frische Einstellungen"/>
+
+        <!-- Settings expiration duration options -->
+        <text name="fresh_expire_never" text="Nicht ablaufen"/>
+        <text name="fresh_expire_1_month" text="1 Monat"/>
+        <text name="fresh_expire_2_months" text="2 Monate"/>
+        <text name="fresh_expire_3_months" text="3 Monate"/>
+        <text name="fresh_expire_4_months" text="4 Monate"/>
+        <text name="fresh_expire_5_months" text="5 Monate"/>
+        <text name="fresh_expire_6_months" text="6 Monate"/>
+        <text name="fresh_expire_9_months" text="9 Monate"/>
+        <text name="fresh_expire_1_year" text="1 Jahr"/>
+        <text name="fresh_expire_1_5_years" text="1,5 Jahre"/>
+        <text name="fresh_expire_2_years" text="2 Jahre"/>
+        <text name="fresh_expire_3_years" text="3 Jahre"/>
+        <text name="fresh_expire_5_years" text="5 Jahre"/>
+
+        <!-- Sub-category tabs -->
+        <text name="fresh_tab_settings" text="Einstellungen"/>
+        <text name="fresh_tab_expiration" text="Ablauf"/>
+        <text name="fresh_tab_maxbenefit" text="Maximaler Nutzen"/>
+        <text name="fresh_tab_storage" text="Lagerung"/>
+
+        <!-- Difficulty Preset -->
+        <text name="fresh_settings_preset" text="Schwierigkeit"/>
+        <text name="fresh_settings_preset_tooltip" text="Passt alle Haltbarkeiten an. Sehr einfach vervierfacht, einfach verdoppelt, schwer halbiert. Benutzerdefiniert erlaubt individuelle Einstellungen."/>
+        <text name="fresh_preset_veryEasy" text="Sehr einfach (x4)"/>
+        <text name="fresh_preset_easy" text="Einfach (x2)"/>
+        <text name="fresh_preset_normal" text="Normal"/>
+        <text name="fresh_preset_hard" text="Schwer (x0,5)"/>
+        <text name="fresh_preset_custom" text="Benutzerdefiniert"/>
+
+        <!-- Period format strings -->
+        <text name="fresh_period_months" text="%d Monate"/>
+        <text name="fresh_period_months_decimal" text="%.1f Monate"/>
+        <text name="fresh_period_years" text="%d Jahre"/>
+        <text name="fresh_period_years_decimal" text="%.1f Jahre"/>
+
+        <!-- DLC/Mod fillTypes section -->
+        <text name="fresh_settings_fillTypes_dlcmod" text="Ablaufzeiten (DLCs &amp; Mods)"/>
+
+        <!-- Settings global section -->
+        <text name="fresh_settings_global" text="Globale Einstellungen"/>
+        <text name="fresh_settings_enableExpiration" text="Ablauf aktivieren"/>
+        <text name="fresh_settings_enableExpiration_tooltip" text="Wenn aktiviert, altern verderbliche Waren und laufen schließlich ab, wenn sie nicht verkauft oder verwendet werden."/>
+        <text name="fresh_settings_showWarnings" text="Warnungen anzeigen"/>
+        <text name="fresh_settings_showWarnings_tooltip" text="Zeigt Benachrichtigungen an, wenn Produkte bald ablaufen."/>
+        <text name="fresh_settings_showAgeDisplay" text="Altersanzeige anzeigen"/>
+        <text name="fresh_settings_showAgeDisplay_tooltip" text="Zeigt Altersverteilung in der Nähe von Lagern an."/>
+        <text name="fresh_settings_warningHours" text="Warnschwelle"/>
+        <text name="fresh_settings_warningHours_tooltip" text="Warnung anzeigen, wenn Produkte innerhalb dieser Zeit ablaufen."/>
+        <text name="fresh_warning_6h" text="6 Stunden"/>
+        <text name="fresh_warning_12h" text="12 Stunden"/>
+        <text name="fresh_warning_24h" text="24 Stunden"/>
+        <text name="fresh_warning_48h" text="48 Stunden"/>
+        <text name="fresh_warning_72h" text="72 Stunden"/>
+        <text name="fresh_settings_fillTypes" text="Ablaufzeiten"/>
+        <text name="fresh_settings_maxBenefitHeader" text="Maximaler Lagerbonus"/>
+        <text name="fresh_settings_storageHeader" text="Lagerklassen-Overrides"/>
+        <text name="fresh_settings_storageAging" text="Alterung nach Lagerklasse"/>
+        <text name="fresh_settings_storageAging_tooltip" text="Wenn aktiviert, altern Waren je nach Lager unterschiedlich schnell."/>
+        <text name="fresh_maxbenefit_default" text="Standard"/>
+        <text name="fresh_maxbenefit_configDefault" text="Standard"/>
+        <text name="fresh_maxbenefit_tooltip" text="Legt den maximalen Lagerbonus fest."/>
+        <text name="fresh_storage_auto" text="Automatisch (erkannt)"/>
+        <text name="fresh_storage_override_tooltip" text="Überschreibt die Lagerklasse für diesen Ort."/>
+        <text name="fresh_storage_items_in_world" text="Objekte in der Welt"/>
+        <text name="fresh_storage_items_in_world_tooltip" text="Bezieht Ballen, Paletten und BigBags ein."/>
+        <text name="fresh_storage_detected" text="Erkannt"/>
+
+        <!-- Empty state -->
+        <text name="fresh_settings_presetActive" text="Alle Produkte werden vom gewählten Preset verwaltet."/>
+
+        <!-- Settings reset -->
+        <text name="fresh_settings_resetDefaults" text="Auf Standard zurücksetzen"/>
+        <text name="fresh_settings_resetConfirm" text="Alle Einstellungen auf Standard zurücksetzen?"/>
+        <text name="fresh_settings_reset" text="Einstellungen zurückgesetzt"/>
+
+        <!-- Inventory -->
+        <text name="fresh_inventory_title" text="Inventarübersicht"/>
+        <text name="fresh_inventory_summary" text="Gesamt: %d Produkttypen in %d Lagern"/>
+        <text name="fresh_inventory_empty" text="Keine verderblichen Waren vorhanden"/>
+        <text name="fresh_no_farm" text="Kein Hof ausgewählt"/>
+        <text name="fresh_column_type" text="Produkt"/>
+        <text name="fresh_column_amount" text="Menge"/>
+        <text name="fresh_column_expiring" text="Läuft ab"/>
+        <text name="fresh_column_status" text="Status"/>
+        <text name="fresh_status_ok" text="OK"/>
+        <text name="fresh_status_expiring" text="Läuft ab"/>
+        <text name="fresh_sort_label" text="Sortieren nach"/>
+        <text name="fresh_sort_by_type" text="Typ"/>
+        <text name="fresh_sort_by_expiring" text="Ablaufmenge"/>
+        <text name="fresh_sort_by_age" text="Nächstes Ablaufdatum"/>
+
+        <!-- Expiring Soon -->
+        <text name="fresh_expires_within" text="Läuft ab innerhalb"/>
+        <text name="fresh_expires_24h" text="24 Stunden"/>
+        <text name="fresh_expires_48h" text="48 Stunden"/>
+        <text name="fresh_expires_72h" text="72 Stunden"/>
+        <text name="fresh_column_storage" text="Lager"/>
+        <text name="fresh_column_timeleft" text="Nächstes Ablaufdatum"/>
+        <text name="fresh_expiring_empty" text="Nichts läuft bald ab"/>
+        <text name="fresh_expiring_summary" text="%d Objekte (%.0f L gesamt)"/>
+        <text name="fresh_expires_soon" text="&lt; 1 Stunde"/>
+
+        <!-- Shelf Life -->
+        <text name="fresh_shelflife_title" text="Haltbarkeit"/>
+        <text name="fresh_shelflife_empty" text="Keine Produkte konfiguriert"/>
+        <text name="fresh_shelflife_product" text="Produkt"/>
+        <text name="fresh_shelflife_unit_months" text="Haltbarkeit in Monaten"/>
+
+        <!-- Statistics -->
+        <text name="fresh_stats_title" text="Verluststatistik"/>
+        <text name="fresh_stats_today" text="Heute verloren"/>
+        <text name="fresh_stats_month" text="Diesen Monat verloren"/>
+        <text name="fresh_stats_12months" text="Letzte 12 Monate verloren"/>
+        <text name="fresh_stats_total" text="Gesamtverlust"/>
+        <text name="fresh_stats_breakdown" text="Produktverluste (12 Monate)"/>
+        <text name="fresh_stats_recent" text="Letzte Verluste"/>
+        <text name="fresh_stats_breakdown_empty" text="Keine Verluste aufgezeichnet"/>
+        <text name="fresh_stats_log_empty" text="Keine aktuellen Verluste"/>
+        <text name="fresh_column_product" text="Produkt"/>
+        <text name="fresh_column_amount_lost" text="Menge"/>
+        <text name="fresh_column_value" text="Wert"/>
+        <text name="fresh_column_datetime" text="Datum/Uhrzeit"/>
+    </texts>
+</l10n>
