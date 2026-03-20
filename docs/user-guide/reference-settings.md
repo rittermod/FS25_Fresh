@@ -34,7 +34,7 @@ The difficulty preset scales all shelf lives at once. Select a preset from the S
 
 ### How Presets Interact with Custom Settings
 
-- Selecting a preset (Very Easy through Hard) applies that multiplier to all products. The Expiration and Max Benefit tabs show the effective values but are read-only.
+- Selecting a preset (Very Easy through Hard) applies that multiplier to all products. The Expiration and Benefit Limit tabs show the effective values but are read-only.
 - Selecting **Custom** unlocks the Expiration tab for individual per-product editing. Products start at their Normal-difficulty defaults.
 - Switching from Custom back to a preset discards any per-product changes and applies the preset multiplier to the mod defaults.
 
@@ -62,9 +62,9 @@ Each product shows a tooltip with the fill type's source (basegame, DLC name, or
 
 ---
 
-## Max Benefit Settings (Per Product)
+## Benefit Limit Settings (Per Product)
 
-Located in the Settings tab → Max Benefit sub-tab. Controls the maximum storage class that benefits each product.
+Located in the Settings tab → Benefit Limit sub-tab. Controls the maximum storage class that benefits each product.
 
 | Option | Meaning |
 |--------|---------|
@@ -89,7 +89,7 @@ Each tracked storage shows:
 
 Vehicles appear in the list as soon as they are on the map, even when empty. This lets you configure storage class overrides before loading any goods.
 
-A special **Items in World** entry covers all bales, pallets, and big bags not placed in a dedicated object storage. Overriding this entry applies to all loose items at once.
+A special **Loose Items** entry covers all bales, pallets, and big bags not placed in a dedicated storage. Overriding this entry applies to all loose items at once.
 
 Use this when automatic detection doesn't match your setup - for example, if a mod building provides refrigerated storage but Fresh detects it as Indoor.
 
@@ -116,61 +116,9 @@ Some settings depend on others:
 ```
 Enable Expiration → All other settings (only when Expiration is On)
 Difficulty Preset → Expiration tab (editable only when Custom)
-Storage Class Aging → Max Benefit tab + Storage tab (visible only when On)
+Storage Class Aging → Benefit Limit tab + Storage tab (visible only when On)
                     → Shelf Life tab display (per-class table when On, simple list when Off)
 ```
 
 *Dependent settings are greyed out or hidden when their parent setting is disabled.*
 
----
-
-## Console Commands
-
-For advanced users and debugging. Open the game console with the tilde key (~).
-
-### Inspection (All Users)
-
-| Command | Args | Description |
-|---------|------|-------------|
-| `fList` | `[type]` | List all tracked containers. Filter by type: `vehicle` (v), `bale` (b), `placeable` (p), `husbandryfood` (h), `stored` (s) |
-| `fInspect` | `<#>` | Show detailed info for container # (from fList) |
-| `fBatches` | `<#>` | Show all batches in container # with ages |
-| `fStorages` | `[class\|config]` | Show storage classes for all containers. Use `config` to show max benefit per product |
-| `fStats` | - | Show loss statistics summary |
-| `fStatus` | `[hours]` | List containers expiring within N hours (default: 24) |
-| `fLog` | `[count]` | Show recent loss log entries (default: 50) |
-| `fDump` | - | Dump full mod state to the game log file |
-
-### Batch Manipulation (Admin Only)
-
-| Command | Args | Description |
-|---------|------|-------------|
-| `fAddBatch` | `<#> <amount> [age]` | Add a batch to container #. Age in periods (default: 0 = fresh) |
-| `fRemBatch` | `<#> <batchIdx>` | Remove a specific batch from container # |
-| `fSetAge` | `<#> <batchIdx> <age>` | Set age of a specific batch (in periods) |
-| `fSetAllAge` | `<#> [age]` | Set all batches in container # to age (default: 0) |
-
-### Time Simulation (Admin Only)
-
-| Command | Args | Description |
-|---------|------|-------------|
-| `fAge` | `<hours>` | Simulate N hours of aging on ALL containers |
-| `fAgeContainer` | `<#> <hours>` | Simulate N hours of aging on container # only |
-| `fExpire` | `<#> [batchIdx]` | Force expire a specific batch (or all batches) in container # |
-| `fExpireAll` | `<type\|all>` | Force expire all containers of a type, or `all` |
-
-### Storage Class Overrides (Admin Only)
-
-| Command | Args | Description |
-|---------|------|-------------|
-| `fSetStorage` | `<#\|items> <class>` | Override storage class. Use container # or `items` for all bales/pallets. Class: exposed, sheltered, indoor, cooled, frozen, disabled |
-| `fClearStorage` | `<#\|items>` | Remove storage class override |
-
-### Maintenance (Admin Only)
-
-| Command | Args | Description |
-|---------|------|-------------|
-| `fClearLog` | - | Clear the loss log |
-| `fReconcile` | - | Manually reconcile tracked state with game state |
-
-*Admin commands require master user access or server access.*

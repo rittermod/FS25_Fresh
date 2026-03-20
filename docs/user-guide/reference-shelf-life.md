@@ -33,16 +33,16 @@ Default shelf lives for all perishable products in Fresh. Values are in game mon
 | Green Bean | 1 month | Frozen |
 | Spinach | 1 month | Frozen |
 | Pea | 1 month | Frozen |
-| Olive | 1 month | Frozen |
-| Sugarcane | 1 month | Frozen |
+| Olive | 1 month | Cooled |
+| Sugarcane | 1 month | Sheltered |
 | Tomato | 2 months | Frozen |
-| Lettuce | 2 months | Frozen |
+| Lettuce | 2 months | Cooled |
 | Spring Onion | 2 months | Frozen |
 | Chilli | 2 months | Frozen |
 | Napa Cabbage | 2 months | Frozen |
-| Grape | 2 months | Frozen |
-| Potato | 3 months | Frozen |
-| Garlic | 3 months | Frozen |
+| Grape | 2 months | Cooled |
+| Potato | 5 months | Cooled |
+| Garlic | 5 months | Cooled |
 | Beetroot | 4 months | Frozen |
 | Carrot | 5 months | Frozen |
 | Parsnip | 5 months | Frozen |
@@ -64,8 +64,8 @@ Default shelf lives for all perishable products in Fresh. Values are in game mon
 |---------|-----------|-------------|
 | Salmon | 6 months | Frozen |
 | Trout | 6 months | Frozen |
-| Trout Young | 12 months | Frozen |
-| Salmon Young | 30 months | Frozen |
+| Trout Young | 12 months | Sheltered |
+| Salmon Young | 30 months | Sheltered |
 
 *Young fish have longer shelf lives to allow for grow-out periods in fish farms.*
 
@@ -99,7 +99,7 @@ Unpasteurized milk with very short shelf life.
 
 | Product | Shelf Life | Max Benefit |
 |---------|-----------|-------------|
-| Butter | 3 months | Cooled |
+| Butter | 3 months | Frozen |
 | Cheese | 6 months | Cooled |
 | Goat Cheese | 6 months | Cooled |
 
@@ -118,8 +118,8 @@ Unpasteurized milk with very short shelf life.
 
 | Product | Shelf Life | Max Benefit |
 |---------|-----------|-------------|
-| Potato Chips | 4 months | Indoor |
-| Rice Rolls | 4 months | Indoor |
+| Potato Chips | 6 months | Indoor |
+| Rice Rolls | 6 months | Indoor |
 | Cereal | 9 months | Indoor |
 | Chocolate | 18 months | Indoor |
 
@@ -137,17 +137,17 @@ Unpasteurized milk with very short shelf life.
 
 | Product | Shelf Life | Max Benefit |
 |---------|-----------|-------------|
-| Rice Flour | 6 months | Indoor |
 | Canola | 9 months | Indoor |
 | Sunflower | 9 months | Indoor |
 | Soybean | 9 months | Indoor |
 | Maize | 9 months | Indoor |
 | Rice | 9 months | Indoor |
 | Long Grain Rice | 9 months | Indoor |
-| Sorghum | 9 months | Indoor |
 | Flour | 9 months | Indoor |
+| Rice Flour | 9 months | Indoor |
 | Wheat | 12 months | Indoor |
 | Barley | 12 months | Indoor |
+| Sorghum | 12 months | Indoor |
 | Rice (bags) | 12 months | Indoor |
 | Rice (boxes) | 12 months | Indoor |
 | Oat | 18 months | Indoor |
@@ -170,7 +170,7 @@ Unpasteurized milk with very short shelf life.
 |---------|-----------|-------------|
 | Canola Oil | 12 months | Indoor |
 | Sunflower Oil | 12 months | Indoor |
-| Rice Oil | 12 months | Indoor |
+| Rice Oil | 9 months | Indoor |
 | Olive Oil | 18 months | Indoor |
 
 ---
@@ -214,7 +214,7 @@ Unpasteurized milk with very short shelf life.
 
 | Product | Shelf Life | Max Benefit |
 |---------|-----------|-------------|
-| Fermented Napa Cabbage | 6 months | Indoor |
+| Fermented Napa Cabbage | 6 months | Cooled |
 | Preserved Beetroot | 18 months | Indoor |
 | Preserved Carrots | 18 months | Indoor |
 | Preserved Parsnip | 18 months | Indoor |
@@ -234,7 +234,7 @@ Unpasteurized milk with very short shelf life.
 
 | Product | Shelf Life | Max Benefit |
 |---------|-----------|-------------|
-| Honey | 24 months | Indoor |
+| Honey | 36 months | Indoor |
 
 ---
 

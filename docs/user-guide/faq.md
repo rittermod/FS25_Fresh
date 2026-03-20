@@ -22,11 +22,11 @@ These effects stack. Strawberries (1-month base shelf life) on Hard difficulty i
 
 Check two things:
 
-**1. Storage class.** If goods are in **Cooled** (0.3x) or **Frozen** (0.05x) storage, they age dramatically slower. Frozen storage extends shelf life by 20x.
+**1. Storage class.** If goods are in **Cooled** (0.3x) or **Frozen** (0.10x) storage, they age dramatically slower. Frozen storage extends shelf life by 10x.
 
 **2. Difficulty preset.** **Very Easy** quadruples all shelf lives.
 
-Also check if a storage class override has been applied via the Settings → Storage tab or the `fSetStorage` console command.
+Also check if a storage class override has been applied via the Settings → Storage tab.
 
 ---
 
@@ -145,9 +145,9 @@ If the automatic detection doesn't match your setup, use storage class overrides
 
 ---
 
-## What does the "Max Benefit Class" setting do?
+## What does the "Benefit Limit" setting do?
 
-Each product has a ceiling on how much it benefits from better storage. For example, wheat has a max benefit of **Indoor** - storing it in a Cooled or Frozen facility provides no extra benefit over Indoor storage. But strawberries have a max benefit of **Frozen** and benefit from the best storage you can provide.
+Each product has a ceiling on how much it benefits from better storage. For example, wheat has a benefit limit of **Indoor** - storing it in a Cooled or Frozen facility provides no extra benefit over Indoor storage. But strawberries have a benefit limit of **Frozen** and benefit from the best storage you can provide.
 
 This models real-world food storage: freezing grain doesn't meaningfully extend its life beyond proper dry storage, but freezing produce makes a huge difference.
 
@@ -167,8 +167,9 @@ When Storage Class Aging is disabled, the tab shows a single shelf life value pe
 
 Yes, several ways:
 
-- **Fresh Menu → Inventory Overview** - The right panel shows items expiring within 24h/48h/72h
+- **Fresh Menu → Overview** - The right panel shows items expiring within 24h/48h/72h
+- **Fresh Menu → Product Details** - Select a product to see per-storage breakdown with freshness distribution
+- **Fresh Menu → Storage Details** - Select a storage to see all products it holds with expiry times
 - **Info boxes** - Look at any storage and the info box shows time remaining with yellow warnings
 - **Age distribution HUD** - Color-coded bars when near storages (blue/green/orange/red)
-- **Console** - `fStatus 48` lists everything expiring within 48 hours
 - **Daily notifications** - A summary notification appears each morning if anything expired overnight

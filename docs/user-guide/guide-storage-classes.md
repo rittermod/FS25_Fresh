@@ -16,7 +16,7 @@ Each storage class applies a multiplier to the base aging rate. Lower multiplier
 | **Sheltered** | 1.0x | 100% of base | Covered or partially protected |
 | **Indoor** | 0.8x | 125% of base | Enclosed building |
 | **Cooled** | 0.3x | 333% of base | Refrigerated storage |
-| **Frozen** | 0.05x | 2000% of base | Deep freeze, nearly stops aging |
+| **Frozen** | 0.10x | 1000% of base | Deep freeze, nearly stops aging |
 | **Disabled** | 0x | Indefinite | Aging completely stopped |
 
 ### What This Means in Practice
@@ -29,7 +29,7 @@ A product with a 6-month shelf life at Normal difficulty:
 | Sheltered | 6 months |
 | Indoor | 7.5 months |
 | Cooled | 20 months |
-| Frozen | 10 years |
+| Frozen | 5 years |
 
 The difference between leaving strawberries on an outdoor pallet versus putting them in cooled storage is dramatic.
 
@@ -70,7 +70,7 @@ Each product has a **maximum benefit class** that caps how much it benefits from
 
 When a product is stored in a class better than its max benefit, the effective multiplier is capped at the max benefit class:
 
-- **Strawberries** (max benefit: Frozen) in Frozen storage → uses 0.05x multiplier (full benefit)
+- **Strawberries** (max benefit: Frozen) in Frozen storage → uses 0.10x multiplier (full benefit)
 - **Wheat** (max benefit: Indoor) in Cooled storage → uses 0.8x multiplier (capped at Indoor)
 - **Wheat** (max benefit: Indoor) in Indoor storage → uses 0.8x multiplier (full benefit)
 - **Milk** (max benefit: Cooled) in Frozen storage → uses 0.3x multiplier (capped at Cooled)
@@ -113,26 +113,7 @@ Feed in husbandry troughs is classified as Sheltered. Most feed types (pig food,
 
 If the automatic detection doesn't match your situation - for example, you have a covered area for pallets or a refrigerated mod building - you can override the storage class.
 
-### Via Settings Menu
-
-Open the Fresh Menu (Right Shift + F) → Settings tab → Storage tab. Override the detected class for specific storages.
-
-### Via Console Commands
-
-For advanced users, console commands provide direct control:
-
-| Command | Description |
-|---------|-------------|
-| `fStorages` | List all containers with their current storage class |
-| `fStorages config` | Show max benefit class configuration per product |
-| `fSetStorage <#> <class>` | Override storage class for container # (use class name: exposed, sheltered, indoor, cooled, frozen, disabled) |
-| `fSetStorage items <class>` | Override storage class for all items in world (bales, pallets) |
-| `fClearStorage <#>` | Remove override, revert to automatic detection |
-| `fClearStorage items` | Remove override for all items in world |
-
-Use `fList` first to see container numbers, then `fSetStorage` to override.
-
-*Console override commands require admin access (master user or server).*
+Open the Fresh Menu (Right Shift + F) → Settings tab → Storage sub-tab. Each tracked storage shows its detected class and an override dropdown to change it.
 
 ---
 

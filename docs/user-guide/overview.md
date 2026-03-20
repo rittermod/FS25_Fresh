@@ -105,7 +105,7 @@ Where you store goods affects how quickly they age. Fresh has six storage classe
 | **Sheltered** | 1.0x (baseline) | Covered storage, feed troughs |
 | **Indoor** | 0.8x slower | Enclosed silos, production buildings |
 | **Cooled** | 0.3x slower | Refrigerated storage |
-| **Frozen** | 0.05x slower | Freezer storage (nearly stops aging) |
+| **Frozen** | 0.10x slower | Freezer storage (nearly stops aging) |
 | **Disabled** | No aging | Aging completely stopped |
 
 Each product also has a **max benefit class** that caps how much it benefits from better storage. For example, dairy products max out at Cooled - putting milk in a freezer doesn't help more than a fridge.
@@ -133,7 +133,7 @@ A separate HUD panel shows color-coded freshness bars when you're near a storage
 - **Orange** - Warning (25-50% remaining)
 - **Red** - Critical (0-25% remaining)
 
-This gives you an at-a-glance view of how much of your stored goods are near expiration. The age display can be toggled on/off in settings.
+Each row includes a small storage class icon so you can see at a glance which class applies. This gives you an at-a-glance view of how much of your stored goods are near expiration. The age display can be toggled on/off in settings.
 
 ### Daily Loss Notifications
 
@@ -143,15 +143,30 @@ At the start of each game day, Fresh shows a summary notification if any product
 
 ## Fresh Menu
 
-Press **Right Shift + F** to open the Fresh Menu. It has four tabs:
+Press **Right Shift + F** to open the Fresh Menu. It has six tabs:
 
-### Inventory Overview
+### Overview
 
 A summary of all perishable goods across your farm:
 
 - **Left table** - All tracked product types with total amounts, expiring quantities, and time to next expiry
-- **Right table** - Items expiring soon (within 24h, 48h, or 72h), showing specific storage locations
+- **Right table** - Items expiring soon (within 24h, 48h, or 72h), showing specific storage locations with storage class
 - Sort by product type, expiring amount, or next expiry time
+
+### Product Details
+
+Drill into a specific product to see where it's stored:
+
+- **Left panel** - All perishable products with total amounts
+- **Right panel** - Per-storage breakdown for the selected product, showing storage name, class, amount, and time to expiry
+- Freshness distribution: Fresh (75-100%), Good (50-75%), Warning (25-50%), Critical (0-25%)
+
+### Storage Details
+
+Drill into a specific storage to see what it holds:
+
+- **Left panel** - All storages, filtered by category (Placeables, Husbandries, Vehicles, Bales & Pallets)
+- **Right panel** - Per-product breakdown for the selected storage, showing amounts, effective class, and time to expiry
 
 ### Loss Statistics
 
@@ -171,7 +186,7 @@ Full customization of the mod's behavior:
 
 - **Difficulty presets** - Quick adjustment of all shelf lives at once
 - **Per-product shelf lives** - Individual control over every product's expiration time
-- **Max benefit classes** - Adjust the storage class ceiling per product
+- **Benefit limits** - Adjust the storage class ceiling per product
 - **Storage class overrides** - Override automatic storage class detection
 - **Global toggles** - Enable/disable expiration, storage class aging, warnings, age display, warning threshold
 
@@ -186,12 +201,6 @@ See the [Settings Reference](reference-settings.md) for full details.
 | **Right Shift + F** | Open/close Fresh Menu | In-game |
 
 *The keybinding can be remapped in the game's input settings.*
-
----
-
-## Console Commands
-
-Fresh includes console commands for inspection and debugging. Open the game console (~) and type `fList` to see all tracked containers. See the [Settings Reference](reference-settings.md#console-commands) for the full command list.
 
 ---
 
