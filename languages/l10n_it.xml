@@ -154,6 +154,32 @@
         <text name="fresh_expiring_summary" text="%d elementi (%.0f L totali)"/>
         <text name="fresh_expires_soon" text="&lt; 1 ora"/>
 
+        <!-- FillType Detail Tab -->
+        <text name="fresh_filltype_detail_title" text="Dettagli prodotto"/>
+        <text name="fresh_filltype_detail_empty" text="Nessun prodotto deperibile attualmente monitorato"/>
+        <text name="fresh_filltype_detail_no_selection" text="Seleziona un prodotto per vedere i dettagli"/>
+        <text name="fresh_filltype_detail_total" text="Totale: %s"/>
+        <text name="fresh_filltype_detail_percentage" text="%.1f%%"/>
+        <text name="fresh_detail_column_name" text="Nome"/>
+        <text name="fresh_bucket_fresh" text="Fresco"/>
+        <text name="fresh_bucket_good" text="Buono"/>
+        <text name="fresh_bucket_warning" text="Attenzione"/>
+        <text name="fresh_bucket_critical" text="Critico"/>
+        <text name="fresh_bucket_fresh_pct" text="75-100%"/>
+        <text name="fresh_bucket_good_pct" text="50-75%"/>
+        <text name="fresh_bucket_warning_pct" text="25-50%"/>
+        <text name="fresh_bucket_critical_pct" text="0-25%"/>
+
+        <!-- Storage Detail Tab -->
+        <text name="fresh_storage_detail_title" text="Dettagli deposito"/>
+        <text name="fresh_storage_detail_empty" text="Nessun prodotto deperibile in questa categoria"/>
+        <text name="fresh_storage_detail_no_selection" text="Seleziona un deposito per vedere i dettagli"/>
+        <text name="fresh_storage_detail_total" text="Totale: %s"/>
+        <text name="fresh_category_placeables" text="Costruzioni"/>
+        <text name="fresh_category_husbandries" text="Allevamenti"/>
+        <text name="fresh_category_vehicles" text="Veicoli"/>
+        <text name="fresh_category_bales_pallets" text="Balle &amp; Pallet"/>
+
         <!-- Shelf Life Frame -->
         <text name="fresh_shelflife_title" text="Durata di conservazione"/>
         <text name="fresh_shelflife_empty" text="Nessun prodotto deperibile configurato"/>

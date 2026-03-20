@@ -154,6 +154,32 @@
         <text name="fresh_expiring_summary" text="%d éléments (%.0f L au total)"/>
         <text name="fresh_expires_soon" text="&lt; 1 heure"/>
 
+        <!-- FillType Detail Tab -->
+        <text name="fresh_filltype_detail_title" text="Détails du produit"/>
+        <text name="fresh_filltype_detail_empty" text="Aucun produit périssable actuellement suivi"/>
+        <text name="fresh_filltype_detail_no_selection" text="Sélectionnez un produit pour voir les détails"/>
+        <text name="fresh_filltype_detail_total" text="Total : %s"/>
+        <text name="fresh_filltype_detail_percentage" text="%.1f%%"/>
+        <text name="fresh_detail_column_name" text="Nom"/>
+        <text name="fresh_bucket_fresh" text="Frais"/>
+        <text name="fresh_bucket_good" text="Bon"/>
+        <text name="fresh_bucket_warning" text="Attention"/>
+        <text name="fresh_bucket_critical" text="Critique"/>
+        <text name="fresh_bucket_fresh_pct" text="75-100%"/>
+        <text name="fresh_bucket_good_pct" text="50-75%"/>
+        <text name="fresh_bucket_warning_pct" text="25-50%"/>
+        <text name="fresh_bucket_critical_pct" text="0-25%"/>
+
+        <!-- Storage Detail Tab -->
+        <text name="fresh_storage_detail_title" text="Détails du stockage"/>
+        <text name="fresh_storage_detail_empty" text="Aucun produit périssable dans cette catégorie"/>
+        <text name="fresh_storage_detail_no_selection" text="Sélectionnez un stockage pour voir les détails"/>
+        <text name="fresh_storage_detail_total" text="Total : %s"/>
+        <text name="fresh_category_placeables" text="Bâtiments"/>
+        <text name="fresh_category_husbandries" text="Élevages"/>
+        <text name="fresh_category_vehicles" text="Véhicules"/>
+        <text name="fresh_category_bales_pallets" text="Balles &amp; Palettes"/>
+
         <!-- Shelf Life Frame -->
         <text name="fresh_shelflife_title" text="Durée de conservation"/>
         <text name="fresh_shelflife_empty" text="Aucun produit périssable configuré"/>

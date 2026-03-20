@@ -26,6 +26,14 @@
         <!-- Age Distribution HUD -->
         <text name="fresh_age_display_title" text="Färskhet"/>
 
+        <!-- Storage class labels -->
+        <text name="fresh_class_exposed" text="Exponerad"/>
+        <text name="fresh_class_sheltered" text="Skyddad"/>
+        <text name="fresh_class_indoor" text="Inomhus"/>
+        <text name="fresh_class_cooled" text="Kyld"/>
+        <text name="fresh_class_frozen" text="Fryst"/>
+        <text name="fresh_class_disabled" text="Inaktiverad"/>
+
         <!-- Fresh Menu keybind -->
         <text name="input_RM_FRESH_MENU" text="Fresh Meny"/>
 
@@ -42,10 +50,34 @@
         <text name="fresh_expire_6_months" text="6 månader"/>
         <text name="fresh_expire_9_months" text="9 månader"/>
         <text name="fresh_expire_1_year" text="1 år"/>
-        <text name="fresh_expire_1_5_years" text="1.5 år"/>
+        <text name="fresh_expire_1_5_years" text="1,5 år"/>
         <text name="fresh_expire_2_years" text="2 år"/>
         <text name="fresh_expire_3_years" text="3 år"/>
         <text name="fresh_expire_5_years" text="5 år"/>
+
+        <!-- Sub-category tabs -->
+        <text name="fresh_tab_settings" text="Inställningar"/>
+        <text name="fresh_tab_expiration" text="Utgång"/>
+        <text name="fresh_tab_maxbenefit" text="Maximal fördel"/>
+        <text name="fresh_tab_storage" text="Lagring"/>
+
+        <!-- Difficulty Preset -->
+        <text name="fresh_settings_preset" text="Svårighetsgrad"/>
+        <text name="fresh_settings_preset_tooltip" text="Justerar alla hållbarhetstider. Mycket lätt fyrdubblar, Lätt fördubblar, Svårt halverar. Anpassad ger individuell kontroll."/>
+        <text name="fresh_preset_veryEasy" text="Mycket lätt (x4)"/>
+        <text name="fresh_preset_easy" text="Lätt (x2)"/>
+        <text name="fresh_preset_normal" text="Normal"/>
+        <text name="fresh_preset_hard" text="Svårt (x0,5)"/>
+        <text name="fresh_preset_custom" text="Anpassad"/>
+
+        <!-- Period format strings (for readonly preset value display) -->
+        <text name="fresh_period_months" text="%d månader"/>
+        <text name="fresh_period_months_decimal" text="%.1f månader"/>
+        <text name="fresh_period_years" text="%d år"/>
+        <text name="fresh_period_years_decimal" text="%.1f år"/>
+
+        <!-- DLC/Mod fillTypes section -->
+        <text name="fresh_settings_fillTypes_dlcmod" text="Utgångstider (DLC &amp; Mods)"/>
 
         <!-- Settings global section -->
         <text name="fresh_settings_global" text="Globala inställningar"/>
@@ -62,11 +94,36 @@
         <text name="fresh_warning_24h" text="24 timmar"/>
         <text name="fresh_warning_48h" text="48 timmar"/>
         <text name="fresh_warning_72h" text="72 timmar"/>
-        <text name="fresh_settings_fillTypes" text="Utgångsdatum"/>
+        <text name="fresh_settings_fillTypes" text="Utgångstider"/>
+        <text name="fresh_settings_maxBenefitHeader" text="Fördelsgränser"/>
+        <text name="fresh_settings_storageHeader" text="Lagringsklass-överstyrning"/>
+        <text name="fresh_settings_storageAging" text="Åldring per lagringsklass"/>
+        <text name="fresh_settings_storageAging_tooltip" text="När aktiverad åldras varor i olika takt beroende på lagringstyp. Exponerad åldras snabbast, fryst långsammast. När inaktiverad åldras alla lager i samma takt."/>
+        <text name="fresh_maxbenefit_default" text="Standard"/>
+        <text name="fresh_maxbenefit_configDefault" text="Standard"/>
+        <text name="fresh_maxbenefit_tooltip" text="Ställer in maximal lagringsklassfördel för denna produkt. Högre klasser saktar ner åldrandet. Se fliken Hållbarhet för exakta värden."/>
+        <text name="fresh_storage_auto" text="Auto (upptäckt)"/>
+        <text name="fresh_storage_override_tooltip" text="Överstyr lagringsklassen för denna plats. Auto använder den upptäckta klassen. Högre klasser saktar ner åldrandet, Inaktiverad stoppar åldrandet helt."/>
+        <text name="fresh_storage_items_in_world" text="Lösa objekt"/>
+        <text name="fresh_storage_items_in_world_tooltip" text="Omfattar balar, pallar och storsäckar som inte placerats i ett dedikerat lager."/>
+        <text name="fresh_storage_detected" text="Upptäckt"/>
+
+        <!-- Tooltip format strings -->
+        <text name="fresh_tooltip_filltype" text="Fylltyp: %s"/>
+        <text name="fresh_tooltip_source_basegame" text="Källa: Grundspel"/>
+        <text name="fresh_tooltip_source_dlc" text="Källa: DLC (%s)"/>
+        <text name="fresh_tooltip_source_mod" text="Källa: Mod (%s)"/>
+        <text name="fresh_tooltip_source_map" text="Källa: Karta"/>
+
+        <!-- Storage sidebar info -->
+        <text name="fresh_storage_sidebar_info" text="%s L, %d produkter"/>
+
+        <!-- Empty state message for preset-controlled tabs -->
+        <text name="fresh_settings_presetActive" text="Alla produkter hanteras av vald förinställning. Byt till Anpassad för att redigera individuellt."/>
 
         <!-- Settings reset button -->
         <text name="fresh_settings_resetDefaults" text="Återställ till standard"/>
-        <text name="fresh_settings_resetConfirm" text="Återställ alla inställningar till modets standardinställningar. Detta kan inte ångras."/>
+        <text name="fresh_settings_resetConfirm" text="Återställ alla inställningar till modets standardinställningar? Detta kan inte ångras."/>
         <text name="fresh_settings_reset" text="Inställningar återställda till modets standardinställningar"/>
 
         <!-- Status Frame / Inventory Overview -->
@@ -86,7 +143,7 @@
         <text name="fresh_sort_by_age" text="Nästa utgång"/>
 
         <!-- Expiring Soon table -->
-        <text name="fresh_expires_within" text="Går ut om"/>
+        <text name="fresh_expires_within" text="Går ut inom"/>
         <text name="fresh_expires_24h" text="24 timmar"/>
         <text name="fresh_expires_48h" text="48 timmar"/>
         <text name="fresh_expires_72h" text="72 timmar"/>
@@ -96,6 +153,38 @@
         <text name="fresh_expiring_empty" text="Ingenting som går ut i närtid"/>
         <text name="fresh_expiring_summary" text="%d enheter (%.0f L totalt)"/>
         <text name="fresh_expires_soon" text="&lt; 1 timme"/>
+
+        <!-- FillType Detail Tab -->
+        <text name="fresh_filltype_detail_title" text="Produktdetaljer"/>
+        <text name="fresh_filltype_detail_empty" text="Inga färskvaror under bevakning just nu"/>
+        <text name="fresh_filltype_detail_no_selection" text="Välj en produkt för att se detaljer"/>
+        <text name="fresh_filltype_detail_total" text="Totalt: %s"/>
+        <text name="fresh_filltype_detail_percentage" text="%.1f%%"/>
+        <text name="fresh_detail_column_name" text="Namn"/>
+        <text name="fresh_bucket_fresh" text="Färsk"/>
+        <text name="fresh_bucket_good" text="Bra"/>
+        <text name="fresh_bucket_warning" text="Varning"/>
+        <text name="fresh_bucket_critical" text="Kritisk"/>
+        <text name="fresh_bucket_fresh_pct" text="75-100%"/>
+        <text name="fresh_bucket_good_pct" text="50-75%"/>
+        <text name="fresh_bucket_warning_pct" text="25-50%"/>
+        <text name="fresh_bucket_critical_pct" text="0-25%"/>
+
+        <!-- Storage Detail Tab -->
+        <text name="fresh_storage_detail_title" text="Lagringsdetaljer"/>
+        <text name="fresh_storage_detail_empty" text="Inga färskvaror i denna kategori"/>
+        <text name="fresh_storage_detail_no_selection" text="Välj ett lager för att se detaljer"/>
+        <text name="fresh_storage_detail_total" text="Totalt: %s"/>
+        <text name="fresh_category_placeables" text="Byggnader"/>
+        <text name="fresh_category_husbandries" text="Djurhållningar"/>
+        <text name="fresh_category_vehicles" text="Fordon"/>
+        <text name="fresh_category_bales_pallets" text="Balar &amp; Pallar"/>
+
+        <!-- Shelf Life Frame -->
+        <text name="fresh_shelflife_title" text="Hållbarhet"/>
+        <text name="fresh_shelflife_empty" text="Inga färskvaror konfigurerade"/>
+        <text name="fresh_shelflife_product" text="Produkt"/>
+        <text name="fresh_shelflife_unit_months" text="hållbarhet i månader"/>
 
         <!-- Statistics Frame -->
         <text name="fresh_stats_title" text="Förluststatistik"/>
