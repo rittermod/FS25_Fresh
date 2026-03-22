@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <modDesc descVersion="106">
     <author>Ritter</author>
-    <version>1.0.0.0-dev.1</version>
+    <version>1.0.0.0-dev.2</version>
     <title>
         <en>Fresh</en>
         <it>Fresco</it>
@@ -41,7 +41,11 @@ Documentation: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
 
-1.0.0.0-dev:
+1.0.0.0-dev.2:
+- Fixed dedicated server not recognizing third-party mod products on startup
+- Fixed client HUD not showing freshness for products configured only via user settings
+
+1.0.0.0-dev.1:
 - Added German localization - contributed by Roleplayboy
 - Updated all translations (French, Italian, Swedish, German) to cover new detail tabs and storage features
 - Added Storage Details tab - per-product breakdown with age distribution, storage class, expiry times, and 4-category filter with shop icons

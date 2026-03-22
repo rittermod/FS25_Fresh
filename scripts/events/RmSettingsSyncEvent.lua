@@ -199,6 +199,9 @@ function RmSettingsSyncEvent:run(connection)
     RmFreshSettings:setAllStorageClassOverrides(self.settingsData.storageClassOverrides or {})
     RmFreshSettings:setAllMaxBenefitClassOverrides(self.settingsData.maxBenefitClassOverrides or {})
 
+    -- Rebuild index cache on client to reflect server's overrides (F-143)
+    RmFreshSettings:rebuildIndexCache()
+
     -- Apply storageAgingEnabled from synced globals (direct property, not just userOverrides)
     local syncedStorageAging = self.settingsData.global and self.settingsData.global["storageAgingEnabled"]
     if syncedStorageAging ~= nil then
