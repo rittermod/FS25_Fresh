@@ -1,0 +1,130 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! The details you provide here help us reproduce and fix the issue faster. For a step-by-step guide on finding version numbers, log files, and more, see our [Bug Report Guide](https://rittermod.github.io/guides/bug-report/).
+
+        **Tip:** The game log file (`log.txt`) is the single most useful piece of information for diagnosing issues — please always include it if possible.
+
+  - type: input
+    id: mod-version
+    attributes:
+      label: Mod Version
+      description: Which version of Fresh are you using? You can find this in the mod manager or the mod description.
+      placeholder: "e.g. 0.7.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: game-version
+    attributes:
+      label: Game Version
+      description: Which version of Farming Simulator 25 are you running? You can find this in the top left corner of the main menu.
+      placeholder: "e.g. 1.5.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: game-mode
+    attributes:
+      label: Game Mode
+      description: How are you playing?
+      options:
+        - Singleplayer
+        - Multiplayer (hosting)
+        - Multiplayer (joined as client)
+        - Multiplayer (dedicated server)
+    validations:
+      required: true
+
+  - type: input
+    id: map
+    attributes:
+      label: Map
+      description: Which map are you playing on? Full name, not abbreviated. If it's a custom map, please also include the mod name.
+      placeholder: "e.g. Riverbend, Hof Bergmann, Zielonka"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: entity-type
+    attributes:
+      label: Entity Type
+      description: Which type of storage or entity is affected? Select all that apply.
+      multiple: true
+      options:
+        - Vehicle / trailer
+        - Silo / storage (placeable)
+        - Bale
+        - Feeding trough (husbandry)
+        - Production point
+        - Not entity-specific
+    validations:
+      required: false
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug. What did you see or what went wrong?
+      placeholder: "e.g. After loading my savegame, batch ages reset to 0 even though produce had been aging before saving."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+      description: What should have happened instead?
+      placeholder: "e.g. Produce should retain its age after save/load."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we trigger this bug? List the steps if you know them.
+      placeholder: |
+        1. Store wheat in a silo
+        2. Wait for it to age
+        3. Save and exit
+        4. Load the savegame
+    validations:
+      required: false
+
+  - type: textarea
+    id: log-file
+    attributes:
+      label: Log File
+      description: |
+        Attach your `log.txt` file by dragging it into this field, or paste the relevant sections.
+
+        **Where to find it:** Usually `Documents/My Games/FarmingSimulator2025/log.txt`
+
+        **Note:** The log resets every time you start the game, so grab it before restarting.
+
+        **Tip:** If asked to provide more detail, you can enable debug logging in-game with the console command `rmSetLoglevel Fresh DEBUG`, reproduce the issue, then attach the new log.
+      placeholder: "Drag and drop your log.txt file here, or paste the relevant error lines."
+    validations:
+      required: false
+
+  - type: textarea
+    id: other-mods
+    attributes:
+      label: Other Mods
+      description: List any other mods you have active, especially storage, production, or economy related mods.
+      placeholder: "e.g. Precision Farming, Production Revamp, GPS mod"
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots to help explain the problem (especially useful for GUI or HUD issues). Drag and drop images here.
+    validations:
+      required: false
