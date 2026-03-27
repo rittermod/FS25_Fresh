@@ -7,7 +7,7 @@ A Farming Simulator 25 mod that adds shelf life to your produce and bales - crop
 ## Key Features
 
 - **Produce perishability** - Harvested crops, processed products, and baled forage age over time and eventually expire
-- **100+ products** with research-based default shelf lives, from strawberries (1 month) to canned goods (2 years)
+- **Around 100 products** with research-based default shelf lives, from strawberries (1 month) to canned goods (2 years)
 - **Storage classes** - Where you store goods matters: frozen storage extends shelf life 10x compared to leaving goods outdoors
 - **Batch tracking** - FIFO system retrieves oldest items first, so nothing gets forgotten at the back
 - **Visual feedback** - Color-coded age bars, expiry warnings in info boxes, and daily loss notifications

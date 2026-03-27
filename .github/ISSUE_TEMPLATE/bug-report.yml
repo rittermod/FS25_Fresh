@@ -101,7 +101,7 @@ body:
     attributes:
       label: Log File
       description: |
-        Attach your `log.txt` file by dragging it into this field, or paste the relevant sections.
+        Attach your `log.txt` file by dragging it into this field, or paste the relevant sections. Or you can send it via email to ritter.mod@proton.me, mentioning this issue.
 
         **Where to find it:** Usually `Documents/My Games/FarmingSimulator2025/log.txt`
 

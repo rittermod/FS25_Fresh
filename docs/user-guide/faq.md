@@ -81,7 +81,7 @@ Fresh can be added to an existing savegame safely. When you first load a save wi
 
 ## What products are tracked?
 
-Fresh comes with over 100 perishable products pre-configured, covering:
+Fresh comes with around 100 perishable products pre-configured, covering:
 
 - Fresh produce (vegetables, fruit, mushrooms)
 - Dairy (milk, cheese, eggs, butter)

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <modDesc descVersion="106">
     <author>Ritter</author>
-    <version>1.0.0.0-dev.2</version>
+    <version>1.0.0.0</version>
     <title>
         <en>Fresh</en>
         <it>Fresco</it>
@@ -11,8 +11,6 @@
 Fresh adds shelf life to your products - crops age over time and will spoil if not sold or used!
 
 Your harvested crops, processed goods, and baled forage now have realistic shelf lives - leafy vegetables spoil quickly, while grains and canned products last much longer. Customize shelf lives via the Fresh Menu!
-
-Pre-release - testing and feedback welcome.
 
 Fresh Menu (Right Shift+F):
 - Inventory Overview: see all perishables with their oldest ages
@@ -41,22 +39,20 @@ Documentation: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
 
-1.0.0.0-dev.2:
-- Fixed dedicated server not recognizing third-party mod products on startup
-- Fixed client HUD not showing freshness for products configured only via user settings
-
-1.0.0.0-dev.1:
-- Added German localization - contributed by Roleplayboy
-- Updated all translations (French, Italian, Swedish, German) to cover new detail tabs and storage features
+1.0.0.0:
 - Added Storage Details tab - per-product breakdown with age distribution, storage class, expiry times, and 4-category filter with shop icons
 - Added Product Details tab - per-storage breakdown with age distribution across Fresh/Good/Warning/Critical buckets
 - Added storage class icons to HUD, expiring soon table, and loss log with thick stroke variants for small-size legibility
 - Added custom menu icons for all 6 tabs (Lucide icons)
+- Added German localization - contributed by Roleplayboy
+- Updated all translations (French, Italian, Swedish, German) to cover new detail tabs and storage features
 - Improved settings UX: master Enable switch greys out all other settings, dependency toggles hide/show related controls and sub-tabs
-- Improved menu polish: keyboard/controller navigation, table spacing, naming consistency, removed "(preview)" labels
+- Improved menu polish: keyboard/controller navigation, table spacing, naming consistency
 - Localized all remaining hardcoded English strings
 - Rebalanced frozen multiplier from 0.05 to 0.10 (20x to 10x life extension)
 - Adjusted shelf lives and storage class limits for 15+ products to better reflect real-world storage behavior
+- Fixed dedicated server not recognizing third-party mod products on startup
+- Fixed client HUD not showing freshness for products configured only via user settings
 - Fixed incorrect maxBenefitClass for Lettuce, Potatoes, Sugarcane, Salmon/Trout Fry, and Butter
 - Fixed storage list showing empty product entries for containers with zero fill level
 
@@ -107,25 +103,24 @@ Impostazioni e personalizzazione:
 - Supporto multiplayer (server-authoritative)
 - Lingue: inglese, tedesco, francese, italiano, svedese
 
-Note:
-- Pre-release - feedback benvenuto
-
 Documentazione: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
 
-1.0.0.0-dev:
-- Aggiunta localizzazione tedesca - contributo di Roleplayboy
-- Aggiornate tutte le traduzioni (francese, italiana, svedese, tedesca) per le nuove schede dettaglio e funzionalità magazzini
+1.0.0.0:
 - Aggiunta scheda Dettagli Magazzino - dettaglio per prodotto con distribuzione età, classe, scadenza e filtro a 4 categorie con icone negozio
 - Aggiunta scheda Dettagli Prodotto - dettaglio per magazzino con distribuzione età (Fresco/Buono/Avviso/Critico)
 - Aggiunte icone classe di stoccaggio a HUD, tabella in scadenza e registro perdite
 - Aggiunte icone personalizzate per tutte le 6 schede del menu (icone Lucide)
+- Aggiunta localizzazione tedesca - contributo di Roleplayboy
+- Aggiornate tutte le traduzioni (francese, italiana, svedese, tedesca) per le nuove schede dettaglio e funzionalità magazzini
 - Migliorata UX impostazioni: interruttore principale Abilita disattiva tutte le altre impostazioni
 - Migliorata navigazione e coerenza del menu
 - Localizzate tutte le stringhe inglesi rimanenti
 - Ribilanciato moltiplicatore congelato da 0.05 a 0.10 (da 20x a 10x estensione vita)
 - Regolate durate e limiti classe stoccaggio per 15+ prodotti
+- Corretta rilevazione prodotti mod di terze parti su server dedicato all'avvio
+- Corretta visualizzazione HUD freschezza per prodotti configurati solo via impostazioni utente
 - Corretti maxBenefitClass per Lattuga, Patate, Canna da zucchero, Avannotti Salmone/Trota e Burro
 - Corretta lista magazzini che mostrava prodotti vuoti
 

@@ -4,9 +4,9 @@ Fresh adds shelf life to your products - crops age over time and will spoil if n
 
 Fresh brings perishable products to Farming Simulator 25. Your harvested crops, processed goods, and baled forage now have realistic shelf lives - leafy vegetables spoil quickly, while grains and canned products last much longer. Leave produce sitting too long and it will expire and be lost! Customize shelf lives to match your playstyle via the Fresh Menu.
 
-Pre-release - testing and feedback welcome.
-
 **[User Guide](https://rittermod.github.io/FS25_Fresh/)**
+
+Found a bug? [Open an issue](https://github.com/RitterMod/FS25_Fresh/issues)
 
 ## Why Fresh?
 
@@ -83,10 +83,7 @@ Vanilla FS25 lets you stockpile products indefinitely, waiting for the perfect p
 - Ages saved with your game
 
 ## Limitations & Known Issues
-
 - No loose item tracking (loose grass, grains, etc. on the ground)
-- Store-bought pallets may show double the actual amount
-- Multiplayer: clients may not see "Expires in" info when looking at bales
 - Silo extensions are tracked separately rather than as a shared pool
 
 ## Installation
