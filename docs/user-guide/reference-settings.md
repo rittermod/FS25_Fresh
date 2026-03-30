@@ -32,17 +32,21 @@ The difficulty preset scales all shelf lives at once. Select a preset from the S
 | **Hard** | ×0.5 | All shelf lives halved. Demanding logistics for experienced players. |
 | **Custom** | varies | Unlocks individual per-product controls. No global multiplier applied. |
 
+> **Tip:** To adjust a single product's shelf life, select the **Custom** preset. This unlocks the Expiration sub-tab for individual editing. Note that switching to Custom resets all values to Normal defaults — your current preset multiplier is not preserved.
+
 ### How Presets Interact with Custom Settings
 
-- Selecting a preset (Very Easy through Hard) applies that multiplier to all products. The Expiration and Benefit Limit tabs show the effective values but are read-only.
-- Selecting **Custom** unlocks the Expiration tab for individual per-product editing. Products start at their Normal-difficulty defaults.
+- Selecting a preset (Very Easy through Hard) applies that multiplier to all products. The Expiration and Benefit Limit tabs hide preset-controlled products and show a message: *"All products are managed by the selected preset. Switch to Custom to edit individually."*
+- Selecting **Custom** reveals all products in the Expiration tab for individual editing. **All products start at their Normal-difficulty (×1) defaults** — if you were on Easy (×2) or Very Easy (×4), that multiplier is not preserved. You'll need to manually adjust any products you want to differ from the Normal baseline.
 - Switching from Custom back to a preset discards any per-product changes and applies the preset multiplier to the mod defaults.
 
 ---
 
 ## Expiration Settings (Per Product)
 
-Available when difficulty is set to **Custom**. Located in the Settings tab → Expiration sub-tab.
+> **Requires Custom difficulty.** When a preset is active, preset-controlled products are hidden. Switch the difficulty to **Custom** to reveal all products for individual editing. See [Difficulty Presets](#difficulty-presets) above.
+
+Located in the Settings tab → Expiration sub-tab.
 
 Each perishable product has a configurable shelf life:
 
@@ -51,14 +55,9 @@ Each perishable product has a configurable shelf life:
 | **Do not expire** | Product never expires (removed from tracking) |
 | **1 month** - **5 years** | Time before expiration in Sheltered storage |
 
-Available values: 1, 2, 3, 4, 5, 6, 9, 12, 18, 24, 36, or 60 months.
+Available values: 1, 2, 3, 4, 5, 6, 9 months, 1 year, 1.5 years, 2 years, 3 years, or 5 years.
 
-Products are organized into two sections:
-
-- **Expiration Times** - Basegame fill types
-- **Expiration Times (DLCs & Mods)** - Fill types from DLCs, maps, and other mods
-
-Each product shows a tooltip with the fill type's source (basegame, DLC name, or mod name).
+Products are listed alphabetically. Each product shows a tooltip with its source (basegame, DLC name, or mod name).
 
 ---
 
@@ -115,7 +114,7 @@ Some settings depend on others:
 
 ```
 Enable Expiration → All other settings (only when Expiration is On)
-Difficulty Preset → Expiration tab (editable only when Custom)
+Difficulty Preset → Expiration tab product list (hidden when preset controls them)
 Storage Class Aging → Benefit Limit tab + Storage tab (visible only when On)
                     → Shelf Life tab display (per-class table when On, simple list when Off)
 ```

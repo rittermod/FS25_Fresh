@@ -51,6 +51,7 @@ Fresh automatically detects the storage class based on the container type:
 | **Feed troughs** (husbandry food) | Sheltered | Under roof at husbandry |
 | **Silos and storage** (placeables) | Indoor | Enclosed building storage |
 | **Production point storage** | Indoor | Factory/processing buildings |
+| **Object storage** (warehouses) | Indoor | Enclosed building storage for items |
 | **Milk storage** (husbandry milk) | Cooled | Refrigerated milk tanks |
 
 ---

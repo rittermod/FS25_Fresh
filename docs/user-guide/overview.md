@@ -59,7 +59,7 @@ This prevents the situation where fresh goods are used while older ones sit forg
 
 ### Batch Merging
 
-To keep things efficient, Fresh merges batches that are close in age (within about 7 game hours). If you add wheat to a silo repeatedly over a few hours, those small additions merge into a single batch rather than creating dozens of tiny ones.
+To keep things efficient, Fresh merges batches that are close in age. If you add wheat to a silo repeatedly over a short period, those small additions merge into a single batch rather than creating dozens of tiny ones.
 
 ---
 
@@ -185,7 +185,7 @@ A read-only reference listing every perishable product with its active shelf lif
 Full customization of the mod's behavior:
 
 - **Difficulty presets** - Quick adjustment of all shelf lives at once
-- **Per-product shelf lives** - Individual control over every product's expiration time
+- **Per-product shelf lives** - Individual control over every product's expiration time (requires Custom difficulty)
 - **Benefit limits** - Adjust the storage class ceiling per product
 - **Storage class overrides** - Override automatic storage class detection
 - **Global toggles** - Enable/disable expiration, storage class aging, warnings, age display, warning threshold

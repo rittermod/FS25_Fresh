@@ -14,7 +14,7 @@ Two things to check:
 
 **2. Difficulty preset.** At **Hard** difficulty, all shelf lives are halved. A product listed at 6 months on Normal only lasts 3 months on Hard. Check your preset in the Fresh Menu → Settings tab.
 
-These effects stack. Strawberries (1-month base shelf life) on Hard difficulty in Exposed storage last roughly 10 days.
+These effects stack. Strawberries (1-month base shelf life) on Hard difficulty in Exposed storage last only a third of a month.
 
 ---
 
@@ -33,6 +33,21 @@ Also check if a storage class override has been applied via the Settings → Sto
 ## Can I disable expiration entirely?
 
 Yes. Open the Fresh Menu (Right Shift + F) → Settings tab and toggle **Enable Expiration** to Off. All aging pauses. Existing batch ages are preserved and resume if you re-enable it later.
+
+---
+
+## How do I adjust the shelf life of a specific product?
+
+Per-product editing requires **Custom** difficulty. Here's how:
+
+1. Open the Fresh Menu (Right Shift + F) → Settings tab
+2. Change the difficulty preset to **Custom**
+3. Open the **Expiration** sub-tab — all products are now visible
+4. Find the product and select a new shelf life value
+
+The preset difficulties (Very Easy through Hard) apply a global multiplier and hide individual products from the Expiration tab. You'll see a message prompting you to switch to Custom.
+
+> **Note:** Switching to Custom sets all shelf lives to their Normal-difficulty defaults (×1 multiplier). If you were playing on Easy (×2), your doubled shelf lives are not carried over — you'll need to manually adjust any products you want longer than the Normal default.
 
 ---
 
@@ -73,8 +88,8 @@ Fresh can be added to an existing savegame safely. When you first load a save wi
 
 ## How do difficulty presets interact with custom settings?
 
-- **Preset mode** (Very Easy/Easy/Normal/Hard): A global multiplier scales all shelf lives. You cannot edit individual products - the Expiration tab is read-only showing the effective values.
-- **Custom mode**: No global multiplier. Every product can be individually configured. Products start at their Normal-difficulty defaults when you first switch to Custom.
+- **Preset mode** (Very Easy/Easy/Normal/Hard): A global multiplier scales all shelf lives. Individual products are hidden from the Expiration tab — a message prompts you to switch to Custom for per-product control.
+- **Custom mode**: No global multiplier. All products are revealed and can be individually configured. Products start at their Normal-difficulty defaults when you first switch to Custom.
 - **Switching back** to a preset from Custom discards your per-product changes and applies the preset multiplier to the mod defaults.
 
 ---
@@ -100,7 +115,7 @@ See the [Shelf Life Table](reference-shelf-life.md) for the complete list with d
 
 ## What about DLC and mod products?
 
-Fresh automatically detects fill types added by DLCs, maps, and other mods. By default, new fill types don't expire. You can configure them in the Fresh Menu → Settings → Expiration tab, under the "DLCs & Mods" section. The tooltip for each product shows which DLC or mod added it.
+Fresh automatically detects fill types added by DLCs, maps, and other mods. By default, new fill types don't expire. You can configure them in the Fresh Menu → Settings → Expiration tab (requires Custom difficulty). All products are listed alphabetically — the tooltip for each product shows which DLC or mod added it.
 
 ---
 
@@ -139,6 +154,7 @@ Fresh assigns storage classes automatically based on container type:
 | Bales | Exposed |
 | Feed troughs | Sheltered |
 | Silos, production buildings | Indoor |
+| Object storage (warehouses) | Indoor |
 | Husbandry milk storage | Cooled |
 
 If the automatic detection doesn't match your setup, use storage class overrides. See the [Storage Classes Guide](guide-storage-classes.md#storage-class-overrides) for how to override.

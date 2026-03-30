@@ -12,7 +12,7 @@ A Farming Simulator 25 mod that adds shelf life to your produce and bales - crop
 - **Batch tracking** - FIFO system retrieves oldest items first, so nothing gets forgotten at the back
 - **Visual feedback** - Color-coded age bars, expiry warnings in info boxes, and daily loss notifications
 - **Fresh Menu** - Inventory overview, product and storage details, loss statistics, shelf life reference, and full settings customization
-- **Difficulty presets** - Very Easy (4x shelf life) through Hard (half shelf life), or fully custom per product
+- **Difficulty presets** - Very Easy (4x shelf life) through Hard (half shelf life), plus a Custom mode for per-product control
 - **Multiplayer support** - Server-authoritative with full client synchronization
 
 ## Download

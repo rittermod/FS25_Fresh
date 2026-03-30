@@ -10,7 +10,7 @@ Default shelf lives for all perishable products in Fresh. Values are in game mon
 
 - **Shelf Life** - Time before expiration at Normal difficulty, in Sheltered storage (1.0x multiplier)
 - **Max Benefit** - The best storage class that improves this product's shelf life. Better storage than this has no additional effect.
-- All values can be customized per product in the Fresh Menu settings
+- All values can be customized per product in the Fresh Menu settings (requires **Custom** difficulty — see [Settings Reference](reference-settings.md#difficulty-presets))
 - **In-game view** - When Storage Class Aging is enabled, the Fresh Menu → Shelf Life tab shows these values broken down by storage class
 
 ### Difficulty Preset Multipliers
@@ -244,8 +244,6 @@ Unpasteurized milk with very short shelf life.
 |---------|-----------|-------------|
 | Sugar Beet (cut) | 1 month | Cooled |
 | Chaff | 5 months | Sheltered |
-| Forage | 5 months | Sheltered |
-| Forage Mixing | 5 months | Sheltered |
 | Pig Food | 6 months | Indoor |
 | Fish Food | 9 months | Indoor |
 | Straw | 24 months | Sheltered |
@@ -256,6 +254,8 @@ Unpasteurized milk with very short shelf life.
 
 | Product | Shelf Life | Max Benefit |
 |---------|-----------|-------------|
+| Forage | 5 months | Sheltered |
+| Forage Mixing | 5 months | Sheltered |
 | Silage | 12 months | Indoor |
 
 ---
