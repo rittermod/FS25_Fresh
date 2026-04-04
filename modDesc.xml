@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
-<modDesc descVersion="106">
+<modDesc descVersion="107">
     <author>Ritter</author>
-    <version>1.0.0.0</version>
+    <version>1.0.0.1</version>
     <title>
         <en>Fresh</en>
         <it>Fresco</it>
@@ -38,6 +38,9 @@ Features:
 Documentation: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
+
+1.0.0.1:
+- Fixed spurious error log "Failed to register RM_FRESH_MENU action" caused by benign duplicate input registration
 
 1.0.0.0:
 - Added Storage Details tab - per-product breakdown with age distribution, storage class, expiry times, and 4-category filter with shop icons
@@ -106,6 +109,9 @@ Impostazioni e personalizzazione:
 Documentazione: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
+
+1.0.0.1:
+- Corretto log di errore spurio "Failed to register RM_FRESH_MENU action" causato da registrazione input duplicata benigna
 
 1.0.0.0:
 - Aggiunta scheda Dettagli Magazzino - dettaglio per prodotto con distribuzione età, classe, scadenza e filtro a 4 categorie con icone negozio

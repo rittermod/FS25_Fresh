@@ -1,5 +1,8 @@
 # Changelog
 
+1.0.0.1:
+- Fixed spurious error log "Failed to register RM_FRESH_MENU action" caused by benign duplicate input registration
+
 1.0.0.0:
 - Added Storage Details tab - per-product breakdown with age distribution, storage class, expiry times, and 4-category filter with shop icons
 - Added Product Details tab - per-storage breakdown with age distribution across Fresh/Good/Warning/Critical buckets

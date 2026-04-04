@@ -215,10 +215,14 @@ function RmFreshMenu.addPlayerActionEvents(playerInputComponent, controlling)
         callbackState, disableConflictingBindings
     )
 
-    if not success and controlling ~= "VEHICLE" then
-        -- Only log error if not in vehicle context
-        -- When controlling == "VEHICLE", success is false even if registration succeeded
-        Log:error("Failed to register RM_FRESH_MENU action")
+    if not success then
+        if controlling == "VEHICLE" or (actionEventId ~= nil and actionEventId ~= "") then
+            -- VEHICLE context returns false even on success (FS25 quirk)
+            -- Non-empty actionEventId means duplicate registration (benign)
+            Log:debug("RM_FRESH_MENU registration returned false (controlling=%s, eventId=%s)", tostring(controlling), tostring(actionEventId))
+        else
+            Log:debug("RM_FRESH_MENU action not registered (controlling=%s)", tostring(controlling))
+        end
         return
     end
 
