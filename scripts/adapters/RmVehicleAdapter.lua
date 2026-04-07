@@ -9,6 +9,15 @@ RmVehicleAdapter.ENTITY_TYPE = "vehicle"
 
 local Log = RmLogging.getLogger("Fresh")
 
+--- Safe getName wrapper - some vehicle types (e.g. Rideable/horse) override getName()
+--- with code that throws when internal state isn't ready (cluster=nil during async load).
+--- Base game bug: Rideable:getName() has no nil guard on spec.cluster.
+local function safeGetName(vehicle)
+    local ok, name = pcall(function() return vehicle:getName() end)
+    if ok and name then return name end
+    return vehicle.typeName or vehicle.configFileName or "unknown"
+end
+
 -- =============================================================================
 -- IDENTITY
 -- =============================================================================
@@ -250,7 +259,7 @@ function RmVehicleAdapter:onLoadFinished(savegame)
     if propertyState == VehiclePropertyState.SHOP_CONFIG or
        propertyState == VehiclePropertyState.NONE then
         Log:trace("VEHICLE_SKIP_NON_PLAYER: propertyState=%d name=%s",
-            propertyState or 0, self:getName() or "unknown")
+            propertyState or 0, safeGetName(self))
         return
     end
 
@@ -273,7 +282,7 @@ local DEFER_TIMEOUT_MS = 10000
 --- uniqueId is assigned after onLoadFinished for shop purchases
 ---@param vehicle table Vehicle entity
 function RmVehicleAdapter.deferRegistration(vehicle)
-    Log:trace(">>> deferRegistration(vehicle=%s)", vehicle:getName() or "unknown")
+    Log:trace(">>> deferRegistration(vehicle=%s)", safeGetName(vehicle))
 
     local spec = vehicle[RmVehicleAdapter.SPEC_TABLE_NAME]
     if spec.deferredRegistration then
@@ -282,7 +291,7 @@ function RmVehicleAdapter.deferRegistration(vehicle)
     end
 
     spec.deferredRegistration = true
-    Log:debug("VEHICLE_DEFER: %s (uniqueId not yet assigned)", vehicle:getName() or "unknown")
+    Log:debug("VEHICLE_DEFER: %s (uniqueId not yet assigned)", safeGetName(vehicle))
 
     local startTime = g_currentMission.time
 
@@ -314,7 +323,7 @@ function RmVehicleAdapter.deferRegistration(vehicle)
             -- Timeout: polling exhausted
             if (g_currentMission.time - startTime) > DEFER_TIMEOUT_MS then
                 Log:warning("VEHICLE_NO_UNIQUEID: %s failed to get uniqueId after %dms",
-                    v:getName() or "unknown", DEFER_TIMEOUT_MS)
+                    safeGetName(v), DEFER_TIMEOUT_MS)
                 g_currentMission:removeUpdateable(self)
                 return
             end
@@ -352,7 +361,7 @@ function RmVehicleAdapter.doRegistration(vehicle, entityId)
                     "vehicle",
                     identityMatch,
                     vehicle,
-                    { location = vehicle:getName() or "Vehicle", storageClass = storageClass, isPallet = vehicle.isPallet or false }
+                    { location = safeGetName(vehicle), storageClass = storageClass, isPallet = vehicle.isPallet or false }
                 )
 
                 -- Create sub-table lazily (only when we have a perishable type)
@@ -374,10 +383,10 @@ function RmVehicleAdapter.doRegistration(vehicle, entityId)
 
                 if identityMatch.storage.amount > 0 then
                     Log:debug("VEHICLE_REGISTERED: fillType=%s containerId=%s reconciled=%s name=%s",
-                        fillTypeName, containerId or "nil", tostring(wasReconciled), vehicle:getName() or "unknown")
+                        fillTypeName, containerId or "nil", tostring(wasReconciled), safeGetName(vehicle))
                 else
                     Log:debug("VEHICLE_REGISTERED_EMPTY: fillType=%s containerId=%s name=%s (pre-registered)",
-                        fillTypeName, containerId or "nil", vehicle:getName() or "unknown")
+                        fillTypeName, containerId or "nil", safeGetName(vehicle))
                 end
                 Log:debug("STORAGE_DETECT: container=%s type=vehicle class=%s(%d)",
                     containerId or "nil", RmFreshManager.STORAGE_CLASS_NAMES[storageClass], storageClass)
@@ -428,7 +437,7 @@ function RmVehicleAdapter.rescanForPerishables()
                                 local rescanStorageClass = RmVehicleAdapter.detectStorageClass(vehicle)
                                 local containerId, wasReconciled = RmFreshManager:registerContainer(
                                     "vehicle", identityMatch, vehicle,
-                                    { location = vehicle:getName() or "Vehicle", storageClass = rescanStorageClass, isPallet = vehicle.isPallet or false }
+                                    { location = safeGetName(vehicle), storageClass = rescanStorageClass, isPallet = vehicle.isPallet or false }
                                 )
                                 fuMap[fillTypeName] = containerId
 
@@ -446,7 +455,7 @@ function RmVehicleAdapter.rescanForPerishables()
 
                                 Log:debug("RESCAN_VEHICLE: fillType=%s containerId=%s name=%s",
                                     fillTypeName, containerId or "nil",
-                                    vehicle:getName() or "unknown")
+                                    safeGetName(vehicle))
                             end
                         end
                     end
@@ -527,7 +536,7 @@ function RmVehicleAdapter:onFillUnitFillLevelChanged(fillUnitIndex, fillLevelDel
         local wasReconciled
         containerId, wasReconciled = RmFreshManager:registerContainer(
             "vehicle", identityMatch, self,
-            { location = self:getName() or "Vehicle", storageClass = dynStorageClass, isPallet = self.isPallet or false }
+            { location = safeGetName(self), storageClass = dynStorageClass, isPallet = self.isPallet or false }
         )
         spec.containerIds[fillUnitIndex] = spec.containerIds[fillUnitIndex] or {}
         spec.containerIds[fillUnitIndex][fillTypeName] = containerId
@@ -535,12 +544,12 @@ function RmVehicleAdapter:onFillUnitFillLevelChanged(fillUnitIndex, fillLevelDel
         if wasReconciled then
             -- Reconciled from save - batches already loaded, skip fill change processing
             Log:debug("VEHICLE_RECONCILED: fillType=%s containerId=%s name=%s (skipping fill delta)",
-                fillTypeName, containerId or "nil", self:getName() or "unknown")
+                fillTypeName, containerId or "nil", safeGetName(self))
             return
         end
 
         Log:debug("VEHICLE_DYNAMIC_REG: fillType=%s containerId=%s name=%s",
-            fillTypeName, containerId or "nil", self:getName() or "unknown")
+            fillTypeName, containerId or "nil", safeGetName(self))
     end
 
     if containerId then

@@ -1,5 +1,8 @@
 # Changelog
 
+1.0.0.2:
+- Fixed game crash/lock when mounting horses on Hof Bergmann map with horse addon pack
+
 1.0.0.1:
 - Fixed spurious error log "Failed to register RM_FRESH_MENU action" caused by benign duplicate input registration
 

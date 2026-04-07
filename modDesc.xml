@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <modDesc descVersion="107">
     <author>Ritter</author>
-    <version>1.0.0.1</version>
+    <version>1.0.0.2</version>
     <title>
         <en>Fresh</en>
         <it>Fresco</it>
@@ -39,6 +39,9 @@ Documentation: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
 
+1.0.0.2:
+- Fixed game crash/lock when mounting horses on Hof Bergmann map with horse addon pack
+
 1.0.0.1:
 - Fixed spurious error log "Failed to register RM_FRESH_MENU action" caused by benign duplicate input registration
 
@@ -58,14 +61,6 @@ Changelog:
 - Fixed client HUD not showing freshness for products configured only via user settings
 - Fixed incorrect maxBenefitClass for Lettuce, Potatoes, Sugarcane, Salmon/Trout Fry, and Butter
 - Fixed storage list showing empty product entries for containers with zero fill level
-
-0.10.0.0 (Beta):
-- Added storage classes: storages auto-classified (Exposed/Sheltered/Indoor/Cooled/Frozen/Disabled) affecting aging speed - browse in new Storage tab, override per-storage, and cap per-product max benefit in Settings
-- Improved Shelf Life tab: shows effective shelf life across all storage classes in a table layout
-- Improved settings: consolidated into tabbed pages with per-product configuration
-- Added user guide documentation site
-- Fixed empty food troughs not being registered on load
-- Fixed storages list showing other farms' storages in multiplayer
 
 
 Full changelog at https://github.com/rittermod/FS25_Fresh
@@ -110,6 +105,9 @@ Documentazione: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
 
+1.0.0.2:
+- Risolto crash/blocco del gioco durante la monta dei cavalli sulla mappa Hof Bergmann con horse addon pack
+
 1.0.0.1:
 - Corretto log di errore spurio "Failed to register RM_FRESH_MENU action" causato da registrazione input duplicata benigna
 
@@ -129,14 +127,6 @@ Changelog:
 - Corretta visualizzazione HUD freschezza per prodotti configurati solo via impostazioni utente
 - Corretti maxBenefitClass per Lattuga, Patate, Canna da zucchero, Avannotti Salmone/Trota e Burro
 - Corretta lista magazzini che mostrava prodotti vuoti
-
-0.10.0.0 (Beta):
-- Aggiunte classi di stoccaggio: classificazione automatica (Esterno/Coperto/Interno/Refrigerato/Congelato/Disabilitato) - sostituzione per magazzino e limite beneficio massimo per prodotto nelle Impostazioni
-- Migliorata scheda Durata di conservazione: mostra la durata effettiva per classe di stoccaggio in formato tabella
-- Migliorate impostazioni: consolidate in pagine a schede con configurazione per prodotto
-- Aggiunto sito documentazione guida utente
-- Risolte mangiatoie vuote non registrate al caricamento
-- Risolta lista magazzini che mostrava magazzini di altre aziende in multiplayer
 
 
 Changelog completo su https://github.com/rittermod/FS25_Fresh

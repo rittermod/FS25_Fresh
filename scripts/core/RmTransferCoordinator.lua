@@ -157,7 +157,7 @@ end
 function RmTransferCoordinator.dischargeToObject(vehicle, superFunc, dischargeNode, emptyLiters, object, targetFillUnitIndex)
     -- EARLY DEBUG: Log EVERY call to this hook (before any filtering)
     Log:trace("DISCHARGE_HOOK_ENTRY: vehicle=%s emptyLiters=%.1f object=%s targetFillUnitIndex=%s",
-        tostring(vehicle and vehicle.getName and vehicle:getName() or "nil"),
+        tostring(vehicle and (select(2, pcall(vehicle.getName, vehicle)) or "nil")),
         emptyLiters or 0,
         tostring(object ~= nil),
         tostring(targetFillUnitIndex))
