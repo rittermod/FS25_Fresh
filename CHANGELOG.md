@@ -1,5 +1,8 @@
 # Changelog
 
+1.0.1.0-dev.1:
+- Fixed near-empty containers (under 1 L, e.g. a combine grain-tank leftover) showing as "0 L" rows in the inventory menus and skewing the displayed expiry
+
 1.0.0.2:
 - Fixed game crash/lock when mounting horses on Hof Bergmann map with horse addon pack
 

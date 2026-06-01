@@ -70,7 +70,7 @@ function RmBaleAdapter:buildIdentityMatch(bale, fillTypeOverride, fillLevelOverr
 end
 
 -- =============================================================================
--- STORAGE CLASS DETECTION (F-124-1)
+-- STORAGE CLASS DETECTION
 -- =============================================================================
 
 --- Detect storage class for a bale - always EXPOSED (outdoor weather exposure)
@@ -189,8 +189,8 @@ end
 --- Hook for Bale.setFillLevel - captures delta and reports to Manager
 --- CRITICAL: Calls superFunc FIRST for game stability, then wraps our logic in pcall
 --- Handles two scenarios:
----   1. New bale (not registered) → delegate to onFillLevelSet for registration
----   2. Existing bale (registered) → calculate delta and report to Manager
+---   1. New bale (not registered) -> delegate to onFillLevelSet for registration
+---   2. Existing bale (registered) -> calculate delta and report to Manager
 ---@param bale table Bale entity
 ---@param superFunc function Original setFillLevel function
 ---@param newFillLevel number New fill level to set
@@ -299,7 +299,7 @@ function RmBaleAdapter.install()
         end)
     )
 
-    -- Hook Bale.writeStream for MP sync (server → client on join)
+    -- Hook Bale.writeStream for MP sync (server -> client on join)
     -- Appends containerId after game's bale data so client can set up spec table
     -- CRITICAL: Bales don't use NetworkUtil like vehicles - they have their own stream
     Bale.writeStream = Utils.appendedFunction(
@@ -490,7 +490,7 @@ end
 
 --- Called when bale is about to be deleted
 --- TRANSFER FIX v2: Stage batches and apply amount-based retroactive correction
---- This enables age preservation for bale→placeable and bale→husbandry transfers
+--- This enables age preservation for bale->placeable and bale->husbandry transfers
 --- where FS25 deletes the bale WITHOUT calling setFillLevel() first
 ---
 --- v2 FIX: Uses amount-based split correction to only correct the transferred amount,
@@ -570,7 +570,7 @@ function RmBaleAdapter.onDeleteHook(bale)
                             -- Re-merge after correction
                             RmBatch.mergeSimilarBatches(destContainer.batches, RmFreshSettings.MERGE_THRESHOLD)
 
-                            Log:debug("BALE_DELETE_CORRECTION: dest=%s corrected=%.1f/%.1f age→%.4f",
+                            Log:debug("BALE_DELETE_CORRECTION: dest=%s corrected=%.1f/%.1f age->%.4f",
                                 correction.containerId, correctedTotal, transferredAmount, sourceAge)
 
                             -- Broadcast update to clients
@@ -681,7 +681,7 @@ end
 -- We piggyback on this stream to sync containerId to clients.
 -- Adapter handles stream format, Manager owns data.
 
---- Server → Client: Write containerId to stream
+--- Server -> Client: Write containerId to stream
 ---@param bale table Bale entity
 ---@param streamId number Network stream ID
 ---@param connection table Network connection
@@ -710,7 +710,7 @@ function RmBaleAdapter.readStreamHook(bale, streamId, connection)
     Log:trace("BALE_READ_STREAM: received containerId='%s' for bale", containerId)
 
     if containerId ~= "" then
-        -- Delegate to Manager - it owns the entity→container mapping
+        -- Delegate to Manager - it owns the entity->container mapping
         RmFreshManager:registerClientEntity(bale, containerId)
     end
 end

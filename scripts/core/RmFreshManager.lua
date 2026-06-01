@@ -1174,7 +1174,7 @@ function RmFreshManager:onLoad(savegameDir)
     -- Restore max benefit class overrides (backward compat: missing = empty table)
     RmFreshSettings:setAllMaxBenefitClassOverrides(settingsData.maxBenefitClassOverrides or {})
 
-    -- Rebuild index cache to include user overrides (F-143: third-party mod fillTypes)
+    -- Rebuild index cache to include user overrides (third-party mod fillTypes)
     RmFreshSettings:rebuildIndexCache()
 
     local data = RmFreshIO:load(savegameDir)

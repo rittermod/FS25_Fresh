@@ -45,11 +45,11 @@ function RmPlaceableAdapter:buildIdentityMatch(placeable, storage, fillTypeName,
 end
 
 -- =============================================================================
--- STORAGE CLASS DETECTION (F-124-1)
+-- STORAGE CLASS DETECTION
 -- =============================================================================
 
 --- Detect storage class for a placeable based on its specializations
---- HusbandryMilk → COOLED, everything else (silo, production, factory) → INDOOR
+--- HusbandryMilk -> COOLED, everything else (silo, production, factory) -> INDOOR
 ---@param placeable table Placeable entity
 ---@return number storageClass Storage class enum value
 function RmPlaceableAdapter.detectStorageClass(placeable)
@@ -100,12 +100,12 @@ function RmPlaceableAdapter.detectCapabilities(placeable, fillTypeIndex)
         if s.unloadingStation and s.unloadingStation.getIsFillTypeSupported
             and s.unloadingStation:getIsFillTypeSupported(fillTypeIndex) then
             playerCanFill = true
-            Log:trace("    spec_silo.unloadingStation supports fillType → playerCanFill=true")
+            Log:trace("    spec_silo.unloadingStation supports fillType -> playerCanFill=true")
         end
         if s.loadingStation and s.loadingStation.getIsFillTypeSupported
             and s.loadingStation:getIsFillTypeSupported(fillTypeIndex) then
             playerCanEmpty = true
-            Log:trace("    spec_silo.loadingStation supports fillType → playerCanEmpty=true")
+            Log:trace("    spec_silo.loadingStation supports fillType -> playerCanEmpty=true")
         end
     end
 
@@ -119,12 +119,12 @@ function RmPlaceableAdapter.detectCapabilities(placeable, fillTypeIndex)
         if s.unloadingStation and s.unloadingStation.getIsFillTypeSupported
             and s.unloadingStation:getIsFillTypeSupported(fillTypeIndex) then
             playerCanFill = true
-            Log:trace("    spec_husbandry.unloadingStation supports fillType → playerCanFill=true")
+            Log:trace("    spec_husbandry.unloadingStation supports fillType -> playerCanFill=true")
         end
         if s.loadingStation and s.loadingStation.getIsFillTypeSupported
             and s.loadingStation:getIsFillTypeSupported(fillTypeIndex) then
             playerCanEmpty = true
-            Log:trace("    spec_husbandry.loadingStation supports fillType → playerCanEmpty=true")
+            Log:trace("    spec_husbandry.loadingStation supports fillType -> playerCanEmpty=true")
         end
     end
 
@@ -134,18 +134,18 @@ function RmPlaceableAdapter.detectCapabilities(placeable, fillTypeIndex)
         if pp.unloadingStation and pp.unloadingStation.getIsFillTypeSupported
             and pp.unloadingStation:getIsFillTypeSupported(fillTypeIndex) then
             playerCanFill = true
-            Log:trace("    spec_productionPoint.unloadingStation supports fillType → playerCanFill=true")
+            Log:trace("    spec_productionPoint.unloadingStation supports fillType -> playerCanFill=true")
         end
         if pp.loadingStation and pp.loadingStation.getIsFillTypeSupported
             and pp.loadingStation:getIsFillTypeSupported(fillTypeIndex) then
             playerCanEmpty = true
-            Log:trace("    spec_productionPoint.loadingStation supports fillType → playerCanEmpty=true")
+            Log:trace("    spec_productionPoint.loadingStation supports fillType -> playerCanEmpty=true")
         end
     end
 
     -- spec_factory (greenhouses, etc.)
     -- Factory has NO LoadingStation/UnloadingStation - production output only
-    -- Both capabilities remain false → production output behavior (always fresh)
+    -- Both capabilities remain false -> production output behavior (always fresh)
 
     -- =========================================================================
     -- OVERRIDES: Correct station-based detection for specific cases
@@ -160,7 +160,7 @@ function RmPlaceableAdapter.detectCapabilities(placeable, fillTypeIndex)
             if milkFillType == fillTypeIndex then
                 playerCanFill = false
                 playerCanEmpty = true -- Can collect milk via LoadingStation
-                Log:trace("    spec_husbandryMilk override → playerCanFill=false (production output)")
+                Log:trace("    spec_husbandryMilk override -> playerCanFill=false (production output)")
                 break
             end
         end
@@ -172,7 +172,7 @@ function RmPlaceableAdapter.detectCapabilities(placeable, fillTypeIndex)
         if fillTypeIndex == placeable.spec_husbandryStraw.inputFillType then
             playerCanFill = true   -- Can tip straw via UnloadingStation
             playerCanEmpty = false -- Can't bulk-load straw out (consumed for bedding)
-            Log:trace("    spec_husbandryStraw override → playerCanEmpty=false (bedding input)")
+            Log:trace("    spec_husbandryStraw override -> playerCanEmpty=false (bedding input)")
         end
     end
 
@@ -206,7 +206,7 @@ function RmPlaceableAdapter.detectCapabilities(placeable, fillTypeIndex)
                                 isPureOutput = true
                                 Log:trace("    fillType %d is PURE output (not in inputs)", fillTypeIndex)
                             else
-                                Log:trace("    fillType %d is BOTH input AND output → keeping playerCanFill",
+                                Log:trace("    fillType %d is BOTH input AND output -> keeping playerCanFill",
                                     fillTypeIndex)
                             end
                             break
@@ -219,7 +219,7 @@ function RmPlaceableAdapter.detectCapabilities(placeable, fillTypeIndex)
             if isPureOutput then
                 playerCanFill = false
                 -- playerCanEmpty: keep station-based result (may be bulk output or pallet)
-                Log:trace("    spec_productionPoint PURE output override → playerCanFill=false")
+                Log:trace("    spec_productionPoint PURE output override -> playerCanFill=false")
             end
         end
     end
@@ -398,7 +398,7 @@ function RmPlaceableAdapter:addFillLevel(containerId, delta)
     storage:setFillLevel(newLevel, fillTypeIndex)
 
     -- DEBUG log for state change (per architecture-impl.md 12.5)
-    Log:debug("PLACEABLE_FILL_SET: container=%s %.1f → %.1f %s",
+    Log:debug("PLACEABLE_FILL_SET: container=%s %.1f -> %.1f %s",
         containerId, currentLevel, newLevel, fillTypeName or "?")
 
     Log:trace("<<< addFillLevel (success)")
@@ -854,13 +854,13 @@ function RmPlaceableAdapter:onLoad(_savegame)
     end
 
     -- Create spec table for container tracking
-    -- containerIds: fillTypeName → containerId (one per fillType, not per storage)
-    -- storageRefs: containerId → storage reference (for fill manipulation in 25-5)
-    -- registeredStorages: storage → true (for callback deduplication in 25-4)
+    -- containerIds: fillTypeName -> containerId (one per fillType, not per storage)
+    -- storageRefs: containerId -> storage reference (for fill manipulation in 25-5)
+    -- registeredStorages: storage -> true (for callback deduplication in 25-4)
     self[RmPlaceableAdapter.SPEC_TABLE_NAME] = {
-        containerIds = {},           -- fillTypeName → containerId
-        storageRefs = {},            -- containerId → storage reference
-        registeredStorages = {},     -- storage → true (for callback deduplication)
+        containerIds = {},           -- fillTypeName -> containerId
+        storageRefs = {},            -- containerId -> storage reference
+        registeredStorages = {},     -- storage -> true (for callback deduplication)
         deferredRegistration = false -- Prevent double scheduling
     }
 
@@ -993,7 +993,7 @@ function RmPlaceableAdapter:onReadStream(streamId, _connection)
         local containerId = streamReadString(streamId)
         spec.containerIds[fillTypeName] = containerId
 
-        -- Register entity→containerId mapping for display hooks
+        -- Register entity->containerId mapping for display hooks
         if RmFreshManager and RmFreshManager.registerClientEntity then
             RmFreshManager:registerClientEntity(self, containerId)
         end
@@ -1031,7 +1031,7 @@ function RmPlaceableAdapter:updateInfo(superFunc, infoTable)
     local daysPerPeriod = (g_currentMission and g_currentMission.environment
         and g_currentMission.environment.daysPerPeriod) or 1
     local warningHours = RmFreshSettings:getWarningHours()
-    local expiringByFillType = {}  -- fillTypeIndex → { amount, soonestHours }
+    local expiringByFillType = {}  -- fillTypeIndex -> { amount, soonestHours }
     local totalExpiring = 0
 
     for fillTypeName, containerId in pairs(spec.containerIds) do

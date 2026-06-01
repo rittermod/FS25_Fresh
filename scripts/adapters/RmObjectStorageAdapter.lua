@@ -51,7 +51,7 @@ function RmObjectStorageAdapter.registerOverwrittenFunctions(placeableType)
 end
 
 -- =============================================================================
--- STORAGE CLASS DETECTION (F-124-1)
+-- STORAGE CLASS DETECTION
 -- =============================================================================
 
 --- Detect storage class for object storage - always INDOOR (stored inside buildings)
@@ -96,8 +96,8 @@ function RmObjectStorageAdapter:onLoad(_savegame)
 
     -- Create spec table
     self[RmObjectStorageAdapter.SPEC_TABLE_NAME] = {
-        containerIds = {},             -- index → containerId (for general tracking)
-        abstractObjectContainers = {}, -- abstractObject → containerId (runtime mapping)
+        containerIds = {},             -- index -> containerId (for general tracking)
+        abstractObjectContainers = {}, -- abstractObject -> containerId (runtime mapping)
         pendingSpawn = nil,            -- abstractObject being spawned (for exit flow)
         deferredRegistration = false,  -- Prevent double scheduling
     }
@@ -194,7 +194,7 @@ function RmObjectStorageAdapter.doLoadRegistration(placeable, entityId)
                 )
 
                 if containerId then
-                    -- Map abstractObject → containerId for exit tracking
+                    -- Map abstractObject -> containerId for exit tracking
                     spec.abstractObjectContainers[abstractObject] = containerId
                     spec.containerIds[i] = containerId
                     registeredCount = registeredCount + 1
@@ -513,7 +513,7 @@ function RmObjectStorageAdapter:addObjectToObjectStorageHook(superFunc, object, 
             storedContainerId, batchCount, totalAmount)
     end
 
-    -- Map abstractObject → containerId for exit tracking
+    -- Map abstractObject -> containerId for exit tracking
     spec.abstractObjectContainers[abstractObject] = storedContainerId
     spec.containerIds[#specOS.storedObjects] = storedContainerId
 
@@ -525,7 +525,7 @@ end
 -- =============================================================================
 
 --- Hook for removeAbstractObjectFromStorage - transfers batches when object spawns
---- Strategy: Snapshot existing containers → superFunc → find new container → transfer
+--- Strategy: Snapshot existing containers -> superFunc -> find new container -> transfer
 ---@param superFunc function Original function
 ---@param abstractObject table The abstract object being spawned
 ---@param x number Spawn X position
@@ -589,7 +589,7 @@ function RmObjectStorageAdapter:removeAbstractObjectFromStorageHook(superFunc, a
         -- (BaleAdapter creates age=0 batch on spawn, we replace with aged batch)
         RmFreshManager:clearBatches(destContainerId)
 
-        -- Transfer batches from stored → spawned
+        -- Transfer batches from stored -> spawned
         local batchCount = 0
         local totalAmount = 0
 
@@ -938,7 +938,7 @@ function RmObjectStorageAdapter:onReadStream(streamId, _connection)
         local containerId = streamReadString(streamId)
         spec.containerIds[key] = containerId
 
-        -- Register entity→containerId mapping for display hooks
+        -- Register entity->containerId mapping for display hooks
         if RmFreshManager and RmFreshManager.registerClientEntity then
             RmFreshManager:registerClientEntity(self, containerId)
         end

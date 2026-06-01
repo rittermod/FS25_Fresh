@@ -34,7 +34,7 @@ function RmHusbandryFoodAdapter:buildIdentityMatch(placeable, fillTypeName, fill
 end
 
 -- =============================================================================
--- STORAGE CLASS DETECTION (F-124-1)
+-- STORAGE CLASS DETECTION
 -- =============================================================================
 
 --- Detect storage class for husbandry food - always SHELTERED (troughs under roof/cover)
@@ -193,7 +193,7 @@ function RmHusbandryFoodAdapter.doRegistration(placeable, entityId)
     Log:debug("HUSBANDRY_FOOD_LOAD: uniqueId=%s name=%s",
         entityId or "?", placeable:getName() or "unknown")
 
-    -- Register containers for all perishable food slots (including empty troughs, F-130)
+    -- Register containers for all perishable food slots (including empty troughs)
     local registered = 0
     for fillTypeIndex, fillLevel in pairs(husbandryFoodSpec.fillLevels) do
         if RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
@@ -564,7 +564,7 @@ function RmHusbandryFoodAdapter:updateInfo(superFunc, infoTable)
     local daysPerPeriod = (g_currentMission and g_currentMission.environment
         and g_currentMission.environment.daysPerPeriod) or 1
     local warningHours = RmFreshSettings:getWarningHours()
-    local expiringByFillType = {}  -- fillTypeIndex → { amount, soonestHours }
+    local expiringByFillType = {}  -- fillTypeIndex -> { amount, soonestHours }
     local totalExpiring = 0
 
     for fillTypeName, containerId in pairs(spec.containerIds) do

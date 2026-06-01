@@ -181,7 +181,7 @@ function RmFreshIO.registerLogSchema()
     -- Who
     schema:register(XMLValueType.INT, entryPath .. "#farmId", "Owner farm ID", 0)
 
-    -- Storage class at expiration (optional, nil for pre-F-124 entries)
+    -- Storage class at expiration (optional, nil for older entries)
     schema:register(XMLValueType.INT, entryPath .. "#storageClass", "Storage class at expiration")
 
     RmFreshIO.logSchema = schema
@@ -207,7 +207,7 @@ end
 --- Save Fresh data to rm_FreshData.xml --- Writes containers using identity model: identityMatch (worldObject + storage), flat batches
 --- CRITICAL: Do NOT save runtimeEntity/fillTypeIndex (runtime-only references)
 ---@param savegameDir string Path to savegame directory
----@param containers table Container registry from RmFreshManager (id → Container)
+---@param containers table Container registry from RmFreshManager (id -> Container)
 ---@param statistics table Statistics from RmFreshManager
 ---@param settings table Settings from RmFreshConfig (currently unused, reserved)
 ---@return boolean true on success, false on failure
@@ -628,9 +628,9 @@ end
 -- =============================================================================
 
 --- Sequential settings migrations. Each function transforms data from version N to N+1.
---- v1 save → runs [1], then [2] (future), etc. Adding v3 = just add [2].
+--- v1 save -> runs [1], then [2] (future), etc. Adding v3 = just add [2].
 RmFreshIO.SETTINGS_MIGRATIONS = {
-    -- v1→v2: Default preset changed from "custom" to "normal"
+    -- v1->v2: Default preset changed from "custom" to "normal"
     -- v1 saved ALL fillTypes (not just overrides), so strip redundant ones first
     [1] = function(data)
         local loadedPreset = data.global["preset"]
@@ -670,7 +670,7 @@ RmFreshIO.SETTINGS_MIGRATIONS = {
                 stripped)
         end
     end,
-    -- Future: [2] = function(data) ... end,  -- v2→v3
+    -- Future: [2] = function(data) ... end,  -- v2->v3
 }
 
 --- Run sequential settings migrations from loaded version to current
@@ -738,7 +738,7 @@ function RmFreshIO:load(savegameDir)
         }
     }
 
-    -- Parse containers section → reconciliationPool
+    -- Parse containers section -> reconciliationPool
     xmlFile:iterate("freshData.containers.container", function(_, containerPath)
         local containerId = xmlFile:getString(containerPath .. "#id")
         if containerId == nil or containerId == "" then
@@ -930,7 +930,7 @@ function RmFreshIO:loadLog(savegameDir)
             location = xmlFile:getString(entryPath .. "#location", "Unknown"),
             objectUniqueId = objectUniqueId ~= "" and objectUniqueId or nil,
             entityType = xmlFile:getString(entryPath .. "#entityType", "unknown"),
-            storageClass = scRaw,  -- nil if missing (backward compat with pre-F-124 saves)
+            storageClass = scRaw,  -- nil if missing (backward compat with older saves)
             -- Who
             farmId = xmlFile:getInt(entryPath .. "#farmId", 0),
         }

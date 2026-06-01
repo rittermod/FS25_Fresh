@@ -57,11 +57,11 @@ function RmVehicleAdapter:buildIdentityMatch(vehicle, fillUnitIndex, fillTypeNam
 end
 
 -- =============================================================================
--- STORAGE CLASS DETECTION (F-124-1)
+-- STORAGE CLASS DETECTION
 -- =============================================================================
 
 --- Detect storage class for a vehicle based on its type
---- Pallet/bigBag → EXPOSED, open-top (FillVolume) → EXPOSED, enclosed → SHELTERED
+--- Pallet/bigBag -> EXPOSED, open-top (FillVolume) -> EXPOSED, enclosed -> SHELTERED
 ---@param vehicle table Vehicle entity
 ---@return number storageClass Storage class enum value
 function RmVehicleAdapter.detectStorageClass(vehicle)
@@ -236,7 +236,7 @@ function RmVehicleAdapter:onLoad(savegame)
     -- Server only - clients receive container state via sync events
     if not self.isServer then return end
 
-    -- Create spec table with containerIds map (fillUnitIndex → containerId)
+    -- Create spec table with containerIds map (fillUnitIndex -> containerId)
     -- Registration deferred to onLoadFinished to ensure all fill events during load are ignored
     self[RmVehicleAdapter.SPEC_TABLE_NAME] = { containerIds = {} }
 end
@@ -608,7 +608,7 @@ function RmVehicleAdapter:onReadStream(streamId, connection)
         spec.containerIds[fillUnitIndex] = spec.containerIds[fillUnitIndex] or {}
         spec.containerIds[fillUnitIndex][fillTypeName] = containerId
 
-        -- Register entity→containerId mapping for display hooks
+        -- Register entity->containerId mapping for display hooks
         if RmFreshManager and RmFreshManager.registerClientEntity then
             RmFreshManager:registerClientEntity(self, containerId)
         end
@@ -632,7 +632,7 @@ function RmVehicleAdapter:showInfo(superFunc, box)
     local daysPerPeriod = (g_currentMission and g_currentMission.environment
         and g_currentMission.environment.daysPerPeriod) or 1
     local warningHours = RmFreshSettings:getWarningHours()
-    local byFillType = {} -- fillTypeIndex → { containerId, oldestAge, totalAmount, expiringAmount }
+    local byFillType = {} -- fillTypeIndex -> { containerId, oldestAge, totalAmount, expiringAmount }
 
     for _, fuMap in pairs(spec.containerIds) do
         if type(fuMap) == "table" then

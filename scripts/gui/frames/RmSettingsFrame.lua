@@ -76,7 +76,7 @@ RmSettingsFrame.currentSubCategory = 1
 RmSettingsFrame.STORAGE_CLASS_OPTIONS = { "auto", "exposed", "sheltered", "indoor", "cooled", "frozen", "disabled" }
 
 --- Max benefit class dropdown options (state 1=Default, 2-6=EXPOSED..FROZEN)
---- No "Disabled" - that's a per-building opt-out from F-125-1, not a fillType ceiling
+--- No "Disabled" - that's a per-building opt-out, not a fillType ceiling
 RmSettingsFrame.MAXBENEFIT_OPTIONS = {
     { value = nil,  label = "fresh_maxbenefit_default" },
     { value = 0,    label = "fresh_class_exposed" },
@@ -1117,8 +1117,8 @@ end
 
 --- Update disabled state of all controls based on admin status and setting dependencies
 --- Non-admin clients get disabled controls (grayed out)
---- Dependency chain: Enable Expiration → all other controls
----                   Show Warnings → Warning Threshold
+--- Dependency chain: Enable Expiration -> all other controls
+---                   Show Warnings -> Warning Threshold
 function RmSettingsFrame:updateReadonlyState()
     local isAdmin = self:isAdmin()
     local notAdmin = not isAdmin
@@ -1364,13 +1364,13 @@ function RmSettingsFrame:updateTabVisibility()
     local expirationEnabled = RmFreshSettings:getGlobal("enableExpiration") ~= false
     local storageAgingEnabled = RmFreshSettings.storageAgingEnabled
 
-    -- Tab 2: Expiration fillTypes — only when expiration is on
+    -- Tab 2: Expiration fillTypes - only when expiration is on
     local expirationTabButton = self.subCategoryTabs[2]
     if expirationTabButton then
         expirationTabButton:setVisible(expirationEnabled)
     end
 
-    -- Tabs 3+4: Max Benefit and Storage — only when both expiration and storage aging are on
+    -- Tabs 3+4: Max Benefit and Storage - only when both expiration and storage aging are on
     local storageTabsVisible = expirationEnabled and storageAgingEnabled
     local maxBenefitTabButton = self.subCategoryTabs[3]
     if maxBenefitTabButton then
