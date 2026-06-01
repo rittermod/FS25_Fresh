@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<l10n>
+    <texts>
+        <!-- Expires in display -->
+        <text name="fresh_expires_in" text="Закінчується через"/>
+        <text name="fresh_expires_hour" text="1 година"/>
+        <text name="fresh_expires_hours" text="%d годин"/>
+        <text name="fresh_expires_day" text="1 день"/>
+        <text name="fresh_expires_days" text="%d днів"/>
+        <text name="fresh_expires_month" text="1 місяць"/>
+        <text name="fresh_expires_months" text="%.1f місяців"/>
+
+        <!-- Status messages -->
+        <text name="fresh_expired" text="Зіпсовано"/>
+        <text name="fresh_expires_never" text="Не псується"/>
+        <text name="fresh_near_expiration" text="Скоро зіпсується"/>
+
+        <!-- Daily loss notification -->
+        <text name="fresh_dailyLossNotification" text="Втрачено %.0f л через псування продуктів"/>
+
+        <!-- Storage HUD -->
+        <text name="fresh_storage_expiring" text="-%d через %s"/>
+        <text name="fresh_storage_expiring_volume" text="-%s через %s"/>
+        <text name="fresh_vehicle_expiring_volume" text="-%s"/>
+
+        <!-- Age Distribution HUD -->
+        <text name="fresh_age_display_title" text="Свіжість"/>
+
+        <!-- Storage class labels -->
+        <text name="fresh_class_exposed" text="Під відкритим небом"/>
+        <text name="fresh_class_sheltered" text="Під навісом"/>
+        <text name="fresh_class_indoor" text="У приміщенні"/>
+        <text name="fresh_class_cooled" text="Охолоджене"/>
+        <text name="fresh_class_frozen" text="Заморожене"/>
+        <text name="fresh_class_disabled" text="Вимкнено"/>
+
+        <!-- Fresh Menu keybind -->
+        <text name="input_RM_FRESH_MENU" text="Меню Fresh"/>
+
+        <!-- Settings tab -->
+        <text name="fresh_settings_title" text="Налаштування"/>
+
+        <!-- Settings expiration duration options -->
+        <text name="fresh_expire_never" text="Не псується"/>
+        <text name="fresh_expire_1_month" text="1 місяць"/>
+        <text name="fresh_expire_2_months" text="2 місяці"/>
+        <text name="fresh_expire_3_months" text="3 місяці"/>
+        <text name="fresh_expire_4_months" text="4 місяці"/>
+        <text name="fresh_expire_5_months" text="5 місяців"/>
+        <text name="fresh_expire_6_months" text="6 місяців"/>
+        <text name="fresh_expire_9_months" text="9 місяців"/>
+        <text name="fresh_expire_1_year" text="1 рік"/>
+        <text name="fresh_expire_1_5_years" text="1.5 року"/>
+        <text name="fresh_expire_2_years" text="2 роки"/>
+        <text name="fresh_expire_3_years" text="3 роки"/>
+        <text name="fresh_expire_5_years" text="5 років"/>
+
+        <!-- Sub-category tabs -->
+        <text name="fresh_tab_settings" text="Налаштування"/>
+        <text name="fresh_tab_expiration" text="Псування"/>
+        <text name="fresh_tab_maxbenefit" text="Ліміт бонусу"/>
+        <text name="fresh_tab_storage" text="Зберігання"/>
+
+        <!-- Difficulty Preset -->
+        <text name="fresh_settings_preset" text="Складність"/>
+        <text name="fresh_settings_preset_tooltip" text="Змінює термін придатності. Дуже легко — ×4, Легко — ×2, Важко — ×0.5. Власний режим дозволяє окреме налаштування."/>
+        <text name="fresh_preset_veryEasy" text="Дуже легко (x4)"/>
+        <text name="fresh_preset_easy" text="Легко (x2)"/>
+        <text name="fresh_preset_normal" text="Нормально"/>
+        <text name="fresh_preset_hard" text="Важко (x0.5)"/>
+        <text name="fresh_preset_custom" text="Власний"/>
+
+        <!-- Period format strings -->
+        <text name="fresh_period_months" text="%d місяців"/>
+        <text name="fresh_period_months_decimal" text="%.1f місяців"/>
+        <text name="fresh_period_years" text="%d років"/>
+        <text name="fresh_period_years_decimal" text="%.1f років"/>
+
+        <!-- DLC/Mod fillTypes section -->
+        <text name="fresh_settings_fillTypes_dlcmod" text="Термін придатності (DLC та моди)"/>
+
+        <!-- Settings global section -->
+        <text name="fresh_settings_global" text="Глобальні налаштування"/>
+        <text name="fresh_settings_enableExpiration" text="Увімкнути псування"/>
+        <text name="fresh_settings_enableExpiration_tooltip" text="Коли увімкнено, продукти поступово старіють і з часом псуються."/>
+        <text name="fresh_settings_showWarnings" text="Показувати попередження"/>
+        <text name="fresh_settings_showWarnings_tooltip" text="Показувати повідомлення, коли продукт скоро зіпсується."/>
+        <text name="fresh_settings_showAgeDisplay" text="Показувати індикатор віку"/>
+        <text name="fresh_settings_showAgeDisplay_tooltip" text="Показувати розподіл свіжості біля складів."/>
+        <text name="fresh_settings_warningHours" text="Поріг попередження"/>
+        <text name="fresh_settings_warningHours_tooltip" text="Показувати попередження коли продукт скоро зіпсується."/>
+        <text name="fresh_warning_6h" text="6 годин"/>
+        <text name="fresh_warning_12h" text="12 годин"/>
+        <text name="fresh_warning_24h" text="24 години"/>
+        <text name="fresh_warning_48h" text="48 годин"/>
+        <text name="fresh_warning_72h" text="72 години"/>
+
+        <!-- Inventory -->
+        <text name="fresh_inventory_title" text="Огляд"/>
+        <text name="fresh_inventory_summary" text="Всього: %d типів продуктів у %d контейнерах"/>
+        <text name="fresh_inventory_empty" text="Немає продуктів що псуються"/>
+        <text name="fresh_no_farm" text="Ферму не вибрано. Приєднайтесь до ферми."/>
+        <text name="fresh_column_type" text="Продукт"/>
+        <text name="fresh_column_amount" text="Кількість"/>
+        <text name="fresh_column_expiring" text="Псується"/>
+        <text name="fresh_column_status" text="Статус"/>
+        <text name="fresh_status_ok" text="Свіже"/>
+        <text name="fresh_status_expiring" text="Псується"/>
+
+        <!-- Shelf Life -->
+        <text name="fresh_shelflife_title" text="Термін придатності"/>
+        <text name="fresh_shelflife_empty" text="Немає продуктів що псуються"/>
+        <text name="fresh_shelflife_product" text="Продукт"/>
+        <text name="fresh_shelflife_unit_months" text="місяців придатності"/>
+
+        <!-- Statistics -->
+        <text name="fresh_stats_title" text="Статистика втрат"/>
+        <text name="fresh_stats_today" text="Втрачено сьогодні"/>
+        <text name="fresh_stats_month" text="Втрачено цього місяця"/>
+        <text name="fresh_stats_12months" text="Втрачено за 12 місяців"/>
+        <text name="fresh_stats_total" text="Всього втрачено"/>
+        <text name="fresh_stats_breakdown" text="Втрати за 12 місяців"/>
+        <text name="fresh_stats_recent" text="Останні втрати"/>
+        <text name="fresh_stats_breakdown_empty" text="Втрат немає"/>
+        <text name="fresh_stats_log_empty" text="Останніх втрат немає"/>
+        <text name="fresh_column_product" text="Продукт"/>
+        <text name="fresh_column_amount_lost" text="Кількість"/>
+        <text name="fresh_column_value" text="Вартість"/>
+        <text name="fresh_column_datetime" text="Дата/час"/>
+		<!-- Overview -->
+        <text name="fresh_expires_within" text="Закінчується через"/>
+        <text name="fresh_sort_label" text="Сортувати за"/>
+        <text name="fresh_sort_by_type" text="Тип продукту"/>
+        <text name="fresh_expiring_empty" text="Немає продуктів що скоро псуються"/>
+
+        <!-- Filltype Detail -->
+        <text name="fresh_filltype_detail_title" text="Деталі продукту"/>
+        <text name="fresh_filltype_detail_total" text="Всього: %s"/>
+        <text name="fresh_detail_column_name" text="Назва"/>
+
+        <text name="fresh_bucket_fresh" text="Свіже"/>
+        <text name="fresh_bucket_good" text="Добре"/>
+        <text name="fresh_bucket_warning" text="Попередження"/>
+        <text name="fresh_bucket_critical" text="Критично"/>
+
+        <text name="fresh_bucket_fresh_pct" text="75-100%"/>
+        <text name="fresh_bucket_good_pct" text="50-75%"/>
+        <text name="fresh_bucket_warning_pct" text="25-50%"/>
+        <text name="fresh_bucket_critical_pct" text="0-25%"/>
+
+        <!-- Storage Detail -->
+        <text name="fresh_storage_detail_title" text="Деталі зберігання"/>
+        <text name="fresh_storage_detail_empty" text="У цій категорії немає продуктів"/>
+        <text name="fresh_storage_detail_total" text="Всього: %s"/>
+
+        <text name="fresh_category_placeables" text="Об'єкти"/>
+        <text name="fresh_category_husbandries" text="Тваринництво"/>
+        <text name="fresh_category_vehicles" text="Техніка"/>
+        <text name="fresh_category_bales_pallets" text="Тюки та палети"/>
+
+        <!-- Settings -->
+        <text name="fresh_settings_storageAging" text="Старіння залежно від типу зберігання"/>
+        <text name="fresh_settings_storageAging_tooltip" text="Продукти старіють з різною швидкістю залежно від типу зберігання. На відкритому повітрі швидше, заморожені — повільніше."/>
+
+        <text name="fresh_settings_fillTypes" text="Термін придатності продуктів"/>
+        <text name="fresh_settings_presetActive" text="Усі продукти керуються пресетом. Перемкніть на 'Власний' для редагування."/>
+
+        <!-- Max Benefit -->
+        <text name="fresh_settings_maxBenefitHeader" text="Ліміт бонусу зберігання"/>
+        <text name="fresh_maxbenefit_default" text="За замовчуванням"/>
+        <text name="fresh_maxbenefit_configDefault" text="За замовчуванням"/>
+        <text name="fresh_maxbenefit_tooltip" text="Встановлює максимальний бонус зберігання для продукту."/>
+
+        <!-- Storage -->
+        <text name="fresh_settings_storageHeader" text="Класи зберігання"/>
+        <text name="fresh_storage_auto" text="Автоматично"/>
+        <text name="fresh_storage_override_tooltip" text="Перевизначити клас зберігання для цього місця"/>
+        <text name="fresh_storage_items_in_world" text="Предмети у світі"/>
+        <text name="fresh_storage_items_in_world_tooltip" text="Тюки, палети та бігбеги поза складом"/>
+        <text name="fresh_storage_detected" text="Визначено"/>
+
+        <!-- Reset -->
+        <text name="fresh_settings_resetDefaults" text="Скинути до стандартних"/>
+        <text name="fresh_settings_resetConfirm" text="Скинути всі налаштування моду?"/>
+        <text name="fresh_settings_reset" text="Налаштування скинуто"/>
+
+        <!-- Tooltips -->
+        <text name="fresh_tooltip_filltype" text="Тип продукту: %s"/>
+        <text name="fresh_tooltip_source_basegame" text="Джерело: Базова гра"/>
+        <text name="fresh_tooltip_source_dlc" text="Джерело: DLC (%s)"/>
+        <text name="fresh_tooltip_source_mod" text="Джерело: Мод (%s)"/>
+        <text name="fresh_tooltip_source_map" text="Джерело: Карта"/>
+		<!-- Sorting -->
+        <text name="fresh_sort_by_expiring" text="Кількість що псується"/>
+        <text name="fresh_sort_by_age" text="Найближче псування"/>
+
+        <!-- Detail headers -->
+        <text name="fresh_column_timeleft" text="До псування"/>
+        <text name="fresh_column_class" text="Клас"/>
+        <text name="fresh_column_storage" text="Зберігання"/>
+		<text name="fresh_expires_24h" text="24 години"/>
+        <text name="fresh_expires_48h" text="48 годин"/>
+        <text name="fresh_expires_72h" text="72 години"/>
+		<text name="fresh_storage_sidebar_info" text="Всього: %s"/>
+    </texts>
+</l10n>
