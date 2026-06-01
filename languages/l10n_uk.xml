@@ -63,7 +63,7 @@
 
         <!-- Difficulty Preset -->
         <text name="fresh_settings_preset" text="Складність"/>
-        <text name="fresh_settings_preset_tooltip" text="Змінює термін придатності. Дуже легко — ×4, Легко — ×2, Важко — ×0.5. Власний режим дозволяє окреме налаштування."/>
+        <text name="fresh_settings_preset_tooltip" text="Змінює термін придатності. Дуже легко - x4, Легко - x2, Важко - x0.5. Власний режим дозволяє окреме налаштування."/>
         <text name="fresh_preset_veryEasy" text="Дуже легко (x4)"/>
         <text name="fresh_preset_easy" text="Легко (x2)"/>
         <text name="fresh_preset_normal" text="Нормально"/>
@@ -127,15 +127,20 @@
         <text name="fresh_column_amount_lost" text="Кількість"/>
         <text name="fresh_column_value" text="Вартість"/>
         <text name="fresh_column_datetime" text="Дата/час"/>
-		<!-- Overview -->
+        <!-- Overview -->
         <text name="fresh_expires_within" text="Закінчується через"/>
         <text name="fresh_sort_label" text="Сортувати за"/>
         <text name="fresh_sort_by_type" text="Тип продукту"/>
         <text name="fresh_expiring_empty" text="Немає продуктів що скоро псуються"/>
+        <text name="fresh_expiring_summary" text="%d позицій (%.0f л загалом)"/>
+        <text name="fresh_expires_soon" text="&lt; 1 година"/>
 
         <!-- Filltype Detail -->
         <text name="fresh_filltype_detail_title" text="Деталі продукту"/>
+        <text name="fresh_filltype_detail_empty" text="Немає продуктів що псуються"/>
+        <text name="fresh_filltype_detail_no_selection" text="Виберіть продукт для перегляду деталей"/>
         <text name="fresh_filltype_detail_total" text="Всього: %s"/>
+        <text name="fresh_filltype_detail_percentage" text="%.1f%%"/>
         <text name="fresh_detail_column_name" text="Назва"/>
 
         <text name="fresh_bucket_fresh" text="Свіже"/>
@@ -151,6 +156,7 @@
         <!-- Storage Detail -->
         <text name="fresh_storage_detail_title" text="Деталі зберігання"/>
         <text name="fresh_storage_detail_empty" text="У цій категорії немає продуктів"/>
+        <text name="fresh_storage_detail_no_selection" text="Виберіть сховище для перегляду деталей"/>
         <text name="fresh_storage_detail_total" text="Всього: %s"/>
 
         <text name="fresh_category_placeables" text="Об'єкти"/>
@@ -160,7 +166,7 @@
 
         <!-- Settings -->
         <text name="fresh_settings_storageAging" text="Старіння залежно від типу зберігання"/>
-        <text name="fresh_settings_storageAging_tooltip" text="Продукти старіють з різною швидкістю залежно від типу зберігання. На відкритому повітрі швидше, заморожені — повільніше."/>
+        <text name="fresh_settings_storageAging_tooltip" text="Продукти старіють з різною швидкістю залежно від типу зберігання. На відкритому повітрі швидше, заморожені - повільніше."/>
 
         <text name="fresh_settings_fillTypes" text="Термін придатності продуктів"/>
         <text name="fresh_settings_presetActive" text="Усі продукти керуються пресетом. Перемкніть на 'Власний' для редагування."/>
@@ -190,7 +196,7 @@
         <text name="fresh_tooltip_source_dlc" text="Джерело: DLC (%s)"/>
         <text name="fresh_tooltip_source_mod" text="Джерело: Мод (%s)"/>
         <text name="fresh_tooltip_source_map" text="Джерело: Карта"/>
-		<!-- Sorting -->
+        <!-- Sorting -->
         <text name="fresh_sort_by_expiring" text="Кількість що псується"/>
         <text name="fresh_sort_by_age" text="Найближче псування"/>
 
@@ -198,9 +204,9 @@
         <text name="fresh_column_timeleft" text="До псування"/>
         <text name="fresh_column_class" text="Клас"/>
         <text name="fresh_column_storage" text="Зберігання"/>
-		<text name="fresh_expires_24h" text="24 години"/>
+        <text name="fresh_expires_24h" text="24 години"/>
         <text name="fresh_expires_48h" text="48 годин"/>
         <text name="fresh_expires_72h" text="72 години"/>
-		<text name="fresh_storage_sidebar_info" text="Всього: %s"/>
+        <text name="fresh_storage_sidebar_info" text="%s л, %d продуктів"/>
     </texts>
 </l10n>
