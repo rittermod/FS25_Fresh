@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    customDefaults.example.xml
+    Purpose: Optional per-install overlay for advanced users
+    Author: Ritter
+
+    ===== HOW TO USE =====
+    1. Copy this file to:  modSettings/FS25_Fresh/customDefaults.xml
+       (the modSettings folder sits next to your "mods" folder; create the
+        FS25_Fresh subfolder if it does not exist)
+    2. Edit the entries below to tune shelf life for your install.
+    3. Restart the game. Values are re-read every launch and apply to all saves.
+
+    ===== WHAT IT DOES =====
+    This file uses the SAME schema as the mod's bundled data/defaultSettings.xml.
+    It is a DEFAULT tier that sits ABOVE the bundled defaults but BELOW your in-game
+    settings overrides. Precedence (highest first):
+        savegame settings (in-game UI), then customDefaults.xml, then bundled defaults.
+
+    So anything you set here overrides the mod's bundled value for that fillType, but
+    a value you change in the in-game Settings menu still wins. The difficulty preset
+    multiplier (Easy / Hard / ...) applies to custom periods exactly as it does to
+    bundled ones.
+
+    ===== NOTES =====
+    * It is NEVER saved into your savegame and NEVER written by the mod (read-only).
+    * On a dedicated/host server it is read on the server only; clients receive the
+      values automatically, so display matches everywhere.
+    * Entries are keyed by fillType NAME. You may list fillTypes from custom crop or
+      map mods that are not in your current game; they stay dormant until a save that
+      has them, so one file is portable across all your saves.
+    * period is in months; UI values: 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 9.0, 12.0, 18.0,
+      24.0, 36.0, 60.0. maxBenefitClass is one of:
+      exposed, sheltered, indoor, cooled, frozen.
+
+    The examples below are commented out. Uncomment and edit the ones you want.
+-->
+<freshSettings version="2">
+
+    <!-- Global defaults (optional). These seed defaults the server already controls. -->
+    <!--
+    <global>
+        <setting name="warningHours" value="48"/>
+    </global>
+    -->
+
+    <!-- Auto-hide entire FS25 fillType categories. UNION with the mod's bundled list:
+         ANIMAL and HORSE stay hidden; anything you add here is hidden in addition. -->
+    <!--
+    <categories>
+        <category name="FUEL" hidden="true"/>
+    </categories>
+    -->
+
+    <!-- Storage class aging multipliers (override only the classes you list). -->
+    <!--
+    <storageClasses enabled="true">
+        <class name="frozen" multiplier="0.05"/>
+    </storageClasses>
+    -->
+
+    <fillTypes>
+        <!-- Add a custom-crop fillType from another mod (dormant if absent this game) -->
+        <!-- <fillType name="CUSTOMCROP" period="3.0" maxBenefitClass="cooled"/> -->
+
+        <!-- Override a bundled default: make WHEAT last 6 months instead of 12 -->
+        <!-- <fillType name="WHEAT" period="6.0"/> -->
+
+        <!-- Mark a fillType as non-expiring -->
+        <!-- <fillType name="POTATO" expires="false"/> -->
+    </fillTypes>
+</freshSettings>

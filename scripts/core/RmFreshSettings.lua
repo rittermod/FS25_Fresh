@@ -1,7 +1,7 @@
 -- RmFreshSettings.lua
 -- Purpose: Settings data model with XML-based configuration loading
 -- Author: Ritter
--- Pattern: Three-layer configuration (game fillTypes → mod defaults → user overrides)
+-- Pattern: Three-layer configuration (game fillTypes -> mod defaults -> user overrides)
 
 RmFreshSettings = {}
 
@@ -58,14 +58,14 @@ RmFreshSettings.DEFAULT_CLASS_MULTIPLIERS = {
 --- Mod directory path (set during initialize())
 RmFreshSettings.modDirectory = nil
 
---- All fillTypes from game (fillTypeName → { name, title })
+--- All fillTypes from game (fillTypeName -> { name, title })
 RmFreshSettings.allFillTypes = {}
 
---- Mod defaults from fillTypeDefaults.xml (fillTypeName → { period = X } or { expires = false })
+--- Mod defaults from fillTypeDefaults.xml (fillTypeName -> { period = X } or { expires = false })
 RmFreshSettings.modDefaults = {}
 
 --- User overrides
---- Structure: { global = { key → value }, fillTypes = { fillTypeName → { period = X } or { expires = false } } }
+--- Structure: { global = { key -> value }, fillTypes = { fillTypeName -> { period = X } or { expires = false } } }
 RmFreshSettings.userOverrides = {
     global = {},
     fillTypes = {},
@@ -83,7 +83,7 @@ RmFreshSettings.perishableByIndex = {}
 RmFreshSettings.suppressNotify = false
 
 --- Fill type source tracking (populated by hooks during map load)
---- fillTypeName → { source = "basegame"|"dlc"|"mod"|"map", modName = string|nil }
+--- fillTypeName -> { source = "basegame"|"dlc"|"mod"|"map", modName = string|nil }
 RmFreshSettings.fillTypeSourceMap = {}
 
 --- Internal flag: true during mod fill type loading phase
@@ -92,21 +92,48 @@ RmFreshSettings._isLoadingModFillTypes = false
 --- Storage aging enabled toggle (loaded from XML storageClasses#enabled)
 RmFreshSettings.storageAgingEnabled = true
 
---- Storage class overrides (keyed by uniqueId string or "itemsInWorld" → storage class value)
+--- Bundled baseline for storageAgingEnabled (captured after loadStorageClasses, before any
+--- custom overlay) so a client can revert to it when a sync removes the override
+RmFreshSettings.bundledStorageAgingEnabled = true
+
+--- Storage class overrides (keyed by uniqueId string or "itemsInWorld" -> storage class value)
 --- Set by admin via fSetStorage command, synced via RmSettingsSyncEvent
 RmFreshSettings.storageClassOverrides = {}
 
---- Runtime storage class multipliers (classValue → multiplier)
+--- Runtime storage class multipliers (classValue -> multiplier)
 --- Populated by loadStorageClasses() from XML, falls back to DEFAULT_CLASS_MULTIPLIERS
 RmFreshSettings.classMultipliers = {}
 
---- Per-fillType maximum benefit class ceiling (fillTypeName → classValue)
+--- Per-fillType maximum benefit class ceiling (fillTypeName -> classValue)
 --- Populated by loadStorageClasses() from XML maxBenefitClass attributes
 RmFreshSettings.maxBenefitClassDefaults = {}
 
---- Per-fillType maximum benefit class user overrides (fillTypeName → classValue)
+--- Per-fillType maximum benefit class user overrides (fillTypeName -> classValue)
 --- Set by admin via settings UI, synced via RmSettingsSyncEvent
 RmFreshSettings.maxBenefitClassOverrides = {}
+
+--- Custom defaults overlay: server-side modSettings/FS25_Fresh/customDefaults.xml
+--- A default tier ABOVE bundled defaults but BELOW savegame overrides.
+--- Re-read each launch, NEVER persisted to the savegame, NEVER routed through getUserOverrides().
+--- Carried to clients as its own additive sync section (server's copy diverges from bundled).
+--- Keyed by fillType NAME; entries for fillTypes absent this game stay dormant (portable across saves).
+---   global              = { key -> value }            global default seeds
+---   fillTypes           = { name -> { period=X } / { expires=false } / hidden=true }
+---   maxBenefit          = { name -> classValue }       per-fillType ceiling
+---   classMultipliers    = { classValue -> multiplier } storage-class aging multipliers
+---   storageAgingEnabled = nil | true | false           tri-state (nil = unset, keep bundled)
+---   hiddenCategoryNames = { categoryName -> true }      raw names, resolved + merged at apply
+RmFreshSettings.customDefaults = {
+    global = {},
+    fillTypes = {},
+    maxBenefit = {},
+    classMultipliers = {},
+    storageAgingEnabled = nil,
+    hiddenCategoryNames = {},
+}
+
+--- Default modSettings-relative path for the custom defaults file
+RmFreshSettings.CUSTOM_DEFAULTS_SUBPATH = "FS25_Fresh/customDefaults.xml"
 
 -- =============================================================================
 -- FILL TYPE SOURCE TRACKING
@@ -257,6 +284,13 @@ function RmFreshSettings:initialize(modDir)
     -- Load storage class config (multipliers + per-fillType maxBenefitClass)
     self:loadStorageClasses()
 
+    -- Load optional server-side custom defaults overlay (modSettings)
+    -- Server only; clients receive the overlay via RmSettingsSyncEvent, never from disk.
+    -- Nil-safe on g_modSettingsDirectory (defensive; the var is always set on PC).
+    if g_server ~= nil and g_modSettingsDirectory ~= nil then
+        self:loadCustomDefaults()
+    end
+
     -- Build index-based cache for adapter performance
     self:rebuildIndexCache()
 
@@ -327,9 +361,78 @@ function RmFreshSettings:loadModDefaults()
         self:tableCount(self.modDefaults), self:tableCount(self.hiddenCategoryIndices))
 end
 
---- Load storage class configuration from defaultSettings.xml
---- Loads multipliers per class and maxBenefitClass per fillType
---- Opens XML independently (same file as loadModDefaults, separate open)
+--- Parse the storageClasses / maxBenefitClass sections of any settings file.
+--- NON-DESTRUCTIVE: returns a delta table and does NOT mutate live state, so the
+--- same parse serves both the bundled (reset-then-apply) and custom (overlay) paths.
+--- The unified global/fillTypes/categories parse lives in RmFreshIO:loadSettings;
+--- this covers only the storageClasses + maxBenefitClass attributes it does not.
+---@param xmlPath string Full path to a freshSettings-format XML file
+---@return table delta { classMultipliers = { classValue -> mult },
+---                      maxBenefit = { fillTypeName -> classValue },
+---                      storageAgingEnabled = nil|true|false }
+function RmFreshSettings:parseStorageClassesFromFile(xmlPath)
+    local delta = {
+        classMultipliers = {},
+        maxBenefit = {},
+        storageAgingEnabled = nil,
+    }
+
+    if xmlPath == nil or xmlPath == "" then
+        return delta
+    end
+
+    RmFreshIO.registerSettingsSchema()
+
+    local xmlFile = XMLFile.loadIfExists("freshSettings", xmlPath, RmFreshIO.settingsSchema)
+    if xmlFile == nil then
+        Log:debug("STORAGE_CLASS_LOAD: File not found: %s", xmlPath)
+        return delta
+    end
+
+    -- enabled toggle (tri-state: nil = absent, keep caller's value)
+    local enabledStr = xmlFile:getString("freshSettings.storageClasses#enabled")
+    if enabledStr ~= nil then
+        delta.storageAgingEnabled = (enabledStr == "true")
+    end
+
+    -- class multipliers
+    xmlFile:iterate("freshSettings.storageClasses.class", function(_, path)
+        local name = xmlFile:getString(path .. "#name")
+        local multiplier = xmlFile:getFloat(path .. "#multiplier", nil)
+        if name and multiplier then
+            local classValue = RmFreshManager:getStorageClassByName(name)
+            if classValue ~= nil then
+                delta.classMultipliers[classValue] = multiplier
+                Log:debug("STORAGE_CLASS_CONFIG: %s(%d) = %.2fx", name, classValue, multiplier)
+            else
+                Log:warning("Unknown storage class '%s' in %s, skipping", name, xmlPath)
+            end
+        end
+    end)
+
+    -- per-fillType maxBenefitClass
+    xmlFile:iterate("freshSettings.fillTypes.fillType", function(_, path)
+        local fillTypeName = xmlFile:getString(path .. "#name")
+        local maxBenefitStr = xmlFile:getString(path .. "#maxBenefitClass")
+        if fillTypeName and maxBenefitStr then
+            local classValue = RmFreshManager:getStorageClassByName(maxBenefitStr)
+            if classValue ~= nil then
+                delta.maxBenefit[fillTypeName] = classValue
+                Log:trace("MAX_BENEFIT: %s -> %s(%d)", fillTypeName, maxBenefitStr, classValue)
+            else
+                Log:warning("Unknown maxBenefitClass '%s' for fillType '%s', skipping",
+                    maxBenefitStr, fillTypeName)
+            end
+        end
+    end)
+
+    xmlFile:delete()
+    return delta
+end
+
+--- Load storage class configuration from defaultSettings.xml (bundled).
+--- Reset-then-apply: starts from DEFAULT_CLASS_MULTIPLIERS, then applies the
+--- bundled delta. loadCustomDefaults overlays its own delta on top afterwards.
 function RmFreshSettings:loadStorageClasses()
     -- Initialize with defaults
     self.classMultipliers = {}
@@ -345,66 +448,151 @@ function RmFreshSettings:loadStorageClasses()
     end
 
     local xmlPath = self.modDirectory .. self.MOD_DEFAULTS_PATH
+    local delta = self:parseStorageClassesFromFile(xmlPath)
 
-    RmFreshIO.registerSettingsSchema()
-
-    local xmlFile = XMLFile.loadIfExists("freshSettings", xmlPath, RmFreshIO.settingsSchema)
-    if xmlFile == nil then
-        Log:debug("STORAGE_CLASS_LOAD: File not found: %s", xmlPath)
-        return
+    -- Apply bundled delta onto the freshly-reset live tables
+    for classValue, multiplier in pairs(delta.classMultipliers) do
+        self.classMultipliers[classValue] = multiplier
+    end
+    for fillTypeName, classValue in pairs(delta.maxBenefit) do
+        self.maxBenefitClassDefaults[fillTypeName] = classValue
+    end
+    if delta.storageAgingEnabled ~= nil then
+        self.storageAgingEnabled = delta.storageAgingEnabled
     end
 
-    -- Load enabled toggle
-    local enabledStr = xmlFile:getString("freshSettings.storageClasses#enabled")
-    if enabledStr ~= nil then
-        self.storageAgingEnabled = (enabledStr == "true")
-    end
-
-    -- Load class multipliers
-    local classCount = 0
-    xmlFile:iterate("freshSettings.storageClasses.class", function(_, path)
-        local name = xmlFile:getString(path .. "#name")
-        local multiplier = xmlFile:getFloat(path .. "#multiplier", nil)
-        if name and multiplier then
-            local classValue = RmFreshManager:getStorageClassByName(name)
-            if classValue ~= nil then
-                self.classMultipliers[classValue] = multiplier
-                classCount = classCount + 1
-                Log:debug("STORAGE_CLASS_CONFIG: %s(%d) = %.2fx", name, classValue, multiplier)
-            else
-                Log:warning("Unknown storage class '%s' in defaultSettings.xml, skipping", name)
-            end
-        end
-    end)
-
-    -- Load per-fillType maxBenefitClass from fillType elements
-    local maxBenefitCount = 0
-    xmlFile:iterate("freshSettings.fillTypes.fillType", function(_, path)
-        local fillTypeName = xmlFile:getString(path .. "#name")
-        local maxBenefitStr = xmlFile:getString(path .. "#maxBenefitClass")
-        if fillTypeName and maxBenefitStr then
-            local classValue = RmFreshManager:getStorageClassByName(maxBenefitStr)
-            if classValue ~= nil then
-                self.maxBenefitClassDefaults[fillTypeName] = classValue
-                maxBenefitCount = maxBenefitCount + 1
-                Log:trace("MAX_BENEFIT: %s -> %s(%d)", fillTypeName, maxBenefitStr, classValue)
-            else
-                Log:warning("Unknown maxBenefitClass '%s' for fillType '%s', skipping",
-                    maxBenefitStr, fillTypeName)
-            end
-        end
-    end)
-
-    xmlFile:delete()
+    -- Capture the bundled baseline (before any custom overlay) so a client can revert
+    -- storageAgingEnabled to it when a later sync removes the override.
+    self.bundledStorageAgingEnabled = self.storageAgingEnabled
 
     Log:info("Storage class config loaded: %d classes, %d fillType ceilings, aging %s",
-        classCount, maxBenefitCount, self.storageAgingEnabled and "enabled" or "disabled")
+        self:tableCount(delta.classMultipliers), self:tableCount(delta.maxBenefit),
+        self.storageAgingEnabled and "enabled" or "disabled")
+end
+
+--- Load the optional server-side custom defaults overlay (modSettings).
+--- OVERLAYS (never replaces): custom keys win, bundled keys absent from the custom
+--- file are preserved. Stored by fillType NAME; entries for fillTypes absent from this
+--- game stay dormant (consumed only if/when that fillType is present), so one file is
+--- portable across saves. A single malformed entry never aborts the rest (existing
+--- RmFreshIO:loadSettings + parseStorageClassesFromFile validation handles that).
+--- Server only; clients receive these values via RmSettingsSyncEvent.
+---@param path string|nil Full path override (test seam). Defaults to the modSettings file.
+function RmFreshSettings:loadCustomDefaults(path)
+    -- Reset overlay state to a clean baseline each launch (re-read from disk)
+    self.customDefaults = {
+        global = {},
+        fillTypes = {},
+        maxBenefit = {},
+        classMultipliers = {},
+        storageAgingEnabled = nil,
+        hiddenCategoryNames = {},
+    }
+
+    local xmlPath = path
+    if xmlPath == nil then
+        if g_modSettingsDirectory == nil then
+            Log:debug("CUSTOM_DEFAULTS: g_modSettingsDirectory not set, skipping")
+            return
+        end
+        xmlPath = g_modSettingsDirectory .. self.CUSTOM_DEFAULTS_SUBPATH
+    end
+
+    -- Parse global / fillTypes / categories via the shared unified parser (unchanged)
+    local data = RmFreshIO:loadSettings(xmlPath)
+    self.customDefaults.global = data.global or {}
+    self.customDefaults.fillTypes = data.fillTypes or {}
+
+    -- Raw category names (resolved to indices + merged into hiddenCategoryIndices below)
+    for catName, config in pairs(data.categories or {}) do
+        if config.hidden then
+            self.customDefaults.hiddenCategoryNames[catName] = true
+        end
+    end
+
+    -- Parse storageClasses / maxBenefitClass via the shared non-destructive parse
+    local scDelta = self:parseStorageClassesFromFile(xmlPath)
+    self.customDefaults.classMultipliers = scDelta.classMultipliers or {}
+    self.customDefaults.maxBenefit = scDelta.maxBenefit or {}
+    self.customDefaults.storageAgingEnabled = scDelta.storageAgingEnabled
+
+    -- Overlay the custom delta onto the already-loaded bundled values.
+    -- Custom keys win; bundled keys absent from the custom file are preserved.
+    self:applyCustomDefaultsOverlay()
+
+    -- One DEBUG summary of custom fillType names not registered in this game (dormant).
+    -- Normal for a portable config; never warn per absent entry.
+    self:logUnregisteredCustomFillTypes()
+
+    Log:info("CUSTOM_DEFAULTS: Loaded %d global, %d fillTypes, %d maxBenefit, %d class multipliers, %d categories from %s",
+        self:tableCount(self.customDefaults.global), self:tableCount(self.customDefaults.fillTypes),
+        self:tableCount(self.customDefaults.maxBenefit), self:tableCount(self.customDefaults.classMultipliers),
+        self:tableCount(self.customDefaults.hiddenCategoryNames), xmlPath)
+end
+
+--- Apply the custom-defaults overlay to the live storage-aging tables and hidden
+--- categories. Idempotent given the current customDefaults state; called from
+--- loadCustomDefaults (server) and setCustomDefaults (client sync).
+--- classMultipliers/storageAgingEnabled/hiddenCategories merge here; getExpiration/
+--- getMaxBenefitClass/getGlobal consult customDefaults directly (no overlay needed).
+function RmFreshSettings:applyCustomDefaultsOverlay()
+    -- classMultipliers: custom values win over bundled, absent classes keep bundled
+    for classValue, multiplier in pairs(self.customDefaults.classMultipliers or {}) do
+        self.classMultipliers[classValue] = multiplier
+    end
+
+    -- storageAgingEnabled: only apply if the custom file set it (tri-state)
+    if self.customDefaults.storageAgingEnabled ~= nil then
+        self.storageAgingEnabled = self.customDefaults.storageAgingEnabled
+    end
+
+    -- hidden categories: UNION/additive - resolve names to indices and MERGE,
+    -- never replace, so bundled ANIMAL/HORSE stay hidden alongside custom ones.
+    if g_fillTypeManager then
+        for catName, _ in pairs(self.customDefaults.hiddenCategoryNames or {}) do
+            local idx = g_fillTypeManager.nameToCategoryIndex[catName]
+            if idx then
+                self.hiddenCategoryIndices[idx] = true
+                Log:debug("CUSTOM_DEFAULTS: Hidden category %s -> index %d (merged)", catName, idx)
+            else
+                Log:warning("CUSTOM_DEFAULTS: Unknown hidden category: %s", catName)
+            end
+        end
+    end
+end
+
+--- Emit ONE DEBUG summary listing custom fillType entries (fillTypes + maxBenefit)
+--- whose names are not registered in this game. Dormant entries are normal for a
+--- portable config; this never warns per entry and never drops the entries.
+function RmFreshSettings:logUnregisteredCustomFillTypes()
+    local seen = {}
+    local unregistered = {}
+    local function check(name)
+        if name and not seen[name] and self.allFillTypes[name] == nil then
+            seen[name] = true
+            table.insert(unregistered, name)
+        end
+    end
+    for name, _ in pairs(self.customDefaults.fillTypes or {}) do check(name) end
+    for name, _ in pairs(self.customDefaults.maxBenefit or {}) do check(name) end
+
+    if #unregistered > 0 then
+        table.sort(unregistered)
+        Log:debug("CUSTOM_DEFAULTS: %d unregistered fillType entries (dormant, kept for portability): %s",
+            #unregistered, table.concat(unregistered, ", "))
+    end
 end
 
 --- Get the aging rate multiplier for a storage class value
 ---@param classValue number Storage class value (0-5)
 ---@return number Multiplier (fallback 1.0 for unknown classes)
 function RmFreshSettings:getClassMultiplier(classValue)
+    -- customDefaults tier wins over bundled (also merged into classMultipliers at load,
+    -- but consulted explicitly here so the source of truth is unambiguous)
+    local custom = self.customDefaults.classMultipliers[classValue]
+    if custom ~= nil then
+        return custom
+    end
     local multiplier = self.classMultipliers[classValue]
     if multiplier ~= nil then
         return multiplier
@@ -414,7 +602,7 @@ end
 
 --- Get the maximum benefit class ceiling for a fillType
 --- Returns the highest storage class that provides aging benefit for this fillType
---- Priority: user override → config default → SHELTERED fallback
+--- Priority: user override -> config default -> SHELTERED fallback
 ---@param fillTypeIndex number Fill type index
 ---@return number Storage class value (fallback: SHELTERED)
 function RmFreshSettings:getMaxBenefitClass(fillTypeIndex)
@@ -424,7 +612,11 @@ function RmFreshSettings:getMaxBenefitClass(fillTypeIndex)
         if self.maxBenefitClassOverrides[fillTypeName] ~= nil then
             return self.maxBenefitClassOverrides[fillTypeName]
         end
-        -- Layer 2: Config default
+        -- Layer 2: customDefaults tier (above bundled config default)
+        if self.customDefaults.maxBenefit[fillTypeName] ~= nil then
+            return self.customDefaults.maxBenefit[fillTypeName]
+        end
+        -- Layer 3: Bundled config default
         if self.maxBenefitClassDefaults[fillTypeName] ~= nil then
             return self.maxBenefitClassDefaults[fillTypeName]
         end
@@ -436,15 +628,16 @@ end
 -- QUERY FUNCTIONS
 -- =============================================================================
 
---- Get expiration period for a fillType (3-layer merge: user → preset×mod → nil)
+--- Get expiration period for a fillType (3-layer merge: user -> preset x mod -> nil)
 --- Returns nil for fillTypes that don't expire
 --- Hidden fillTypes always return nil
 --- User override ALWAYS wins for non-hidden fillTypes (safety: prevents inventory loss on mod update)
 ---@param fillTypeName string The fillType name (e.g., "WHEAT")
 ---@return number|nil Expiration period in months, or nil if doesn't expire
 function RmFreshSettings:getExpiration(fillTypeName)
-    -- Hidden fillTypes are always non-expiring (mod author decision, overrides all layers)
-    local modDefault = self.modDefaults[fillTypeName]
+    -- Hidden fillTypes are always non-expiring (mod author decision, overrides all layers).
+    -- Default tier: customDefaults (modSettings overlay) wins over bundled modDefaults.
+    local modDefault = self.customDefaults.fillTypes[fillTypeName] or self.modDefaults[fillTypeName]
     if modDefault ~= nil and modDefault.hidden == true then
         return nil
     end
@@ -499,7 +692,8 @@ end
 ---@param fillTypeName string The fillType name
 ---@return boolean True if fillType is hidden
 function RmFreshSettings:isHidden(fillTypeName)
-    local modDefault = self.modDefaults[fillTypeName]
+    -- Default tier: customDefaults overlay wins over bundled modDefaults
+    local modDefault = self.customDefaults.fillTypes[fillTypeName] or self.modDefaults[fillTypeName]
     if modDefault ~= nil and modDefault.hidden == true then
         return true
     end
@@ -762,13 +956,16 @@ function RmFreshSettings:resetAllOverrides()
     end
 end
 
---- Clear fillType overrides that are redundant (match mod default exactly or hidden)
+--- Clear fillType overrides that are redundant (match the EFFECTIVE default exactly or hidden)
 --- Called when switching to a preset so the preset multiplier can take effect
 --- Keeps overrides where the user intentionally changed the value from the default
+--- EFFECTIVE default = customDefaults overlay if present, else bundled modDefaults.
+--- This lets a savegame override equal to the current custom value be cleared, so a later
+--- customDefaults.xml edit can take effect (preserving the "behaves like modDefaults" contract).
 function RmFreshSettings:clearRedundantOverrides()
     local removed = 0
     for name, override in pairs(self.userOverrides.fillTypes) do
-        local modDefault = self.modDefaults[name]
+        local modDefault = self.customDefaults.fillTypes[name] or self.modDefaults[name]
         if modDefault ~= nil then
             local redundant = false
             if modDefault.hidden == true then
@@ -796,14 +993,19 @@ end
 
 --- Get a global setting value
 ---@param key string The setting key (e.g., "enableExpiration")
----@return any The setting value (user override → default)
+---@return any The setting value (user override -> default)
 function RmFreshSettings:getGlobal(key)
-    -- Check user override first
+    -- Layer 1: user override (savegame) wins
     if self.userOverrides.global[key] ~= nil then
         return self.userOverrides.global[key]
     end
 
-    -- Fall back to default
+    -- Layer 2: customDefaults tier (modSettings overlay) above the bundled default
+    if self.customDefaults.global[key] ~= nil then
+        return self.customDefaults.global[key]
+    end
+
+    -- Layer 3: bundled default
     return self.GLOBAL_DEFAULTS[key]
 end
 
@@ -852,14 +1054,14 @@ function RmFreshSettings:getStorageClassOverride(key)
 end
 
 --- Get all storage class overrides (for sync/save)
----@return table overrides table keyed by string → classValue
+---@return table overrides table keyed by string -> classValue
 function RmFreshSettings:getAllStorageClassOverrides()
     return self.storageClassOverrides
 end
 
 --- Bulk set all storage class overrides (from sync/load)
 --- Suppresses per-item notifications
----@param overrides table keyed by string → classValue
+---@param overrides table keyed by string -> classValue
 function RmFreshSettings:setAllStorageClassOverrides(overrides)
     self.storageClassOverrides = overrides or {}
     Log:debug("STORAGE_OVERRIDES_BULK: %d overrides loaded", self:tableCount(self.storageClassOverrides))
@@ -892,14 +1094,14 @@ function RmFreshSettings:clearMaxBenefitClassOverride(fillTypeName)
 end
 
 --- Get all maxBenefitClass overrides (for save/sync)
----@return table overrides table keyed by fillTypeName → classValue
+---@return table overrides table keyed by fillTypeName -> classValue
 function RmFreshSettings:getAllMaxBenefitClassOverrides()
     return self.maxBenefitClassOverrides
 end
 
 --- Bulk set all maxBenefitClass overrides (from save/sync)
 --- Does NOT call onSettingsChanged() - caller is responsible
----@param overrides table keyed by fillTypeName → classValue
+---@param overrides table keyed by fillTypeName -> classValue
 function RmFreshSettings:setAllMaxBenefitClassOverrides(overrides)
     self.maxBenefitClassOverrides = overrides or {}
     Log:debug("MAXBENEFIT_OVERRIDES_BULK: %d overrides loaded", self:tableCount(self.maxBenefitClassOverrides))
@@ -938,4 +1140,42 @@ function RmFreshSettings:setUserOverrides(overrides)
     Log:debug("SETTINGS: User overrides set (%d global, %d fillTypes)",
         self:tableCount(self.userOverrides.global),
         self:tableCount(self.userOverrides.fillTypes))
+end
+
+-- =============================================================================
+-- CUSTOM DEFAULTS ACCESSORS (MP sync only - NEVER persisted to savegame)
+-- =============================================================================
+
+--- Get the custom defaults overlay for MP sync (server -> client).
+--- This is a separate tier from getUserOverrides() and is NEVER routed through
+--- the savegame; it rides RmSettingsSyncEvent as its own additive section.
+---@return table customDefaults { global, fillTypes, maxBenefit, classMultipliers, storageAgingEnabled, hiddenCategoryNames }
+function RmFreshSettings:getCustomDefaults()
+    return self.customDefaults
+end
+
+--- Set the custom defaults overlay from MP sync (client side).
+--- Mirrors loadCustomDefaults' overlay step but takes already-parsed data instead of
+--- reading disk; does NOT persist. Caller (RmSettingsSyncEvent:run) rebuilds the index
+--- cache once after applying all tiers.
+---@param t table customDefaults payload from the server
+function RmFreshSettings:setCustomDefaults(t)
+    t = t or {}
+    self.customDefaults = {
+        global = t.global or {},
+        fillTypes = t.fillTypes or {},
+        maxBenefit = t.maxBenefit or {},
+        classMultipliers = t.classMultipliers or {},
+        storageAgingEnabled = t.storageAgingEnabled,
+        hiddenCategoryNames = t.hiddenCategoryNames or {},
+    }
+
+    -- Overlay onto the live tables (classMultipliers / storageAgingEnabled / hidden categories).
+    -- Category names are resolved to indices and MERGED (union, never replace).
+    self:applyCustomDefaultsOverlay()
+
+    Log:debug("CUSTOM_DEFAULTS: Set from sync (%d global, %d fillTypes, %d maxBenefit, %d class mult, %d categories)",
+        self:tableCount(self.customDefaults.global), self:tableCount(self.customDefaults.fillTypes),
+        self:tableCount(self.customDefaults.maxBenefit), self:tableCount(self.customDefaults.classMultipliers),
+        self:tableCount(self.customDefaults.hiddenCategoryNames))
 end

@@ -1205,6 +1205,12 @@ function RmFreshManager:onLoad(savegameDir)
     -- Restore max benefit class overrides (backward compat: missing = empty table)
     RmFreshSettings:setAllMaxBenefitClassOverrides(settingsData.maxBenefitClassOverrides or {})
 
+    -- Prune overrides that match the effective default (customDefaults overlay or bundled)
+    -- so an edited customDefaults.xml takes effect on reload instead of a now-redundant saved
+    -- override masking it. customDefaults is loaded in
+    -- RmFreshSettings:initialize(), which runs before onLoad.
+    RmFreshSettings:clearRedundantOverrides()
+
     -- Rebuild index cache to include user overrides (third-party mod fillTypes)
     RmFreshSettings:rebuildIndexCache()
 
