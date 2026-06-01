@@ -56,6 +56,27 @@ RmFreshManager = {}
 -- Get logger (RmLogging loaded before this module in main.lua)
 local Log = RmLogging.getLogger("Fresh")
 
+--- Run a function under error protection so a crash in one periodic step cannot
+--- abort the rest of the tick or propagate out of the g_messageCenter callback,
+--- keeping the rest of our own work - and other periodic game updates such as
+--- animal aging - running. Used at the periodic-handler boundary and per-iteration
+--- inside the periodic loops. The xpcall message handler logs the Lua call stack at
+--- the throw site (via the engine's printCallstack) before the stack unwinds, then
+--- returns the error string.
+---@param label string Identifies the protected step in error logs
+---@param fn function Zero-arg closure to execute
+---@return boolean ok True if fn completed without error
+local function runProtected(label, fn)
+    local ok, err = xpcall(fn, function(e)
+        printCallstack()
+        return tostring(e)
+    end)
+    if not ok then
+        Log:error("PERIODIC_GUARD: %s: %s", label, tostring(err))
+    end
+    return ok
+end
+
 -- =============================================================================
 -- STORAGE CLASS ENUM
 -- =============================================================================
@@ -1097,35 +1118,45 @@ end
 function RmFreshManager:onHourChanged()
     if g_server == nil then return end -- Server only - NEVER SKIP THIS
 
-    -- Finalize reconciliation on first tick (adapters have had time to register)
-    if not self.reconciliationFinalized then
-        self:finalizeReconciliation()
-    end
+    -- Crash safeguard (boundary): a fault anywhere below must not propagate out of
+    -- this g_messageCenter callback, so other periodic game updates (e.g. animal
+    -- aging) keep running. Per-item guards inside the called loops keep the rest of
+    -- our own work running too. Side-effect call: the handler keeps its nil return.
+    runProtected("onHourChanged", function()
+        -- Finalize reconciliation on first tick (adapters have had time to register)
+        if not self.reconciliationFinalized then
+            self:finalizeReconciliation()
+        end
 
-    -- Periodic reconciliation: fix drift from missed fill events (small amounts compound over time)
-    local reconStats = self:reconcileAll()
-    if reconStats.totalAdded > 0 or reconStats.totalRemoved > 0 then
-        Log:info("HOURLY_RECONCILE: added=%.1f removed=%.1f", reconStats.totalAdded, reconStats.totalRemoved)
-    end
+        -- Periodic reconciliation: fix drift from missed fill events (small amounts compound over time)
+        local reconStats = self:reconcileAll()
+        if reconStats.totalAdded > 0 or reconStats.totalRemoved > 0 then
+            Log:info("HOURLY_RECONCILE: added=%.1f removed=%.1f", reconStats.totalAdded, reconStats.totalRemoved)
+        end
 
-    -- Cleanup phantom batches (floating-point artifacts with amount < 0.001)
-    self:cleanupEmptyBatches()
+        -- Cleanup phantom batches (floating-point artifacts with amount < 0.001)
+        self:cleanupEmptyBatches()
 
-    -- Check if expiration is enabled globally (AC #12)
-    if not RmFreshSettings:isExpirationEnabled() then
-        Log:trace("HOURLY_AGING: Skipped - expiration disabled")
-        return
-    end
+        -- Check if expiration is enabled globally (AC #12)
+        if not RmFreshSettings:isExpirationEnabled() then
+            Log:trace("HOURLY_AGING: Skipped - expiration disabled")
+            return
+        end
 
-    -- Process aging for all containers
-    self:processHourlyAging()
+        -- Process aging for all containers
+        self:processHourlyAging()
+    end)
 end
 
 --- Handle day change - delegate to LossTracker for notifications (29-4)
 --- SERVER ONLY - notifications are sent from server
 function RmFreshManager:onDayChanged()
     if not g_server then return end
-    RmLossTracker:onDayChanged(self.containers)
+    -- Crash safeguard (boundary): contain a fault so it cannot propagate out of
+    -- this DAY_CHANGED callback. Side-effect call: the handler keeps its nil return.
+    runProtected("onDayChanged", function()
+        RmLossTracker:onDayChanged(self.containers)
+    end)
 end
 
 --- Called during save game
@@ -1881,102 +1912,125 @@ function RmFreshManager:_applyAging(hours)
     local entitiesToDelete = {}
 
     for containerId, container in pairs(self.containers) do
-        -- Test isolation: skip non-test containers when in test mode
-        if self:shouldProcessContainer(containerId) then
-            stats.containersProcessed = stats.containersProcessed + 1
-
-            -- Skip aging for fillTypes no longer perishable (AC #13: settings changes apply immediately)
-            if not RmFreshSettings:isPerishableByIndex(container.fillTypeIndex) then
-                Log:trace("SKIP_AGE: container=%s (fillType no longer perishable)", containerId)
-                -- Skip aging for fermenting bales, etc.
-            elseif not self:shouldAge(container) then
-                Log:trace("SKIP_AGE: container=%s (shouldAge=false)", containerId)
-            else
-                -- Sync fillType for bales before aging (handles GRASS->SILAGE transformation)
-                self:syncBaleFillType(containerId, container)
-
-                -- Resolve storage class multiplier for this container (with override support)
-                local storageMultiplier = 1.0
-                if RmFreshSettings.storageAgingEnabled then
-                    local info = self:resolveStorageClassInfo(container)
-                    storageMultiplier = info.multiplier
-
-                    Log:trace("    STORAGE: container=%s detected=%s(%d) override=%s effective=%s(%d) mult=%.2f",
-                        containerId,
-                        self.STORAGE_CLASS_NAMES[info.detected] or "?", info.detected,
-                        info.override and (self.STORAGE_CLASS_NAMES[info.override] .. "(" .. info.override .. ")") or "none",
-                        self.STORAGE_CLASS_NAMES[info.effective] or "?", info.effective,
-                        storageMultiplier)
-
-                    if storageMultiplier ~= 1.0 then
-                        Log:debug("STORAGE_MULT: container=%s detected=%s(%d) override=%s maxBenefit=%s(%d) effective=%s(%d) mult=%.2f",
-                            containerId,
-                            self.STORAGE_CLASS_NAMES[info.detected] or "?", info.detected,
-                            info.override and (self.STORAGE_CLASS_NAMES[info.override] .. "(" .. info.override .. ")") or "none",
-                            self.STORAGE_CLASS_NAMES[info.maxBenefitClass] or "?", info.maxBenefitClass,
-                            self.STORAGE_CLASS_NAMES[info.effective] or "?", info.effective,
-                            storageMultiplier)
-                    end
-                end
-                local adjustedIncrement = increment * storageMultiplier
-
-                if container.batches and #container.batches > 0 then
-                    -- Age all batches with storage-adjusted increment
-                    for _, batch in ipairs(container.batches) do
-                        RmBatch.age(batch, adjustedIncrement)
-                    end
-
-                    -- Process expirations
-                    local config = RmFreshSettings:getThresholdByIndex(container.fillTypeIndex)
-                    local removedAmount = RmBatch.removeExpired(container.batches, config.expiration)
-
-                    if removedAmount > 0 then
-                        stats.amountExpired = stats.amountExpired + removedAmount
-                        stats.batchesExpired = stats.batchesExpired + 1 -- Count containers with expirations
-
-                        -- Record loss for statistics
-                        local location = container.metadata and container.metadata.location or "Unknown"
-                        RmLossTracker:recordExpiration(container, removedAmount, location)
-
-                        -- Remove expired fill from game entity (adapter uses containerId)
-                        local adapter = self:getAdapterForType(container.entityType)
-                        if adapter and container.runtimeEntity then
-                            self.suppressFillChangeBatch = true
-                            adapter:addFillLevel(containerId, -removedAmount)
-                            self.suppressFillChangeBatch = false
-                            Log:debug("EXPIRE_REMOVE: container=%s removed=%.1f", containerId, removedAmount)
-
-                            -- Check if container is now empty - let adapter handle cleanup
-                            if adapter.onContainerEmpty and adapter.getFillLevel then
-                                -- Check actual game state via adapter (handles drift)
-                                local fillLevel = adapter:getFillLevel(containerId)
-                                if fillLevel <= 0 then
-                                    table.insert(entitiesToDelete, {
-                                        containerId = containerId,
-                                        adapter = adapter
-                                    })
-                                end
-                            end
-                        end
-                    end
-
-                    -- Broadcast update to clients
-                    self:broadcastContainerUpdate(containerId, RmFreshUpdateEvent.OP_UPDATE, {
-                        batches = container.batches
-                    })
-                end
-            end -- end of shouldAge else block
+        -- Crash safeguard (per-item): one bad container must not abort aging for the
+        -- rest. shouldProcessContainer runs INSIDE the guard so the loop cannot throw.
+        -- On fault, reset the transient suppress flag the body toggles around the
+        -- adapter call, or it would stay stuck and corrupt later fills.
+        local ok = runProtected("applyAging:" .. tostring(containerId), function()
+            if not self:shouldProcessContainer(containerId) then return end -- test isolation
+            self:_applyAgingToContainer(containerId, container, increment, stats, entitiesToDelete)
+        end)
+        if not ok then
+            self.suppressFillChangeBatch = false
         end
     end
 
     -- Handle empty containers after loop (safe iteration pattern from v1)
     for _, entry in ipairs(entitiesToDelete) do
-        Log:debug("CONTAINER_EMPTY: %s calling adapter cleanup", entry.containerId)
-        -- Let adapter handle cleanup (unregister, delete entity, etc.)
-        entry.adapter:onContainerEmpty(entry.containerId)
+        -- Crash safeguard (per-item): one failed cleanup must not abort the rest.
+        runProtected("onContainerEmpty:" .. tostring(entry.containerId), function()
+            Log:debug("CONTAINER_EMPTY: %s calling adapter cleanup", entry.containerId)
+            -- Let adapter handle cleanup (unregister, delete entity, etc.)
+            entry.adapter:onContainerEmpty(entry.containerId)
+        end)
     end
 
     return stats
+end
+
+--- Age a single container by `increment` periods, process expirations, remove
+--- expired fill from the game entity, and broadcast the update. Extracted from
+--- _applyAging so the per-container work can run under runProtected for crash
+--- isolation. Mutates `stats` and appends to `entitiesToDelete` in place.
+---@param containerId string Container ID
+---@param container table Container record
+---@param increment number Base age increment in periods (before storage multiplier)
+---@param stats table Accumulator { containersProcessed, batchesExpired, amountExpired }
+---@param entitiesToDelete table Accumulator of { containerId, adapter } for post-loop cleanup
+function RmFreshManager:_applyAgingToContainer(containerId, container, increment, stats, entitiesToDelete)
+    stats.containersProcessed = stats.containersProcessed + 1
+
+    -- Skip aging for fillTypes no longer perishable (AC #13: settings changes apply immediately)
+    if not RmFreshSettings:isPerishableByIndex(container.fillTypeIndex) then
+        Log:trace("SKIP_AGE: container=%s (fillType no longer perishable)", containerId)
+        -- Skip aging for fermenting bales, etc.
+    elseif not self:shouldAge(container) then
+        Log:trace("SKIP_AGE: container=%s (shouldAge=false)", containerId)
+    else
+        -- Sync fillType for bales before aging (handles GRASS->SILAGE transformation)
+        self:syncBaleFillType(containerId, container)
+
+        -- Resolve storage class multiplier for this container (with override support)
+        local storageMultiplier = 1.0
+        if RmFreshSettings.storageAgingEnabled then
+            local info = self:resolveStorageClassInfo(container)
+            storageMultiplier = info.multiplier
+
+            Log:trace("    STORAGE: container=%s detected=%s(%d) override=%s effective=%s(%d) mult=%.2f",
+                containerId,
+                self.STORAGE_CLASS_NAMES[info.detected] or "?", info.detected,
+                info.override and (self.STORAGE_CLASS_NAMES[info.override] .. "(" .. info.override .. ")") or "none",
+                self.STORAGE_CLASS_NAMES[info.effective] or "?", info.effective,
+                storageMultiplier)
+
+            if storageMultiplier ~= 1.0 then
+                Log:debug("STORAGE_MULT: container=%s detected=%s(%d) override=%s maxBenefit=%s(%d) effective=%s(%d) mult=%.2f",
+                    containerId,
+                    self.STORAGE_CLASS_NAMES[info.detected] or "?", info.detected,
+                    info.override and (self.STORAGE_CLASS_NAMES[info.override] .. "(" .. info.override .. ")") or "none",
+                    self.STORAGE_CLASS_NAMES[info.maxBenefitClass] or "?", info.maxBenefitClass,
+                    self.STORAGE_CLASS_NAMES[info.effective] or "?", info.effective,
+                    storageMultiplier)
+            end
+        end
+        local adjustedIncrement = increment * storageMultiplier
+
+        if container.batches and #container.batches > 0 then
+            -- Age all batches with storage-adjusted increment
+            for _, batch in ipairs(container.batches) do
+                RmBatch.age(batch, adjustedIncrement)
+            end
+
+            -- Process expirations
+            local config = RmFreshSettings:getThresholdByIndex(container.fillTypeIndex)
+            local removedAmount = RmBatch.removeExpired(container.batches, config.expiration)
+
+            if removedAmount > 0 then
+                stats.amountExpired = stats.amountExpired + removedAmount
+                stats.batchesExpired = stats.batchesExpired + 1 -- Count containers with expirations
+
+                -- Record loss for statistics
+                local location = container.metadata and container.metadata.location or "Unknown"
+                RmLossTracker:recordExpiration(container, removedAmount, location)
+
+                -- Remove expired fill from game entity (adapter uses containerId)
+                local adapter = self:getAdapterForType(container.entityType)
+                if adapter and container.runtimeEntity then
+                    self.suppressFillChangeBatch = true
+                    adapter:addFillLevel(containerId, -removedAmount)
+                    self.suppressFillChangeBatch = false
+                    Log:debug("EXPIRE_REMOVE: container=%s removed=%.1f", containerId, removedAmount)
+
+                    -- Check if container is now empty - let adapter handle cleanup
+                    if adapter.onContainerEmpty and adapter.getFillLevel then
+                        -- Check actual game state via adapter (handles drift)
+                        local fillLevel = adapter:getFillLevel(containerId)
+                        if fillLevel <= 0 then
+                            table.insert(entitiesToDelete, {
+                                containerId = containerId,
+                                adapter = adapter
+                            })
+                        end
+                    end
+                end
+            end
+
+            -- Broadcast update to clients
+            self:broadcastContainerUpdate(containerId, RmFreshUpdateEvent.OP_UPDATE, {
+                batches = container.batches
+            })
+        end
+    end
 end
 
 --- Process real hourly aging - called from onHourChanged
@@ -3489,8 +3543,12 @@ function RmFreshManager:reconcileAll()
     local modifiedContainers = {}
 
     for containerId, _ in pairs(self.containers) do
-        -- Test isolation: skip non-test containers when in test mode
-        if self:shouldProcessContainer(containerId) then
+        -- Crash safeguard (per-item): one bad container must not abort reconcile for
+        -- the rest. shouldProcessContainer runs INSIDE the guard so the loop cannot
+        -- throw and the suppressReconcileBroadcast reset below always runs.
+        runProtected("reconcile:" .. tostring(containerId), function()
+            if not self:shouldProcessContainer(containerId) then return end -- test isolation
+
             local containerStats = self:reconcileContainer(containerId)
 
             if containerStats then
@@ -3507,7 +3565,7 @@ function RmFreshManager:reconcileAll()
                     end
                 end
             end
-        end
+        end)
     end
 
     -- Re-enable broadcasts
@@ -3515,13 +3573,16 @@ function RmFreshManager:reconcileAll()
 
     -- Send consolidated broadcast for all modified containers
     for _, containerId in ipairs(modifiedContainers) do
-        local container = self.containers[containerId]
-        if container then
-            -- Broadcast flat batches structure
-            self:broadcastContainerUpdate(containerId, RmFreshUpdateEvent.OP_UPDATE, {
-                batches = container.batches
-            })
-        end
+        -- Crash safeguard (per-item): one failed broadcast must not abort the rest.
+        runProtected("reconcileBroadcast:" .. tostring(containerId), function()
+            local container = self.containers[containerId]
+            if container then
+                -- Broadcast flat batches structure
+                self:broadcastContainerUpdate(containerId, RmFreshUpdateEvent.OP_UPDATE, {
+                    batches = container.batches
+                })
+            end
+        end)
     end
 
     Log:debug("RECONCILE_ALL: processed=%d skipped=%d added=%.1f removed=%.1f broadcast=%d",
@@ -3540,19 +3601,23 @@ function RmFreshManager:cleanupEmptyBatches()
     local removedCount = 0
     local EPSILON = 0.001
 
-    for _, container in pairs(self.containers) do
-        local batches = container.batches
-        if batches then
-            local i = 1
-            while i <= #batches do
-                if batches[i].amount < EPSILON then
-                    table.remove(batches, i)
-                    removedCount = removedCount + 1
-                else
-                    i = i + 1
+    for containerId, container in pairs(self.containers) do
+        -- Crash safeguard (per-item): isolate per-container cleanup. containerId is
+        -- bound (not _) so the guard can name the failing container in its log.
+        runProtected("cleanupEmptyBatches:" .. tostring(containerId), function()
+            local batches = container.batches
+            if batches then
+                local i = 1
+                while i <= #batches do
+                    if batches[i].amount < EPSILON then
+                        table.remove(batches, i)
+                        removedCount = removedCount + 1
+                    else
+                        i = i + 1
+                    end
                 end
             end
-        end
+        end)
     end
 
     if removedCount > 0 then

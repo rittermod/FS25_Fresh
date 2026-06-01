@@ -7,6 +7,25 @@ RmLossTracker.lossLog = {}
 
 local Log = RmLogging.getLogger("Fresh")
 
+--- Run a function under error protection so a crash handling one item cannot abort
+--- the rest of the daily notification loop. File-local copy of the same pattern used
+--- in RmFreshManager (kept local per the safeHook precedent rather than shared).
+--- The xpcall message handler logs the Lua call stack at the throw site (via the
+--- engine's printCallstack) before unwinding, then returns the error string.
+---@param label string Identifies the protected step in error logs
+---@param fn function Zero-arg closure to execute
+---@return boolean ok True if fn completed without error
+local function runProtected(label, fn)
+    local ok, err = xpcall(fn, function(e)
+        printCallstack()
+        return tostring(e)
+    end)
+    if not ok then
+        Log:error("PERIODIC_GUARD: %s: %s", label, tostring(err))
+    end
+    return ok
+end
+
 --- Record an expiration event to the loss log
 ---@param container table Container data (from RmFreshManager.containers[id])
 ---@param amount number Amount that expired
@@ -261,14 +280,17 @@ function RmLossTracker:onDayChanged(containers)
 
     -- Send notification to each farm with losses
     for farmId, _ in pairs(farmIds) do
-        local totalLost = self:getLossesForDay(farmId, prevYear, prevPeriod, prevDay)
-        Log:debug("DAILY_NOTIFY: farm=%d totalLost=%.0f", farmId, totalLost)
-        if totalLost > 0 then
-            local message = self:buildDailyLossMessage(totalLost)
-            if message then
-                self:notifyFarm(farmId, message)
+        -- Crash safeguard (per-item): one farm's notification failure must not block the others.
+        runProtected("notifyFarm:" .. tostring(farmId), function()
+            local totalLost = self:getLossesForDay(farmId, prevYear, prevPeriod, prevDay)
+            Log:debug("DAILY_NOTIFY: farm=%d totalLost=%.0f", farmId, totalLost)
+            if totalLost > 0 then
+                local message = self:buildDailyLossMessage(totalLost)
+                if message then
+                    self:notifyFarm(farmId, message)
+                end
             end
-        end
+        end)
     end
 
     Log:trace("<<< RmLossTracker:onDayChanged()")
