@@ -71,7 +71,7 @@ RmFreshManager.STORAGE_CLASS = {
     DISABLED  = 5,
 }
 
---- Reverse lookup: storage class value → display name string
+--- Reverse lookup: storage class value -> display name string
 RmFreshManager.STORAGE_CLASS_NAMES = {
     [0] = "exposed",
     [1] = "sheltered",
@@ -181,13 +181,13 @@ end
 -- =============================================================================
 
 --- Container registry - the SINGLE SOURCE OF TRUTH for all batch data
---- Structure: id → Container (see Container type definition in header)
+--- Structure: id -> Container (see Container type definition in header)
 --- Do NOT access directly from adapters - use API methods
 --- NOTE: Populated by adapters calling registerContainer() during their load lifecycle
 RmFreshManager.containers = {}
 
 --- Reconciliation Pool - holds loaded containers awaiting entity match
---- Structure: id → Container (same as containers, but runtimeEntity = nil)
+--- Structure: id -> Container (same as containers, but runtimeEntity = nil)
 --- LIFECYCLE:
 ---   1. onLoad populates pool from savegame
 ---   2. Adapters call tryClaimContainer() during their registration
@@ -199,7 +199,7 @@ RmFreshManager.reconciliationPool = {}
 -- =============================================================================
 -- RECONCILIATION API
 -- =============================================================================
--- These functions define the adapter ↔ manager reconciliation contract.
+-- These functions define the adapter <-> manager reconciliation contract.
 -- Adapters call these when they find entities that might have persisted data.
 --
 -- CALL ORDER (expected):
@@ -216,8 +216,8 @@ RmFreshManager.reconciliationPool = {}
 ---
 --- ALGORITHM:
 --- 1. Validate structure (nil checks)
---- 2. If saved.worldObject.uniqueId exists → compare ONLY uniqueId (definitive shortcut)
---- 3. If no uniqueId → fall back to generic key-value comparison for worldObject
+--- 2. If saved.worldObject.uniqueId exists -> compare ONLY uniqueId (definitive shortcut)
+--- 3. If no uniqueId -> fall back to generic key-value comparison for worldObject
 --- 4. Compare ALL storage fields (with amount tolerance)
 ---
 --- TOLERANCE: storage.amount uses proximity tolerance (5% or 10 units minimum)
@@ -333,7 +333,7 @@ end
 
 --- Entity Reference Index - maps entity object references to container IDs
 --- Structure: entityRefIndex[entity] = containerId
---- Used for display hooks where we need entity → containerId lookup
+--- Used for display hooks where we need entity -> containerId lookup
 --- NETWORK SAFE: Uses direct object references (not uniqueId strings or integer node IDs)
 --- - Server: entity is the actual game object
 --- - Client: entity is resolved via NetworkUtil.readNodeObject() during sync
@@ -344,7 +344,7 @@ RmFreshManager.entityRefIndex = {}
 --- totalExpired: Cumulative count of expired batches (incremented during onHourChanged)
 ---   Type: number
 --- expiredByFillType: Breakdown by fill type index (maps fillTypeIndex to count)
----   Type: table {fillTypeIndex → count}
+---   Type: table {fillTypeIndex -> count}
 ---   Example: { [5] = 10, [7] = 5 } means 10 WHEAT (index 5), 5 BARLEY (index 7) expired
 --- lossLog: Recent expiration events for debugging and player notifications
 ---   Type: array of { fillType=number, amount=number, container=string, timestamp=number }
@@ -382,7 +382,7 @@ RmFreshManager.initialized = false
 RmFreshManager.reconciliationFinalized = false
 
 --- Adapter registry - maps entityType to adapter module
---- Structure: entityType → adapter module (e.g., { vehicle = RmVehicleAdapter })
+--- Structure: entityType -> adapter module (e.g., { vehicle = RmVehicleAdapter })
 --- Used by console commands to call adapter-specific methods like adjustFillLevel()
 --- Populated by adapters calling registerAdapter() during their source() load
 RmFreshManager.adapters = {}
@@ -393,18 +393,18 @@ RmFreshManager.adapters = {}
 --- Affects: simulateHours(), forceExpireAll()
 RmFreshManager.testContainerPrefix = nil
 
---- Transfer pending batches: containerId → { batches, timestamp }
+--- Transfer pending batches: containerId -> { batches, timestamp }
 --- Used by TransferCoordinator to stage batches before fill occurs
 --- Adapters check this when fill increases to use transferred ages
 RmFreshManager.transferPending = {}
 
---- Transfer pending by fillType: fillTypeIndex → { batches, timestamp }
+--- Transfer pending by fillType: fillTypeIndex -> { batches, timestamp }
 --- FALLBACK for physics-based transfers (pallets, undetected discharge paths)
 --- When Dischargeable.dischargeToObject isn't called, this catches the transfer
 --- Source staging on negative delta, consumed on positive delta
 RmFreshManager.transferPendingByFillType = {}
 
---- Pending correction: fillTypeIndex → { containerId, timestamp }
+--- Pending correction: fillTypeIndex -> { containerId, timestamp }
 --- RETROACTIVE FIX for same-frame timing issue where dest +delta fires before source -delta
 --- When fresh batch is created (no pending), record it here so source can correct the age
 --- Corrects first-tick fresh batches with actual source age
@@ -412,8 +412,8 @@ RmFreshManager.pendingCorrection = {}
 
 --- Bulk transfer state (nil when not active)
 --- Used by ProductionChainManager:distributeGoods() hook
---- Tracks multiple ADD→REMOVE pairs within a single distribution cycle
---- Structure when active: { active = true, pending = { fillType → [{containerId, amount, batches, isAdd, matched}] } }
+--- Tracks multiple ADD->REMOVE pairs within a single distribution cycle
+--- Structure when active: { active = true, pending = { fillType -> [{containerId, amount, batches, isAdd, matched}] } }
 RmFreshManager.bulkTransfer = nil
 
 -- =============================================================================
@@ -530,7 +530,7 @@ function RmFreshManager:registerContainer(entityType, identityMatch, runtimeEnti
         -- Update entityRefIndex
         if runtimeEntity ~= nil then
             self.entityRefIndex[runtimeEntity] = matchedId
-            Log:debug("ENTITY_REF_ADD: runtimeEntity→%s", matchedId)
+            Log:debug("ENTITY_REF_ADD: runtimeEntity->%s", matchedId)
         end
 
         Log:debug("CONTAINER_REG: reconciled %s type=%s fillType=%s playerCanFill=%s playerCanEmpty=%s",
@@ -594,7 +594,7 @@ function RmFreshManager:registerContainer(entityType, identityMatch, runtimeEnti
     -- Update entityRefIndex (for display hook lookups)
     if runtimeEntity ~= nil then
         self.entityRefIndex[runtimeEntity] = containerId
-        Log:debug("ENTITY_REF_ADD: runtimeEntity→%s", containerId)
+        Log:debug("ENTITY_REF_ADD: runtimeEntity->%s", containerId)
     end
 
     Log:debug("CONTAINER_REG: new %s type=%s fillType=%s playerCanFill=%s playerCanEmpty=%s",
@@ -618,11 +618,11 @@ function RmFreshManager:unregisterContainer(containerId)
         -- Clean entityRefIndex
         if container.entity ~= nil then
             self.entityRefIndex[container.entity] = nil
-            Log:trace("UNREG_ENTITY_REF: cleared entity ref → %s", containerId)
+            Log:trace("UNREG_ENTITY_REF: cleared entity ref -> %s", containerId)
         end
         if container.runtimeEntity ~= nil then
             self.entityRefIndex[container.runtimeEntity] = nil
-            Log:trace("UNREG_ENTITY_REF: cleared runtimeEntity ref → %s", containerId)
+            Log:trace("UNREG_ENTITY_REF: cleared runtimeEntity ref -> %s", containerId)
         end
 
         -- Broadcast unregister to clients before removing
@@ -714,7 +714,7 @@ end
 --- Get all containers in the registry
 --- Returns the containers table directly (not a copy)
 --- Used for iteration in console commands and save/load
----@return table The containers registry table (id → Container)
+---@return table The containers registry table (id -> Container)
 function RmFreshManager:getAllContainers()
     return self.containers
 end
@@ -724,7 +724,7 @@ end
 ---@param farmId number|nil Filter by farm ownership (nil = all farms)
 ---@return table Array of { uniqueId, entityName, entityType, detectedClass, containerCount, key }
 function RmFreshManager:getStorageListForSettings(farmId)
-    local buildingMap = {}   -- uniqueId → { ... }
+    local buildingMap = {}   -- uniqueId -> { ... }
     local hasItemsInWorld = false
 
     for _, container in pairs(self.containers) do
@@ -804,7 +804,7 @@ end
 --- Get all storages grouped by uniqueId with class info and totals for inventory detail views
 --- Groups containers by building/vehicle (uniqueId), separates bales/pallets into "Items in World"
 --- Unlike getStorageListForSettings, includes amount totals and fillType counts for display
---- Returns unsorted array — caller is responsible for sorting
+--- Returns unsorted array - caller is responsible for sorting
 ---@param farmId number|nil Filter by farm ownership (nil returns empty)
 ---@return table Array of { uniqueId, entityName, entityType, totalAmount, fillTypeCount, storageClass, className }
 function RmFreshManager:getStorageList(farmId)
@@ -814,9 +814,9 @@ function RmFreshManager:getStorageList(farmId)
         return {}
     end
 
-    local buildingMap = {}   -- uniqueId → group entry
+    local buildingMap = {}   -- uniqueId -> group entry
     local itemsInWorldAmount = 0
-    local itemsInWorldFillTypes = {} -- fillTypeName → true
+    local itemsInWorldFillTypes = {} -- fillTypeName -> true
     local hasItemsInWorld = false
 
     for _, container in pairs(self.containers) do
@@ -834,7 +834,7 @@ function RmFreshManager:getStorageList(farmId)
             end
 
             if container.entityType == "bale" or (container.metadata and container.metadata.isPallet) then
-                -- Bales/pallets → "Items in World" bucket
+                -- Bales/pallets -> "Items in World" bucket
                 hasItemsInWorld = true
                 itemsInWorldAmount = itemsInWorldAmount + containerAmount
                 if fillTypeName and containerAmount > 0 then
@@ -846,7 +846,7 @@ function RmFreshManager:getStorageList(farmId)
                 local uniqueId = wo and wo.uniqueId
                 if uniqueId then
                     if not buildingMap[uniqueId] then
-                        -- Resolve building operational class (override or detected — deterministic)
+                        -- Resolve building operational class (override or detected - deterministic)
                         local storageClass = nil
                         local className = nil
                         if RmFreshSettings.storageAgingEnabled then
@@ -934,7 +934,7 @@ function RmFreshManager:getContainerIdByEntity(entity)
     return self.entityRefIndex[entity]
 end
 
---- Register entity→container mapping on client (MP sync)
+--- Register entity->container mapping on client (MP sync)
 --- Called by adapters when they receive containerId via their stream hooks
 --- NETWORK SAFE: Establishes entity reference mapping on client for display hooks
 --- This is the client-side counterpart to server's registerContainer()
@@ -953,7 +953,7 @@ function RmFreshManager:registerClientEntity(entity, containerId)
     local container = self.containers[containerId]
     local hasContainer = container ~= nil
 
-    Log:trace("CLIENT_ENTITY_REG: entity→%s containerExists=%s", containerId, tostring(hasContainer))
+    Log:trace("CLIENT_ENTITY_REG: entity->%s containerExists=%s", containerId, tostring(hasContainer))
 end
 
 -- =============================================================================
@@ -1180,7 +1180,7 @@ function RmFreshManager:onLoad(savegameDir)
     local data = RmFreshIO:load(savegameDir)
     if data then
         -- Load to reconciliationPool (NOT containers)
-        -- Adapters will claim containers via registerContainer() → findMatchingContainer()
+        -- Adapters will claim containers via registerContainer() -> findMatchingContainer()
         self.reconciliationPool = data.reconciliationPool or {}
 
         -- Restore statistics
@@ -1208,7 +1208,7 @@ end
 
 --- Rebuild entity reference index from loaded container data
 --- Called on client after RmFreshSyncEvent to enable display lookups
---- Populates: entityRefIndex[entity] → containerId
+--- Populates: entityRefIndex[entity] -> containerId
 ---@return nil
 function RmFreshManager:rebuildEntityRefIndex()
     local containerCount = self:getContainerCount()
@@ -1432,7 +1432,7 @@ function RmFreshManager:onFillChanged(containerId, fillUnitIndex, delta, fillTyp
         return
     end
 
-    -- Validate fillType matches container's fillTypeIndex (perishable→perishable transitions)
+    -- Validate fillType matches container's fillTypeIndex (perishable->perishable transitions)
     if container and container.fillTypeIndex and container.fillTypeIndex ~= fillType then
         if delta > 0 then
             -- Fill type changed with new fill: update fillType, preserve batches
@@ -1762,7 +1762,7 @@ function RmFreshManager:setBatchAge(containerId, batchIndex, age)
     Log:trace("BATCH_AGE_SET: container=%s batch=%d oldAge=%.4f newAge=%.4f",
         containerId, batchIndex, oldAge, age)
 
-    return true, string.format("Age set: %.4f → %.4f", oldAge, age)
+    return true, string.format("Age set: %.4f -> %.4f", oldAge, age)
 end
 
 --- Remove a specific batch by index
@@ -1867,7 +1867,7 @@ function RmFreshManager:_applyAging(hours)
         daysPerPeriod = g_currentMission.environment.daysPerPeriod or 1
     end
 
-    -- Age increment: hours → periods
+    -- Age increment: hours -> periods
     local increment = hours / (daysPerPeriod * 24)
 
     local stats = {
@@ -1892,7 +1892,7 @@ function RmFreshManager:_applyAging(hours)
             elseif not self:shouldAge(container) then
                 Log:trace("SKIP_AGE: container=%s (shouldAge=false)", containerId)
             else
-                -- Sync fillType for bales before aging (handles GRASS→SILAGE transformation)
+                -- Sync fillType for bales before aging (handles GRASS->SILAGE transformation)
                 self:syncBaleFillType(containerId, container)
 
                 -- Resolve storage class multiplier for this container (with override support)
@@ -2033,7 +2033,7 @@ function RmFreshManager:simulateHoursForContainer(containerId, hours)
         daysPerPeriod = g_currentMission.environment.daysPerPeriod or 1
     end
 
-    -- Age increment: hours → periods
+    -- Age increment: hours -> periods
     local increment = hours / (daysPerPeriod * 24)
 
     local stats = {
@@ -2047,7 +2047,7 @@ function RmFreshManager:simulateHoursForContainer(containerId, hours)
         return stats -- Return empty stats - nothing processed
     end
 
-    -- Sync fillType for bales before aging (handles GRASS→SILAGE transformation)
+    -- Sync fillType for bales before aging (handles GRASS->SILAGE transformation)
     self:syncBaleFillType(containerId, container)
 
     -- Use flat batches
@@ -2277,11 +2277,11 @@ end
 
 --- Sync fillType from bale entity to container
 --- Called before aging to ensure fillType is current after fermentation completes
---- Bale-specific: GRASS_WINDROW → SILAGE transformation during fermentation
+--- Bale-specific: GRASS_WINDROW -> SILAGE transformation during fermentation
 --- CRITICAL: Preserves batches (transformation, not replacement)
 ---
---- ASSUMPTION: Bales undergo single-step transformations (GRASS→SILAGE).
---- Multi-step refills (GRASS→other→SILAGE) are out of scope.
+--- ASSUMPTION: Bales undergo single-step transformations (GRASS->SILAGE).
+--- Multi-step refills (GRASS->other->SILAGE) are out of scope.
 ---
 ---@param containerId string Container ID
 ---@param container table Container entry
@@ -2292,7 +2292,7 @@ function RmFreshManager:syncBaleFillType(containerId, container)
     local baleFillType = container.runtimeEntity.fillType
     if baleFillType == nil then return end
 
-    -- Check if fillType changed (e.g., fermentation complete: GRASS → SILAGE)
+    -- Check if fillType changed (e.g., fermentation complete: GRASS -> SILAGE)
     if container.fillTypeIndex ~= baleFillType and RmFreshSettings:isPerishableByIndex(baleFillType) then
         -- Defensive fillType name lookup (handles mod conflicts, shutdown edge cases)
         local function getFillTypeName(fillTypeIndex)
@@ -2419,11 +2419,11 @@ function RmFreshManager:resolveFillTypeIndex(fillTypeName)
     -- Check legacy compatibility map for old/alternative names
     local mapped = self.FILLTYPE_LEGACY_MAP[normalized]
     if mapped then
-        Log:trace("FILLTYPE_RESOLVE: Legacy mapping %s → %s", normalized, mapped)
+        Log:trace("FILLTYPE_RESOLVE: Legacy mapping %s -> %s", normalized, mapped)
         normalized = mapped
     end
 
-    -- Use FS25 fillTypeManager to resolve name → index
+    -- Use FS25 fillTypeManager to resolve name -> index
     local ok, result = pcall(function()
         return g_fillTypeManager:getFillTypeIndexByName(normalized)
     end)
@@ -2466,7 +2466,7 @@ function RmFreshManager:getFillTypeName(fillTypeIndex)
         return "FT_nil"
     end
 
-    -- Use FS25 fillTypeManager to resolve index → name
+    -- Use FS25 fillTypeManager to resolve index -> name
     local ok, result = pcall(function()
         return g_fillTypeManager:getFillTypeNameByIndex(fillTypeIndex)
     end)
@@ -2558,6 +2558,14 @@ end
 --- Reconciliation threshold - ignore drift smaller than this (float noise)
 RmFreshManager.RECONCILE_THRESHOLD = 0.5
 
+--- Inventory display floor (litres). Containers holding less than this are negligible
+--- residue (e.g. a grain-tank leftover after unloading) and are hidden from the inventory
+--- views. Display-only: the amount is NOT mutated - it stays tracked (and visible in the
+--- fInspect/fBatches console) and reappears in the views once the storage passes this floor.
+--- A flat floor cannot tell residue from legitimately small production; a more
+--- context-aware distinction is left to a future pass.
+RmFreshManager.MIN_DISPLAY_AMOUNT = 1.0
+
 --- Get statistics object
 --- Returns the statistics table for display and debugging
 ---@return table Statistics { totalExpired, expiredByFillType, lossLog }
@@ -2625,7 +2633,7 @@ function RmFreshManager:getExpiringWithin(hours, farmId)
     -- Default to 24 hours if not specified
     hours = hours or 24
 
-    -- Get environment time settings for period→hours conversion
+    -- Get environment time settings for period->hours conversion
     local daysPerPeriod = 1
     if g_currentMission and g_currentMission.environment then
         daysPerPeriod = g_currentMission.environment.daysPerPeriod or 1
@@ -2648,7 +2656,9 @@ function RmFreshManager:getExpiringWithin(hours, farmId)
                 and container.identityMatch.storage.fillTypeName or nil
 
             if fillTypeName and container.fillTypeIndex
-                and RmFreshSettings:isPerishableByIndex(container.fillTypeIndex) then
+                and RmFreshSettings:isPerishableByIndex(container.fillTypeIndex)
+                -- Hide negligible residue; total below the display floor stays tracked but hidden
+                and RmBatch.getTotalAmount(container.batches or {}) >= self.MIN_DISPLAY_AMOUNT then
                 local config = RmFreshSettings:getThresholdByIndex(container.fillTypeIndex)
                 local expirationThreshold = config.expiration
 
@@ -2762,7 +2772,9 @@ function RmFreshManager:getInventorySummary(farmId)
                 and container.identityMatch.storage.fillTypeName
 
             if fillTypeName and #container.batches > 0
-                and RmFreshSettings:isPerishableByIndex(container.fillTypeIndex) then
+                and RmFreshSettings:isPerishableByIndex(container.fillTypeIndex)
+                -- Hide negligible residue; total below the display floor stays tracked but hidden
+                and RmBatch.getTotalAmount(container.batches) >= self.MIN_DISPLAY_AMOUNT then
                 Log:trace("INVENTORY_PROCESS: %s fillType=%s batches=%d",
                     containerId, fillTypeName, #container.batches)
 
@@ -2891,7 +2903,7 @@ end
 
 --- Get per-storage batch breakdown for a specific fillType (inventory detail view)
 --- Returns all containers holding this fillType with batch refs, class info, and expiry display
---- Batch references are shared (not copied) — callers must not mutate
+--- Batch references are shared (not copied) - callers must not mutate
 ---@param fillTypeName string FillType name (e.g., "WHEAT")
 ---@param farmId number|nil Filter by farm (nil returns empty)
 ---@return table { fillTypeName, fillTypeIndex, fillTypeTitle, totalAmount, threshold, containers = [...] }
@@ -2930,7 +2942,9 @@ function RmFreshManager:getFillTypeDetail(fillTypeName, farmId)
 
             if containerFillTypeName == fillTypeName
                 and RmFreshSettings:isPerishableByIndex(container.fillTypeIndex)
-                and #container.batches > 0 then
+                and #container.batches > 0
+                -- Hide negligible residue; total below the display floor stays tracked but hidden
+                and RmBatch.getTotalAmount(container.batches) >= self.MIN_DISPLAY_AMOUNT then
 
                 -- Capture fillTypeIndex from first matching container
                 if resultFillTypeIndex == nil then
@@ -3013,7 +3027,7 @@ end
 
 --- Get per-fillType breakdown for a specific storage (inventory detail view)
 --- Two code paths: normal (by uniqueId) and "itemsInWorld" (by entityType/isPallet)
---- Batch references are shared (not copied) — callers must not mutate
+--- Batch references are shared (not copied) - callers must not mutate
 ---@param uniqueId string Storage uniqueId or "itemsInWorld"
 ---@param farmId number|nil Filter by farm (nil returns empty)
 ---@return table { uniqueId, entityName, entityType, storageClass, className, totalAmount, fillTypes = [...] }
@@ -3040,7 +3054,7 @@ function RmFreshManager:getStorageDetail(uniqueId, farmId)
     local storageAgingEnabled = RmFreshSettings.storageAgingEnabled
 
     -- Collect matching containers grouped by fillTypeName
-    local fillTypeMap = {}   -- fillTypeName → { containers = {}, amount, batches, ... }
+    local fillTypeMap = {}   -- fillTypeName -> { containers = {}, amount, batches, ... }
     local headerEntityName = nil
     local headerEntityType = nil
     local headerStorageClass = nil
@@ -3615,12 +3629,12 @@ end
 --
 -- USAGE FLOW:
 -- 1. TransferCoordinator hooks transfer function BEFORE superFunc
--- 2. peekBatches(source) → preview what batches would transfer
--- 3. setTransferPending(destination, batches) → stage them for destination
+-- 2. peekBatches(source) -> preview what batches would transfer
+-- 3. setTransferPending(destination, batches) -> stage them for destination
 -- 4. superFunc executes the actual transfer
 -- 5. Destination adapter's fill callback calls getTransferPending()
--- 6. If pending → use those batches (preserves ages)
--- 7. If no pending → create fresh batch (age=0) - normal flow
+-- 6. If pending -> use those batches (preserves ages)
+-- 7. If no pending -> create fresh batch (age=0) - normal flow
 -- =============================================================================
 
 --- Set pending batches for an incoming transfer
@@ -3770,7 +3784,7 @@ function RmFreshManager:beginBulkTransfer()
     Log:trace(">>> beginBulkTransfer()")
     self.bulkTransfer = {
         active = true,
-        pending = {}, -- fillType → array of {containerId, amount, batches, isAdd, matched}
+        pending = {}, -- fillType -> array of {containerId, amount, batches, isAdd, matched}
     }
 end
 
@@ -3867,7 +3881,7 @@ function RmFreshManager:handleBulkTransferFillChange(containerId, delta, fillTyp
         end
 
         if not matched then
-            -- Queue REMOVE for potential later ADD (handles REMOVE→ADD order)
+            -- Queue REMOVE for potential later ADD (handles REMOVE->ADD order)
             table.insert(pending, {
                 containerId = containerId,
                 amount = consumeAmount,
