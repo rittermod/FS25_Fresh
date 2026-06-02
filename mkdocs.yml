@@ -54,6 +54,7 @@ nav:
   - Overview: overview.md
   - Guides:
       - Storage Classes: guide-storage-classes.md
+      - Custom Defaults: guide-custom-defaults.md
   - Reference:
       - Shelf Life Table: reference-shelf-life.md
       - Settings: reference-settings.md

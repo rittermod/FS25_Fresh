@@ -13,6 +13,7 @@ A Farming Simulator 25 mod that adds shelf life to your produce and bales - crop
 - **Visual feedback** - Color-coded age bars, expiry warnings in info boxes, and daily loss notifications
 - **Fresh Menu** - Inventory overview, product and storage details, loss statistics, shelf life reference, and full settings customization
 - **Difficulty presets** - Very Easy (4x shelf life) through Hard (half shelf life), plus a Custom mode for per-product control
+- **Reusable custom defaults** - Advanced users can set shelf lives once in an external file that applies to all savegames and survives mod updates
 - **Multiplayer support** - Server-authoritative with full client synchronization
 
 ## Download
@@ -42,6 +43,7 @@ Fresh tracks all vanilla FS25 products plus any fill types added by DLCs, maps, 
 ### Guide
 
 - [Storage Classes](guide-storage-classes.md) - How storage location affects shelf life, the 6 storage classes, and the max benefit system
+- [Custom Defaults](guide-custom-defaults.md) - Advanced: a reusable per-install config file that applies to all savegames and survives mod updates
 
 ### Reference
 

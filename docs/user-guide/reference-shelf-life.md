@@ -10,17 +10,18 @@ Default shelf lives for all perishable products in Fresh. Values are in game mon
 
 - **Shelf Life** - Time before expiration at Normal difficulty, in Sheltered storage (1.0x multiplier)
 - **Max Benefit** - The best storage class that improves this product's shelf life. Better storage than this has no additional effect.
-- All values can be customized per product in the Fresh Menu settings (requires **Custom** difficulty — see [Settings Reference](reference-settings.md#difficulty-presets))
-- **In-game view** - When Storage Class Aging is enabled, the Fresh Menu → Shelf Life tab shows these values broken down by storage class
+- All values can be customized per product in the Fresh Menu settings (requires **Custom** difficulty - see [Settings Reference](reference-settings.md#difficulty-presets))
+- **In-game view** - When Storage Class Aging is enabled, the Fresh Menu -> Shelf Life tab shows these values broken down by storage class
+- **Reusable defaults** - To set values that apply to all your savegames and survive mod updates - including shelf lives for custom-crop and map-mod products - see [Custom Defaults (Advanced)](guide-custom-defaults.md)
 
 ### Difficulty Preset Multipliers
 
 | Preset | Multiplier | Effect |
 |--------|-----------|--------|
-| Very Easy | ×4 | Quadrupled shelf life |
-| Easy | ×2 | Doubled shelf life |
-| Normal | ×1 | Default values below |
-| Hard | ×0.5 | Halved shelf life |
+| Very Easy | x4 | Quadrupled shelf life |
+| Easy | x2 | Doubled shelf life |
+| Normal | x1 | Default values below |
+| Hard | x0.5 | Halved shelf life |
 
 ---
 

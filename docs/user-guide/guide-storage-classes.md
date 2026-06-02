@@ -33,7 +33,7 @@ A product with a 6-month shelf life at Normal difficulty:
 
 The difference between leaving strawberries on an outdoor pallet versus putting them in cooled storage is dramatic.
 
-*You can view these effective shelf lives in-game: open the Fresh Menu → Shelf Life tab. When Storage Class Aging is enabled, it displays a table with per-storage-class values for every product.*
+*You can view these effective shelf lives in-game: open the Fresh Menu -> Shelf Life tab. When Storage Class Aging is enabled, it displays a table with per-storage-class values for every product.*
 
 ---
 
@@ -71,10 +71,10 @@ Each product has a **maximum benefit class** that caps how much it benefits from
 
 When a product is stored in a class better than its max benefit, the effective multiplier is capped at the max benefit class:
 
-- **Strawberries** (max benefit: Frozen) in Frozen storage → uses 0.10x multiplier (full benefit)
-- **Wheat** (max benefit: Indoor) in Cooled storage → uses 0.8x multiplier (capped at Indoor)
-- **Wheat** (max benefit: Indoor) in Indoor storage → uses 0.8x multiplier (full benefit)
-- **Milk** (max benefit: Cooled) in Frozen storage → uses 0.3x multiplier (capped at Cooled)
+- **Strawberries** (max benefit: Frozen) in Frozen storage -> uses 0.10x multiplier (full benefit)
+- **Wheat** (max benefit: Indoor) in Cooled storage -> uses 0.8x multiplier (capped at Indoor)
+- **Wheat** (max benefit: Indoor) in Indoor storage -> uses 0.8x multiplier (full benefit)
+- **Milk** (max benefit: Cooled) in Frozen storage -> uses 0.3x multiplier (capped at Cooled)
 
 This means there's no point in building frozen storage for grain - a dry indoor silo gives the same benefit. But fresh produce benefits enormously from the best storage you can provide.
 
@@ -114,7 +114,7 @@ Feed in husbandry troughs is classified as Sheltered. Most feed types (pig food,
 
 If the automatic detection doesn't match your situation - for example, you have a covered area for pallets or a refrigerated mod building - you can override the storage class.
 
-Open the Fresh Menu (Right Shift + F) → Settings tab → Storage sub-tab. Each tracked storage shows its detected class and an override dropdown to change it.
+Open the Fresh Menu (Right Shift + F) -> Settings tab -> Storage sub-tab. Each tracked storage shows its detected class and an override dropdown to change it.
 
 ---
 
@@ -129,8 +129,8 @@ Storage class multipliers stack with difficulty presets. The difficulty preset s
 | Normal | Exposed | 0.67 months |
 | Normal | Indoor | 1.25 months |
 | Normal | Cooled | 3.3 months |
-| Easy (×2) | Exposed | 1.3 months |
-| Easy (×2) | Cooled | 6.7 months |
-| Very Easy (×4) | Cooled | 13.3 months |
+| Easy (x2) | Exposed | 1.3 months |
+| Easy (x2) | Cooled | 6.7 months |
+| Very Easy (x4) | Cooled | 13.3 months |
 
 At Very Easy difficulty with Cooled storage, even strawberries last over a year - giving casual players plenty of breathing room while still adding the freshness mechanic.

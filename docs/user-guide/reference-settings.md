@@ -1,8 +1,14 @@
 # Settings Reference
 
-All Fresh settings are accessible from the Fresh Menu (Right Shift + F) → Settings tab. Settings are saved per savegame and synced in multiplayer.
+All Fresh settings are accessible from the Fresh Menu (Right Shift + F) -> Settings tab. Settings are saved per savegame and synced in multiplayer.
 
 > **Note:** This documentation was generated with AI assistance and may contain inaccuracies. If you spot an error, please [open an issue](https://github.com/rittermod/FS25_Fresh/issues).
+
+---
+
+## Where these settings live
+
+Changes you make here are saved **inside the current savegame** - they do not carry over to other games. For a reusable configuration that applies to all your savegames and survives mod updates, see [Custom Defaults (Advanced)](guide-custom-defaults.md). An in-game change always takes priority over the custom-defaults file.
 
 ---
 
@@ -26,18 +32,18 @@ The difficulty preset scales all shelf lives at once. Select a preset from the S
 
 | Preset | Multiplier | Effect |
 |--------|-----------|--------|
-| **Very Easy** | ×4 | All shelf lives quadrupled. Strawberries last 4 months instead of 1. |
-| **Easy** | ×2 | All shelf lives doubled. Forgiving pace for learning the mechanic. |
-| **Normal** | ×1 | Default values from the [Shelf Life Table](reference-shelf-life.md). Research-based realism. |
-| **Hard** | ×0.5 | All shelf lives halved. Demanding logistics for experienced players. |
+| **Very Easy** | x4 | All shelf lives quadrupled. Strawberries last 4 months instead of 1. |
+| **Easy** | x2 | All shelf lives doubled. Forgiving pace for learning the mechanic. |
+| **Normal** | x1 | Default values from the [Shelf Life Table](reference-shelf-life.md). Research-based realism. |
+| **Hard** | x0.5 | All shelf lives halved. Demanding logistics for experienced players. |
 | **Custom** | varies | Unlocks individual per-product controls. No global multiplier applied. |
 
-> **Tip:** To adjust a single product's shelf life, select the **Custom** preset. This unlocks the Expiration sub-tab for individual editing. Note that switching to Custom resets all values to Normal defaults — your current preset multiplier is not preserved.
+> **Tip:** To adjust a single product's shelf life, select the **Custom** preset. This unlocks the Expiration sub-tab for individual editing. Note that switching to Custom resets all values to Normal defaults - your current preset multiplier is not preserved.
 
 ### How Presets Interact with Custom Settings
 
 - Selecting a preset (Very Easy through Hard) applies that multiplier to all products. The Expiration and Benefit Limit tabs hide preset-controlled products and show a message: *"All products are managed by the selected preset. Switch to Custom to edit individually."*
-- Selecting **Custom** reveals all products in the Expiration tab for individual editing. **All products start at their Normal-difficulty (×1) defaults** — if you were on Easy (×2) or Very Easy (×4), that multiplier is not preserved. You'll need to manually adjust any products you want to differ from the Normal baseline.
+- Selecting **Custom** reveals all products in the Expiration tab for individual editing. **All products start at their Normal-difficulty (x1) defaults** - if you were on Easy (x2) or Very Easy (x4), that multiplier is not preserved. You'll need to manually adjust any products you want to differ from the Normal baseline.
 - Switching from Custom back to a preset discards any per-product changes and applies the preset multiplier to the mod defaults.
 
 ---
@@ -46,7 +52,7 @@ The difficulty preset scales all shelf lives at once. Select a preset from the S
 
 > **Requires Custom difficulty.** When a preset is active, preset-controlled products are hidden. Switch the difficulty to **Custom** to reveal all products for individual editing. See [Difficulty Presets](#difficulty-presets) above.
 
-Located in the Settings tab → Expiration sub-tab.
+Located in the Settings tab -> Expiration sub-tab.
 
 Each perishable product has a configurable shelf life:
 
@@ -63,7 +69,7 @@ Products are listed alphabetically. Each product shows a tooltip with its source
 
 ## Benefit Limit Settings (Per Product)
 
-Located in the Settings tab → Benefit Limit sub-tab. Controls the maximum storage class that benefits each product.
+Located in the Settings tab -> Benefit Limit sub-tab. Controls the maximum storage class that benefits each product.
 
 | Option | Meaning |
 |--------|---------|
@@ -78,7 +84,7 @@ See the [Storage Classes Guide](guide-storage-classes.md#max-benefit-class) for 
 
 ## Storage Class Settings
 
-Located in the Settings tab → Storage sub-tab. Override the automatically detected storage class for specific storages.
+Located in the Settings tab -> Storage sub-tab. Override the automatically detected storage class for specific storages.
 
 Each tracked storage shows:
 
@@ -113,10 +119,10 @@ A confirmation dialog appears before the reset takes effect. This action cannot 
 Some settings depend on others:
 
 ```
-Enable Expiration → All other settings (only when Expiration is On)
-Difficulty Preset → Expiration tab product list (hidden when preset controls them)
-Storage Class Aging → Benefit Limit tab + Storage tab (visible only when On)
-                    → Shelf Life tab display (per-class table when On, simple list when Off)
+Enable Expiration -> All other settings (only when Expiration is On)
+Difficulty Preset -> Expiration tab product list (hidden when preset controls them)
+Storage Class Aging -> Benefit Limit tab + Storage tab (visible only when On)
+                    -> Shelf Life tab display (per-class table when On, simple list when Off)
 ```
 
 *Dependent settings are greyed out or hidden when their parent setting is disabled.*

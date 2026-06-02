@@ -12,7 +12,7 @@ Two things to check:
 
 **1. Storage class.** Where your goods are stored matters significantly. Pallets and bales left outdoors are classified as **Exposed** (1.5x aging rate), meaning they expire 50% faster than the listed shelf life. Move goods into Indoor or Cooled storage to extend their life. See the [Storage Classes Guide](guide-storage-classes.md) for details.
 
-**2. Difficulty preset.** At **Hard** difficulty, all shelf lives are halved. A product listed at 6 months on Normal only lasts 3 months on Hard. Check your preset in the Fresh Menu → Settings tab.
+**2. Difficulty preset.** At **Hard** difficulty, all shelf lives are halved. A product listed at 6 months on Normal only lasts 3 months on Hard. Check your preset in the Fresh Menu -> Settings tab.
 
 These effects stack. Strawberries (1-month base shelf life) on Hard difficulty in Exposed storage last only a third of a month.
 
@@ -26,13 +26,13 @@ Check two things:
 
 **2. Difficulty preset.** **Very Easy** quadruples all shelf lives.
 
-Also check if a storage class override has been applied via the Settings → Storage tab.
+Also check if a storage class override has been applied via the Settings -> Storage tab.
 
 ---
 
 ## Can I disable expiration entirely?
 
-Yes. Open the Fresh Menu (Right Shift + F) → Settings tab and toggle **Enable Expiration** to Off. All aging pauses. Existing batch ages are preserved and resume if you re-enable it later.
+Yes. Open the Fresh Menu (Right Shift + F) -> Settings tab and toggle **Enable Expiration** to Off. All aging pauses. Existing batch ages are preserved and resume if you re-enable it later.
 
 ---
 
@@ -40,14 +40,14 @@ Yes. Open the Fresh Menu (Right Shift + F) → Settings tab and toggle **Enable 
 
 Per-product editing requires **Custom** difficulty. Here's how:
 
-1. Open the Fresh Menu (Right Shift + F) → Settings tab
+1. Open the Fresh Menu (Right Shift + F) -> Settings tab
 2. Change the difficulty preset to **Custom**
-3. Open the **Expiration** sub-tab — all products are now visible
+3. Open the **Expiration** sub-tab - all products are now visible
 4. Find the product and select a new shelf life value
 
 The preset difficulties (Very Easy through Hard) apply a global multiplier and hide individual products from the Expiration tab. You'll see a message prompting you to switch to Custom.
 
-> **Note:** Switching to Custom sets all shelf lives to their Normal-difficulty defaults (×1 multiplier). If you were playing on Easy (×2), your doubled shelf lives are not carried over — you'll need to manually adjust any products you want longer than the Normal default.
+> **Note:** Switching to Custom sets all shelf lives to their Normal-difficulty defaults (x1 multiplier). If you were playing on Easy (x2), your doubled shelf lives are not carried over - you'll need to manually adjust any products you want longer than the Normal default.
 
 ---
 
@@ -88,7 +88,7 @@ Fresh can be added to an existing savegame safely. When you first load a save wi
 
 ## How do difficulty presets interact with custom settings?
 
-- **Preset mode** (Very Easy/Easy/Normal/Hard): A global multiplier scales all shelf lives. Individual products are hidden from the Expiration tab — a message prompts you to switch to Custom for per-product control.
+- **Preset mode** (Very Easy/Easy/Normal/Hard): A global multiplier scales all shelf lives. Individual products are hidden from the Expiration tab - a message prompts you to switch to Custom for per-product control.
 - **Custom mode**: No global multiplier. All products are revealed and can be individually configured. Products start at their Normal-difficulty defaults when you first switch to Custom.
 - **Switching back** to a preset from Custom discards your per-product changes and applies the preset multiplier to the mod defaults.
 
@@ -115,7 +115,21 @@ See the [Shelf Life Table](reference-shelf-life.md) for the complete list with d
 
 ## What about DLC and mod products?
 
-Fresh automatically detects fill types added by DLCs, maps, and other mods. By default, new fill types don't expire. You can configure them in the Fresh Menu → Settings → Expiration tab (requires Custom difficulty). All products are listed alphabetically — the tooltip for each product shows which DLC or mod added it.
+Fresh automatically detects fill types added by DLCs, maps, and other mods. By default, new fill types don't expire. You can configure them in the Fresh Menu -> Settings -> Expiration tab (requires Custom difficulty). All products are listed alphabetically - the tooltip for each product shows which DLC or mod added it.
+
+---
+
+## How do I reuse my shelf-life setup across all my savegames?
+
+The in-game Settings are saved inside each savegame, so they don't carry over to a new game on their own. For one reusable setup - your own basegame tweaks plus shelf lives for custom-crop or map-mod products, all in a single place - use the optional **Custom Defaults** file.
+
+It lives outside the mod at `modSettings/FS25_Fresh/customDefaults.xml`, applies to all your savegames, and is re-read every launch. This is an advanced feature that involves editing an XML file - see [Custom Defaults (Advanced)](guide-custom-defaults.md) for the full setup.
+
+---
+
+## Will my shelf-life changes survive a mod update?
+
+In-game settings are stored in your savegame, so they survive updates for that save. If you previously edited the mod's bundled defaults file to reuse settings across games, note that a mod update overwrites that file. Use the [Custom Defaults](guide-custom-defaults.md) file instead - it lives outside the mod and is never touched by an update.
 
 ---
 
@@ -173,7 +187,7 @@ See the [Storage Classes Guide](guide-storage-classes.md#max-benefit-class) for 
 
 ## How can I see effective shelf life per storage class?
 
-Open the Fresh Menu (Right Shift + F) → Shelf Life tab. When **Storage Class Aging** is enabled, the tab displays a table with columns for each storage class (Exposed through Frozen), showing the effective shelf life in months for every product. Cells are blank where a product's max benefit class is exceeded, so you can immediately see which storage types benefit each product.
+Open the Fresh Menu (Right Shift + F) -> Shelf Life tab. When **Storage Class Aging** is enabled, the tab displays a table with columns for each storage class (Exposed through Frozen), showing the effective shelf life in months for every product. Cells are blank where a product's max benefit class is exceeded, so you can immediately see which storage types benefit each product.
 
 When Storage Class Aging is disabled, the tab shows a single shelf life value per product.
 
@@ -183,9 +197,9 @@ When Storage Class Aging is disabled, the tab shows a single shelf life value pe
 
 Yes, several ways:
 
-- **Fresh Menu → Overview** - The right panel shows items expiring within 24h/48h/72h
-- **Fresh Menu → Product Details** - Select a product to see per-storage breakdown with freshness distribution
-- **Fresh Menu → Storage Details** - Select a storage to see all products it holds with expiry times
+- **Fresh Menu -> Overview** - The right panel shows items expiring within 24h/48h/72h
+- **Fresh Menu -> Product Details** - Select a product to see per-storage breakdown with freshness distribution
+- **Fresh Menu -> Storage Details** - Select a storage to see all products it holds with expiry times
 - **Info boxes** - Look at any storage and the info box shows time remaining with yellow warnings
 - **Age distribution HUD** - Color-coded bars when near storages (blue/green/orange/red)
 - **Daily notifications** - A summary notification appears each morning if anything expired overnight
