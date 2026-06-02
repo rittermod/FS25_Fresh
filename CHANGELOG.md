@@ -1,5 +1,11 @@
 # Changelog
 
+1.0.1.0-dev.2:
+- Added optional external config (modSettings/FS25_Fresh/customDefaults.xml) to add or override shelf life, storage class and aging multipliers for any crop - including custom map/mod crops - without editing the mod (update-safe, re-read each launch, server-side in multiplayer)
+- Added user guide documentation for the custom defaults config file (setup, precedence, schema, multiplayer)
+- Added Ukrainian localization - contributed by sava4903-coder
+- Improved stability: a rare error while aging or expiring one item no longer interrupts the rest of the hourly/daily update
+
 1.0.1.0-dev.1:
 - Fixed near-empty containers (under 1 L, e.g. a combine grain-tank leftover) showing as "0 L" rows in the inventory menus and skewing the displayed expiry
 
