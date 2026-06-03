@@ -151,7 +151,7 @@
         <text name="fresh_column_storage" text="Storage"/>
         <text name="fresh_column_timeleft" text="Next Expiry"/>
         <text name="fresh_expiring_empty" text="Nothing expiring soon"/>
-        <text name="fresh_expiring_summary" text="%d items (%.0f L total)"/>
+        <text name="fresh_expiring_summary" text="%d items (%s L total)"/>
         <text name="fresh_expires_soon" text="&lt; 1 hour"/>
 
         <!-- FillType Detail Tab -->

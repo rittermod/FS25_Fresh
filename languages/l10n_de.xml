@@ -151,7 +151,7 @@
         <text name="fresh_column_storage" text="Lager"/>
         <text name="fresh_column_timeleft" text="Nächstes Ablaufdatum"/>
         <text name="fresh_expiring_empty" text="Nichts läuft bald ab"/>
-        <text name="fresh_expiring_summary" text="%d Objekte (%.0f L gesamt)"/>
+        <text name="fresh_expiring_summary" text="%d Objekte (%s L gesamt)"/>
         <text name="fresh_expires_soon" text="&lt; 1 Stunde"/>
 
         <!-- FillType Detail Tab -->

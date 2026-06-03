@@ -240,7 +240,7 @@ function RmOverviewFrame:updateExpiringSummaryText()
 
     local summaryText = string.format(
         g_i18n:getText("fresh_expiring_summary"),
-        count, total
+        count, g_i18n:formatNumber(total, 0)
     )
     self.expiringSummaryText:setText(summaryText)
 end

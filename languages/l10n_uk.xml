@@ -132,7 +132,7 @@
         <text name="fresh_sort_label" text="Сортувати за"/>
         <text name="fresh_sort_by_type" text="Тип продукту"/>
         <text name="fresh_expiring_empty" text="Немає продуктів що скоро псуються"/>
-        <text name="fresh_expiring_summary" text="%d позицій (%.0f л загалом)"/>
+        <text name="fresh_expiring_summary" text="%d позицій (%s л загалом)"/>
         <text name="fresh_expires_soon" text="&lt; 1 година"/>
 
         <!-- Filltype Detail -->

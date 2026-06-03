@@ -151,7 +151,7 @@
         <text name="fresh_column_storage" text="Lagring"/>
         <text name="fresh_column_timeleft" text="Nästa utgång"/>
         <text name="fresh_expiring_empty" text="Ingenting som går ut i närtid"/>
-        <text name="fresh_expiring_summary" text="%d enheter (%.0f L totalt)"/>
+        <text name="fresh_expiring_summary" text="%d enheter (%s L totalt)"/>
         <text name="fresh_expires_soon" text="&lt; 1 timme"/>
 
         <!-- FillType Detail Tab -->

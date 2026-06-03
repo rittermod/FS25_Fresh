@@ -2931,10 +2931,10 @@ function RmFreshManager:getInventoryList(farmId, sortBy)
                 entry.fillTypeName, multiplier, entry.expiresIn)
         end
         entry.ageDisplay = RmBatch.formatExpiresIn({ageInPeriods = entry.oldestAge}, threshold or 1.0, daysPerPeriod, multiplier)
-        entry.amountDisplay = string.format("%.0f L", entry.totalAmount)
+        entry.amountDisplay = g_i18n:formatNumber(entry.totalAmount, 0) .. " L"
         -- Add expiring amount display (shows how much is at/above warning threshold)
         if entry.expiringAmount > 0 then
-            entry.expiringAmountDisplay = string.format("%.0f L", entry.expiringAmount)
+            entry.expiringAmountDisplay = g_i18n:formatNumber(entry.expiringAmount, 0) .. " L"
         else
             entry.expiringAmountDisplay = nil
         end
@@ -3294,7 +3294,7 @@ function RmFreshManager:getLossLogRecent(farmId, count)
                 fillTypeTitle = g_fillTypeManager:getFillTypeTitleByIndex(g_fillTypeManager:getFillTypeIndexByName(entry
                 .fillTypeName)) or entry.fillTypeName,
                 amount = entry.amount,
-                amountDisplay = string.format("%.0f L", entry.amount),
+                amountDisplay = g_i18n:formatNumber(entry.amount, 0) .. " L",
                 value = entryValue,
                 valueDisplay = entryValue > 0 and g_i18n:formatMoney(entryValue, 0, true) or "-",
                 location = entry.location or "Unknown",
@@ -3422,7 +3422,7 @@ function RmFreshManager:getLossStatsSummary(farmId)
             fillTypeIndex = fillTypeIndex,
             fillTypeTitle = g_fillTypeManager:getFillTypeTitleByIndex(fillTypeIndex) or fillTypeName,
             amount = amount,
-            amountDisplay = string.format("%.0f L", amount),
+            amountDisplay = g_i18n:formatNumber(amount, 0) .. " L",
             value = value,
             valueDisplay = value > 0 and g_i18n:formatMoney(value, 0, true) or "-",
         })
@@ -3434,19 +3434,19 @@ function RmFreshManager:getLossStatsSummary(farmId)
 
     return {
         totalExpired = totalExpired,
-        totalExpiredDisplay = string.format("%.0f L", totalExpired),
+        totalExpiredDisplay = g_i18n:formatNumber(totalExpired, 0) .. " L",
         totalValue = totalValue,
         totalValueDisplay = totalValue > 0 and g_i18n:formatMoney(totalValue, 0, true) or "-",
         todayExpired = todayExpired,
-        todayExpiredDisplay = string.format("%.0f L", todayExpired),
+        todayExpiredDisplay = g_i18n:formatNumber(todayExpired, 0) .. " L",
         todayValue = todayValue,
         todayValueDisplay = todayValue > 0 and g_i18n:formatMoney(todayValue, 0, true) or "-",
         thisMonthExpired = thisMonthExpired,
-        thisMonthExpiredDisplay = string.format("%.0f L", thisMonthExpired),
+        thisMonthExpiredDisplay = g_i18n:formatNumber(thisMonthExpired, 0) .. " L",
         thisMonthValue = thisMonthValue,
         thisMonthValueDisplay = thisMonthValue > 0 and g_i18n:formatMoney(thisMonthValue, 0, true) or "-",
         last12MonthsExpired = last12MonthsExpired,
-        last12MonthsExpiredDisplay = string.format("%.0f L", last12MonthsExpired),
+        last12MonthsExpiredDisplay = g_i18n:formatNumber(last12MonthsExpired, 0) .. " L",
         last12MonthsValue = last12MonthsValue,
         last12MonthsValueDisplay = last12MonthsValue > 0 and g_i18n:formatMoney(last12MonthsValue, 0, true) or "-",
         breakdown = breakdown,

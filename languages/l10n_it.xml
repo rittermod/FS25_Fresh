@@ -151,7 +151,7 @@
         <text name="fresh_column_storage" text="Deposito"/>
         <text name="fresh_column_timeleft" text="Prossima scadenza"/>
         <text name="fresh_expiring_empty" text="Niente in scadenza a breve"/>
-        <text name="fresh_expiring_summary" text="%d elementi (%.0f L totali)"/>
+        <text name="fresh_expiring_summary" text="%d elementi (%s L totali)"/>
         <text name="fresh_expires_soon" text="&lt; 1 ora"/>
 
         <!-- FillType Detail Tab -->
