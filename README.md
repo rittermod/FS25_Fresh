@@ -61,6 +61,7 @@ Vanilla FS25 lets you stockpile products indefinitely, waiting for the perfect p
 - Enable/disable expiration globally or per-product
 - Configurable warning threshold (6h/12h/24h/48h/72h)
 - Reset all settings to defaults with one click
+- Optional external config file (`modSettings/FS25_Fresh/customDefaults.xml`) to add or override shelf life, storage class, and aging multipliers for any crop - including custom map/mod crops - without editing the mod (update-safe, server-side in multiplayer)
 - Per-savegame settings
 - Multiplayer: host/admin controls settings for all players
 

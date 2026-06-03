@@ -241,7 +241,7 @@ function RmStatsFrame:populateBreakdownCell(index, cell)
         amountElement:setText(entry.amountDisplay)
     end
 
-    -- Value (placeholder)
+    -- Value (blank until valueDisplay is populated)
     local valueElement = cell:getAttribute("value")
     if valueElement then
         valueElement:setText(entry.valueDisplay or "")
