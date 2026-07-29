@@ -667,9 +667,28 @@ end
 --- SERVER ONLY - clients do not call this, they receive events from server
 ---@param containerId string Container ID
 ---@param operation number RmFreshUpdateEvent.OP_REGISTER | OP_UPDATE | OP_UNREGISTER
----@param data table|nil Container data (REGISTER), fillUnit data (UPDATE), or nil (UNREGISTER)
+---@param data table|nil Container data (REGISTER), changed batch data (UPDATE), or nil (UNREGISTER)
 function RmFreshManager:broadcastContainerUpdate(containerId, operation, data)
     if g_server == nil then return end
+
+    if operation == RmFreshUpdateEvent.OP_UPDATE then
+        local container = self.containers[containerId]
+        if container == nil then
+            Log:warning("MP_BROADCAST: container not found for update: %s", containerId)
+            return
+        end
+
+        local fillTypeName = container.identityMatch
+            and container.identityMatch.storage
+            and container.identityMatch.storage.fillTypeName
+            or ""
+
+        data = {
+            fillTypeIndex = container.fillTypeIndex,
+            fillTypeName = fillTypeName,
+            batches = data and data.batches or container.batches
+        }
+    end
 
     g_server:broadcastEvent(RmFreshUpdateEvent.new(containerId, operation, data))
 
