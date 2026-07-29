@@ -441,6 +441,46 @@ RmFreshManager.bulkTransfer = nil
 -- CONTAINER LIFECYCLE API
 -- =============================================================================
 
+--- Apply batches carried by an object that has just left object storage
+---@param runtimeEntity table|nil Spawned bale or pallet
+---@param destinationContainerId string Newly registered container ID
+---@param broadcastUpdate boolean|nil Send an update when the container was already registered
+---@return boolean claimed True when a pending transfer was applied
+function RmFreshManager:claimPendingObjectStorageTransfer(runtimeEntity, destinationContainerId, broadcastUpdate)
+    local transfer = runtimeEntity and runtimeEntity.rmFreshPendingObjectStorageTransfer
+    if transfer == nil then return false end
+
+    local destination = self.containers[destinationContainerId]
+    if destination == nil then return false end
+
+    destination.batches = {}
+
+    local batchCount = 0
+    local totalAmount = 0
+    for _, batch in ipairs(transfer.batches or {}) do
+        destination.batches[#destination.batches + 1] = RmBatch.create(batch.amount, batch.ageInPeriods)
+        batchCount = batchCount + 1
+        totalAmount = totalAmount + (batch.amount or 0)
+    end
+
+    runtimeEntity.rmFreshPendingObjectStorageTransfer = nil
+
+    local sourceContainerId = transfer.sourceContainerId
+    if sourceContainerId and sourceContainerId ~= destinationContainerId then
+        self:unregisterContainer(sourceContainerId)
+    end
+
+    if broadcastUpdate then
+        self:broadcastContainerUpdate(destinationContainerId, RmFreshUpdateEvent.OP_UPDATE, {
+            batches = destination.batches
+        })
+    end
+
+    Log:info("OBJECTSTORAGE_EXIT: restored %d batches (%.0fL) to %s",
+        batchCount, totalAmount, destinationContainerId)
+    return true
+end
+
 --- Register a container in the Manager
 --- Called by adapters during their load lifecycle (onLoad, onPostLoad, etc.)
 --- Reconciles with reconciliationPool OR creates new container
@@ -455,6 +495,7 @@ RmFreshManager.bulkTransfer = nil
 ---                          - playerCanFill: Can player/vehicles ADD to this container? (Step 4)
 ---                          - playerCanEmpty: Can player/vehicles REMOVE from this container? (Step 4)
 ---@return string|nil containerId The generated or reconciled container ID, nil on error
+---@return boolean|nil hasExistingBatches True when saved or transferred batches are already present
 function RmFreshManager:registerContainer(entityType, identityMatch, runtimeEntity, metadata)
     -- TRACE: Function entry for AI debugging
     Log:trace(">>> registerContainer(entityType=%s, hasIdentityMatch=%s, hasRuntimeEntity=%s)",
@@ -558,6 +599,7 @@ function RmFreshManager:registerContainer(entityType, identityMatch, runtimeEnti
             matchedId, entityType, identityMatch.storage.fillTypeName,
             tostring(playerCanFill), tostring(playerCanEmpty))
 
+        self:claimPendingObjectStorageTransfer(runtimeEntity, matchedId, false)
         return matchedId, true -- wasReconciled = true
     end
 
@@ -622,10 +664,16 @@ function RmFreshManager:registerContainer(entityType, identityMatch, runtimeEnti
         containerId, entityType, identityMatch.storage.fillTypeName,
         tostring(playerCanFill), tostring(playerCanEmpty))
 
+    -- A bale or pallet leaving object storage may already carry its saved batches.
+    -- Claim them before the registration event so clients receive the right ages immediately.
+    local claimedObjectStorageTransfer =
+        self:claimPendingObjectStorageTransfer(runtimeEntity, containerId, false)
+
     -- Broadcast new container to clients
     self:broadcastContainerUpdate(containerId, RmFreshUpdateEvent.OP_REGISTER, self.containers[containerId])
 
-    return containerId, false -- wasReconciled = false
+    -- Adapters use this flag to decide whether to create a new age-zero batch.
+    return containerId, claimedObjectStorageTransfer
 end
 
 --- Unregister a container from the Manager
