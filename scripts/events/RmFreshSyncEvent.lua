@@ -67,12 +67,15 @@ function RmFreshSyncEvent:writeStream(streamId, connection)
         -- Write metadata
         local location = ""
         local storageClass = RmFreshManager.STORAGE_CLASS.SHELTERED
+        local isPallet = false
         if container.metadata then
             location = container.metadata.location or ""
             storageClass = container.metadata.storageClass or RmFreshManager.STORAGE_CLASS.SHELTERED
+            isPallet = container.metadata.isPallet == true
         end
         streamWriteString(streamId, location)
         streamWriteUInt8(streamId, storageClass)
+        streamWriteBool(streamId, isPallet)
 
         -- Write flat batches array (not nested in fillUnits)
         local batches = container.batches or {}
@@ -105,6 +108,8 @@ function RmFreshSyncEvent:writeStream(streamId, connection)
         streamWriteString(streamId, entry.entityType or "")
         -- Who (1 int)
         streamWriteUInt16(streamId, entry.farmId or 0)
+        -- Storage class (UInt8, 255 = nil/unknown)
+        streamWriteUInt8(streamId, entry.storageClass or 255)
     end
 
     Log:debug("SYNC_EVENT_WRITE: containers=%d lossLog=%d", containerCount, lossLogCount)
@@ -136,6 +141,7 @@ function RmFreshSyncEvent:readStream(streamId, connection)
         -- Read metadata
         local location = streamReadString(streamId)
         local storageClass = streamReadUInt8(streamId)
+        local isPallet = streamReadBool(streamId)
 
         -- Read flat batches
         local batchCount = streamReadUInt8(streamId)
@@ -160,7 +166,7 @@ function RmFreshSyncEvent:readStream(streamId, connection)
                 storage = { fillTypeName = fillTypeName }
             },
             batches = batches,
-            metadata = { location = location, storageClass = storageClass }
+            metadata = { location = location, storageClass = storageClass, isPallet = isPallet }
         }
 
         self.containersData[containerId] = container
@@ -188,6 +194,8 @@ function RmFreshSyncEvent:readStream(streamId, connection)
             -- Who
             farmId = streamReadUInt16(streamId),
         }
+        local storageClass = streamReadUInt8(streamId)
+        entry.storageClass = storageClass ~= 255 and storageClass or nil
         table.insert(self.lossLog, entry)
     end
 
