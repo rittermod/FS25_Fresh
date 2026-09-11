@@ -42,11 +42,11 @@ Changelog:
 
 1.0.1.0:
 - Added optional external config (modSettings/FS25_Fresh/customDefaults.xml) to add or override shelf life, storage class and aging multipliers for any crop - including custom map/mod crops - without editing the mod (update-safe, re-read each launch, server-side in multiplayer)
-- Added user guide documentation for the custom defaults config file (setup, precedence, schema, multiplayer)
-- Added Ukrainian localization - contributed by sava4903-coder
-- Improved stability: a rare error while aging or expiring one item no longer interrupts the rest of the hourly/daily update
+- Improved stability - a rare error while aging or expiring one item no longer interrupts the rest of the hourly/daily update
 - Fixed near-empty containers (under 1 L, e.g. a combine grain-tank leftover) showing as "0 L" rows in the inventory menus and skewing the displayed expiry
 - Fixed inventory and loss-statistics amounts ignoring locale number formatting - thousands separators now display correctly for non-English languages (e.g. 1.234 L)
+- Added Ukrainian (uk) translation - contributed by sava4903-coder
+- Added user guide documentation for the custom defaults config file (setup, precedence, schema, multiplayer)
 
 1.0.0.2:
 - Fixed game crash/lock when mounting horses on Hof Bergmann map with horse addon pack
@@ -55,22 +55,29 @@ Changelog:
 - Fixed spurious error log "Failed to register RM_FRESH_MENU action" caused by benign duplicate input registration
 
 1.0.0.0:
+
+Added:
 - Added Storage Details tab - per-product breakdown with age distribution, storage class, expiry times, and 4-category filter with shop icons
 - Added Product Details tab - per-storage breakdown with age distribution across Fresh/Good/Warning/Critical buckets
 - Added storage class icons to HUD, expiring soon table, and loss log with thick stroke variants for small-size legibility
 - Added custom menu icons for all 6 tabs (Lucide icons)
-- Added German localization - contributed by Roleplayboy
-- Updated all translations (French, Italian, Swedish, German) to cover new detail tabs and storage features
-- Improved settings UX: master Enable switch greys out all other settings, dependency toggles hide/show related controls and sub-tabs
-- Improved menu polish: keyboard/controller navigation, table spacing, naming consistency
-- Localized all remaining hardcoded English strings
+
+Changed:
+- Improved settings UX - master Enable switch greys out all other settings, dependency toggles hide/show related controls and sub-tabs
+- Improved menu polish - keyboard/controller navigation, table spacing, naming consistency, removed "(preview)" labels
 - Rebalanced frozen multiplier from 0.05 to 0.10 (20x to 10x life extension)
 - Adjusted shelf lives and storage class limits for 15+ products to better reflect real-world storage behavior
-- Fixed dedicated server not recognizing third-party mod products on startup
-- Fixed client HUD not showing freshness for products configured only via user settings
+
+Fixed:
 - Fixed incorrect maxBenefitClass for Lettuce, Potatoes, Sugarcane, Salmon/Trout Fry, and Butter
 - Fixed storage list showing empty product entries for containers with zero fill level
+- Fixed dedicated server not recognizing third-party mod products on startup
+- Fixed client HUD not showing freshness for products configured only via user settings
 
+Translations:
+- Added German (de) translation - contributed by Roleplayboy
+- Updated all translations (French, Italian, Swedish, German) to cover new detail tabs and storage features
+- Localized all remaining hardcoded English strings
 
 Full changelog at https://github.com/rittermod/FS25_Fresh
         ]]>        </en>
