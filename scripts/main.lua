@@ -12,7 +12,13 @@ local modDirectory = g_currentModDirectory
 
 source(modDirectory .. "scripts/rmlib/RmLogging.lua")
 Log = RmLogging.getLogger("Fresh")
-Log:setLevel(RmLogging.LOG_LEVEL.INFO)
+
+source(modDirectory .. "scripts/rmlib/RmVersion.lua")
+local Ver = RmVersion.forMod(modName, Log)
+Log:info("Build: %s", Ver:describe())
+-- DEBUG unless this is a released stable version (>= 1.0.0.0 with no -dev suffix).
+Ver:applyBuildLogLevel()
+-- Log:setLevel(RmLogging.LOG_LEVEL.DEBUG) -- Manual override of log level
 
 -- =============================================================================
 -- CORE MODULES
