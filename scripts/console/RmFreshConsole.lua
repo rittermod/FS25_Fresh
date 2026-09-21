@@ -1,7 +1,7 @@
 -- RmFreshConsole.lua
 -- Purpose: Console commands using RmFreshManager APIs
 -- Author: Ritter
--- Architecture: Read-only commands using centralized FreshManager
+-- Architecture: Commands call RmFreshManager APIs; registerCommands() decides which register in which build
 
 RmFreshConsole = {}
 RmFreshConsole.targets = {} -- index -> containerId for command targeting
@@ -9,6 +9,9 @@ RmFreshConsole.storageTargets = {} -- index -> uniqueId for storage command targ
 
 -- Get logger
 local Log = RmLogging.getLogger("Fresh")
+
+-- Captured at source time: g_currentModName is nil once the mission runs.
+local MOD_NAME = g_currentModName
 
 -- ============================================================================
 -- Type Resolution
@@ -115,52 +118,69 @@ function RmFreshConsole:requireAdmin(commandName)
     return true
 end
 
+--- Whether this build registers the development-only console commands
+---@return boolean True when the declared modDesc version carries a -dev suffix
+function RmFreshConsole:isDevelopmentBuild()
+    local ver = RmVersion.forMod(MOD_NAME, Log)
+    local isDev = ver:isDevelopmentVersion()
+    Log:debug("CONSOLE: development build = %s (%s)", tostring(isDev), ver:describe())
+    return isDev
+end
+
 -- ============================================================================
 -- Console Command Registration
 -- ============================================================================
 
---- Register console commands
+--- Register console commands: the always-on set in every build, the development-only set on -dev builds
 function RmFreshConsole:registerCommands()
+    local registered = {}
+    -- Every registration goes through here, so the summary line names exactly what registered
+    local function register(name, description, callback)
+        addConsoleCommand(name, description, callback, self)
+        table.insert(registered, name)
+    end
+
     -- Read-only commands (all users)
-    addConsoleCommand("fList", "List containers (fList [type])", "consoleCommandList", self)
-    addConsoleCommand("fInspect", "Inspect container (fInspect <#>)", "consoleCommandInspect", self)
-    addConsoleCommand("fBatches", "Show batches (fBatches <#>)", "consoleCommandBatches", self)
-    addConsoleCommand("fStorages", "Storage classes (fStorages [class|config])", "consoleCommandStorages", self)
+    register("fList", "List containers (fList [type])", "consoleCommandList")
+    register("fInspect", "Inspect container (fInspect <#>)", "consoleCommandInspect")
+    register("fBatches", "Show batches (fBatches <#>)", "consoleCommandBatches")
+    register("fStorages", "Storage classes (fStorages [class|config])", "consoleCommandStorages")
     -- Note: fTest is registered by RmTestRunner when tests/ folder exists
 
-    -- Batch manipulation commands (admin only) - removed fillUnit parameter
-    addConsoleCommand("fAddBatch", "Add batch (fAddBatch <#> <amount> [age])", "consoleCommandAddBatch", self)
-    addConsoleCommand("fRemBatch", "Remove batch (fRemBatch <#> <batchIdx>)", "consoleCommandRemBatch", self)
-    addConsoleCommand("fSetAge", "Set batch age (fSetAge <#> <batchIdx> <age>)", "consoleCommandSetAge", self)
-    addConsoleCommand("fSetAllAge", "Set all ages (fSetAllAge <#> [age])", "consoleCommandSetAllAge", self)
-
-    -- Time/expiration commands (admin only)
-    addConsoleCommand("fAge", "Simulate time (fAge <hours>)", "consoleCommandAge", self)
-    addConsoleCommand("fAgeContainer", "Age container (fAgeContainer <#> <hours>)", "consoleCommandAgeContainer", self)
-    addConsoleCommand("fExpire", "Force expire (fExpire <#> [batchIdx])", "consoleCommandExpire", self)
-    addConsoleCommand("fExpireAll", "Expire all (fExpireAll <type|all>)", "consoleCommandExpireAll", self)
-
     -- Inventory detail commands (read-only, all users)
-    addConsoleCommand("fFillDetail", "FillType detail (fFillDetail <fillType>)", "consoleCommandFillDetail", self)
-    addConsoleCommand("fStorageList", "Storage list (fStorageList)", "consoleCommandStorageList", self)
-    addConsoleCommand("fStorageDetail", "Storage detail (fStorageDetail <#>)", "consoleCommandStorageDetail", self)
+    register("fFillDetail", "FillType detail (fFillDetail <fillType>)", "consoleCommandFillDetail")
+    register("fStorageList", "Storage list (fStorageList)", "consoleCommandStorageList")
+    register("fStorageDetail", "Storage detail (fStorageDetail <#>)", "consoleCommandStorageDetail")
 
     -- Statistics/debug commands (read-only, all users)
-    addConsoleCommand("fStats", "Show statistics", "consoleCommandStats", self)
-    addConsoleCommand("fStatus", "Expiring soon (fStatus [hours])", "consoleCommandStatus", self)
-    addConsoleCommand("fLog", "Show loss log (fLog [count])", "consoleCommandLog", self)
-    addConsoleCommand("fDump", "Dump state to log", "consoleCommandDump", self)
+    register("fStats", "Show statistics", "consoleCommandStats")
+    register("fStatus", "Expiring soon (fStatus [hours])", "consoleCommandStatus")
+    register("fLog", "Show loss log (fLog [count])", "consoleCommandLog")
+    register("fDump", "Dump state to log", "consoleCommandDump")
 
-    -- Statistics/debug admin commands (admin only)
-    addConsoleCommand("fClearLog", "Clear loss log (admin)", "consoleCommandClearLog", self)
-    addConsoleCommand("fReconcile", "Reconcile with game state (admin)", "consoleCommandReconcile", self)
+    -- Loss log admin command (admin only): the loss log has no other clear path
+    register("fClearLog", "Clear loss log (admin)", "consoleCommandClearLog")
 
-    -- Storage class override commands (admin only)
-    addConsoleCommand("fSetStorage", "Set storage class override (fSetStorage <#|items> <class>)", "consoleCommandSetStorage", self)
-    addConsoleCommand("fClearStorage", "Clear storage class override (fClearStorage <#|items>)", "consoleCommandClearStorage", self)
+    -- Development-only commands (admin only): batch edits, simulated time and expiry, reconcile, storage overrides
+    local includeDevelopment = self:isDevelopmentBuild()
+    if includeDevelopment then
+        register("fAddBatch", "Add batch (fAddBatch <#> <amount> [age])", "consoleCommandAddBatch")
+        register("fRemBatch", "Remove batch (fRemBatch <#> <batchIdx>)", "consoleCommandRemBatch")
+        register("fSetAge", "Set batch age (fSetAge <#> <batchIdx> <age>)", "consoleCommandSetAge")
+        register("fSetAllAge", "Set all ages (fSetAllAge <#> [age])", "consoleCommandSetAllAge")
+        register("fAge", "Simulate time (fAge <hours>)", "consoleCommandAge")
+        register("fAgeContainer", "Age container (fAgeContainer <#> <hours>)", "consoleCommandAgeContainer")
+        register("fExpire", "Force expire (fExpire <#> [batchIdx])", "consoleCommandExpire")
+        register("fExpireAll", "Expire all (fExpireAll <type|all>)", "consoleCommandExpireAll")
+        register("fReconcile", "Reconcile with game state (admin)", "consoleCommandReconcile")
+        register("fSetStorage", "Set storage class override (fSetStorage <#|items> <class>)",
+            "consoleCommandSetStorage")
+        register("fClearStorage", "Clear storage class override (fClearStorage <#|items>)",
+            "consoleCommandClearStorage")
+    end
 
-    Log:info(
-    "CONSOLE: fList, fInspect, fBatches, fStorages, fFillDetail, fStorageList, fStorageDetail, fAddBatch, fRemBatch, fSetAge, fSetAllAge, fAge, fAgeContainer, fExpire, fExpireAll, fStats, fStatus, fLog, fDump, fClearLog, fReconcile, fSetStorage, fClearStorage commands registered")
+    Log:info("CONSOLE: %d commands registered (development-only commands %s): %s", #registered,
+        includeDevelopment and "included" or "omitted", table.concat(registered, ", "))
 end
 
 --- Unregister console commands

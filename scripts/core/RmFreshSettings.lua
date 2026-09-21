@@ -97,7 +97,7 @@ RmFreshSettings.storageAgingEnabled = true
 RmFreshSettings.bundledStorageAgingEnabled = true
 
 --- Storage class overrides (keyed by uniqueId string or "itemsInWorld" -> storage class value)
---- Set by admin via fSetStorage command, synced via RmSettingsSyncEvent
+--- Set in the Fresh settings menu (or fSetStorage on development builds), synced via RmSettingsSyncEvent
 RmFreshSettings.storageClassOverrides = {}
 
 --- Runtime storage class multipliers (classValue -> multiplier)
