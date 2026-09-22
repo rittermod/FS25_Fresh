@@ -106,6 +106,7 @@
         <text name="fresh_storage_override_tooltip" text="Überschreibt die Lagerklasse für diesen Ort."/>
         <text name="fresh_storage_items_in_world" text="Objekte in der Welt"/>
         <text name="fresh_storage_items_in_world_tooltip" text="Bezieht Ballen, Paletten und BigBags ein."/>
+        <text name="fresh_storage_items_in_world_minimum" text="Bales and pallets under a roof are detected as Sheltered. The class chosen here is the minimum for all loose items."/>
         <text name="fresh_storage_detected" text="Erkannt"/>
 
         <!-- Tooltip format strings -->

@@ -106,6 +106,7 @@
         <text name="fresh_storage_override_tooltip" text="Överstyr lagringsklassen för denna plats. Auto använder den upptäckta klassen. Högre klasser saktar ner åldrandet, Inaktiverad stoppar åldrandet helt."/>
         <text name="fresh_storage_items_in_world" text="Lösa objekt"/>
         <text name="fresh_storage_items_in_world_tooltip" text="Omfattar balar, pallar och storsäckar som inte placerats i ett dedikerat lager."/>
+        <text name="fresh_storage_items_in_world_minimum" text="Bales and pallets under a roof are detected as Sheltered. The class chosen here is the minimum for all loose items."/>
         <text name="fresh_storage_detected" text="Upptäckt"/>
 
         <!-- Tooltip format strings -->

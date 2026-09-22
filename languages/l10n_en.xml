@@ -106,6 +106,7 @@
         <text name="fresh_storage_override_tooltip" text="Override the storage class for this location. Auto uses the detected class. Higher classes slow aging, Disabled stops aging entirely."/>
         <text name="fresh_storage_items_in_world" text="Loose Items"/>
         <text name="fresh_storage_items_in_world_tooltip" text="Covers bales, pallets, and bigbags not placed in a dedicated storage."/>
+        <text name="fresh_storage_items_in_world_minimum" text="Bales and pallets under a roof are detected as Sheltered. The class chosen here is the minimum for all loose items."/>
         <text name="fresh_storage_detected" text="Detected"/>
 
         <!-- Tooltip format strings -->

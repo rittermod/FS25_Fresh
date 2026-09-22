@@ -60,8 +60,7 @@ end
 -- STORAGE CLASS DETECTION
 -- =============================================================================
 
---- Detect storage class for a vehicle based on its type
---- Pallet/bigBag -> EXPOSED, open-top (FillVolume) -> EXPOSED, enclosed -> SHELTERED
+--- Registration class by vehicle shape: pallet/bigBag or open-top (FillVolume) EXPOSED, enclosed SHELTERED
 ---@param vehicle table Vehicle entity
 ---@return number storageClass Storage class enum value
 function RmVehicleAdapter.detectStorageClass(vehicle)
@@ -72,16 +71,35 @@ function RmVehicleAdapter.detectStorageClass(vehicle)
         tostring(vehicle.spec_fillVolume ~= nil),
         tostring(vehicle.spec_fillUnit ~= nil))
 
-    -- Pallet/bigBag: always exposed (isPallet covers both)
+    -- Pallet/bigBag (isPallet covers both): EXPOSED at registration; the shelter detector refines it at rest
     if vehicle.isPallet then
+        Log:trace("<<< detectStorageClass = EXPOSED (pallet, registration default)")
         return SC.EXPOSED
     end
     -- Open-top heap (trailer with FillVolume): exposed
     if vehicle.spec_fillVolume ~= nil then
+        Log:trace("<<< detectStorageClass = EXPOSED (fillVolume spec)")
         return SC.EXPOSED
     end
     -- Enclosed container (spec_fillUnit only): sheltered
+    Log:trace("<<< detectStorageClass = SHELTERED (no fillVolume spec)")
     return SC.SHELTERED
+end
+
+--- Probe origin for the shelter detector: the pallet's root node (its base), plus when it last moved
+---@param vehicle table Pallet or big bag vehicle
+---@return number|nil x World x, nil when the vehicle has no root node
+---@return number|nil y World y
+---@return number|nil z World z
+---@return number|nil lastMoveTime Server time of the vehicle's last move (ms of g_currentMission.time)
+function RmVehicleAdapter:getShelterProbe(vehicle)
+    local rootNode = vehicle.rootNode
+    if rootNode == nil or rootNode == 0 then
+        Log:trace("VEHICLE_SHELTER_PROBE: uniqueId=%s has no root node", tostring(vehicle.uniqueId))
+        return nil
+    end
+    local x, y, z = getWorldTranslation(rootNode)
+    return x, y, z, vehicle.lastMoveTime
 end
 
 -- =============================================================================

@@ -182,7 +182,8 @@
         <text name="fresh_storage_auto" text="Автоматично"/>
         <text name="fresh_storage_override_tooltip" text="Перевизначити клас зберігання для цього місця"/>
         <text name="fresh_storage_items_in_world" text="Предмети у світі"/>
-        <text name="fresh_storage_items_in_world_tooltip" text="Тюки, палети та бігбеги поза складом"/>
+        <text name="fresh_storage_items_in_world_tooltip" text="Тюки, палети та бігбеги поза складом."/>
+        <text name="fresh_storage_items_in_world_minimum" text="Bales and pallets under a roof are detected as Sheltered. The class chosen here is the minimum for all loose items."/>
         <text name="fresh_storage_detected" text="Визначено"/>
 
         <!-- Reset -->

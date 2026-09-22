@@ -10,7 +10,7 @@ Common questions about Fresh, covering expiration mechanics, storage, multiplaye
 
 Two things to check:
 
-**1. Storage class.** Where your goods are stored matters significantly. Pallets and bales left outdoors are classified as **Exposed** (1.5x aging rate), meaning they expire 50% faster than the listed shelf life. Move goods into Indoor or Cooled storage to extend their life. See the [Storage Classes Guide](guide-storage-classes.md) for details.
+**1. Storage class.** Where your goods are stored matters significantly. Pallets and bales left outdoors are classified as **Exposed** (1.5x aging rate), meaning they expire 50% faster than the listed shelf life. Set them down under a shed or carport roof to make them Sheltered, or move goods into Indoor or Cooled storage to extend their life further. See the [Storage Classes Guide](guide-storage-classes.md) for details.
 
 **2. Difficulty preset.** At **Hard** difficulty, all shelf lives are halved. A product listed at 6 months on Normal only lasts 3 months on Hard. Check your preset in the Fresh Menu -> Settings tab.
 
@@ -158,14 +158,14 @@ Bales track the same way as other containers but with two special behaviors:
 
 ## How do storage classes get detected?
 
-Fresh assigns storage classes automatically based on container type:
+Fresh assigns storage classes automatically based on container type and, for loose bales, pallets, and big bags, on whether they stand under a roof:
 
 | Container | Default Class |
 |-----------|--------------|
-| Pallets, big bags | Exposed |
+| Pallets, big bags | Exposed outdoors, Sheltered under a roof |
 | Open-top trailers/tippers | Exposed |
 | Enclosed vehicles/tankers | Sheltered |
-| Bales | Exposed |
+| Bales | Exposed outdoors, Sheltered under a roof |
 | Feed troughs | Sheltered |
 | Silos, production buildings | Indoor |
 | Object storage (warehouses) | Indoor |

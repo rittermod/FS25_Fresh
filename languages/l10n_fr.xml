@@ -106,6 +106,7 @@
         <text name="fresh_storage_override_tooltip" text="Remplacer la classe de stockage pour cet emplacement. Auto utilise la classe détectée. Les classes supérieures ralentissent le vieillissement, Désactivé arrête le vieillissement."/>
         <text name="fresh_storage_items_in_world" text="Objets en vrac"/>
         <text name="fresh_storage_items_in_world_tooltip" text="Comprend les balles, palettes et bigbags non placés dans un stockage dédié."/>
+        <text name="fresh_storage_items_in_world_minimum" text="Bales and pallets under a roof are detected as Sheltered. The class chosen here is the minimum for all loose items."/>
         <text name="fresh_storage_detected" text="Détecté"/>
 
         <!-- Tooltip format strings -->

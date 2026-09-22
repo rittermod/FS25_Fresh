@@ -29,6 +29,7 @@ source(modDirectory .. "scripts/core/RmFreshSettings.lua")
 source(modDirectory .. "scripts/core/RmFreshManager.lua")
 source(modDirectory .. "scripts/core/RmLossTracker.lua")
 source(modDirectory .. "scripts/core/RmTransferCoordinator.lua")
+source(modDirectory .. "scripts/core/RmShelterDetector.lua")
 source(modDirectory .. "scripts/core/RmFreshIO.lua")
 
 -- =============================================================================
@@ -145,6 +146,9 @@ local function onLoadMapFinished()
     -- Initialize Manager (subscribe to HOUR_CHANGED)
     RmFreshManager:initialize()
 
+    -- Install the loose-item roof poll (server only)
+    RmShelterDetector.install()
+
     -- Install transfer hooks (after Manager, before console)
     RmTransferCoordinator.install()
 
@@ -187,6 +191,9 @@ local function onDeleteMap()
 
     -- Unregister console commands
     RmFreshConsole:unregisterCommands()
+
+    -- Remove the loose-item roof poll
+    RmShelterDetector.uninstall()
 
     -- Cleanup Manager (unsubscribe from HOUR_CHANGED)
     RmFreshManager:destroy()

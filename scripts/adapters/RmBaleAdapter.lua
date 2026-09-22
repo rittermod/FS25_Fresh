@@ -73,11 +73,28 @@ end
 -- STORAGE CLASS DETECTION
 -- =============================================================================
 
---- Detect storage class for a bale - always EXPOSED (outdoor weather exposure)
+--- Registration default for a bale: EXPOSED; the shelter detector refines it once the bale is at rest
 ---@param bale table Bale entity
 ---@return number storageClass Storage class enum value
 function RmBaleAdapter.detectStorageClass(bale)
+    Log:trace("<<< detectStorageClass(bale %s) = EXPOSED (registration default)", tostring(bale and bale.uniqueId))
     return RmFreshManager.STORAGE_CLASS.EXPOSED
+end
+
+--- Probe origin for the shelter detector: the bale's centre node, plus when it last moved
+---@param bale table Bale entity
+---@return number|nil x World x, nil when the bale has no node
+---@return number|nil y World y
+---@return number|nil z World z
+---@return number|nil lastMoveTime Server time of the bale's last move (ms of g_currentMission.time)
+function RmBaleAdapter:getShelterProbe(bale)
+    local nodeId = bale.nodeId
+    if nodeId == nil or nodeId == 0 then
+        Log:trace("BALE_SHELTER_PROBE: uniqueId=%s has no node", tostring(bale.uniqueId))
+        return nil
+    end
+    local x, y, z = getWorldTranslation(nodeId)
+    return x, y, z, bale.lastMoveTime
 end
 
 -- =============================================================================

@@ -127,13 +127,23 @@ function RmFreshManager:getStorageClassByName(name)
     return nil
 end
 
---- Get storage class override for a container
---- Checks "items in world" first (bales, pallets), then uniqueId-based lookup
+--- True for a loose bale or pallet; the runtimeEntity check covers MP clients, whose metadata has no isPallet
 ---@param container table Container structure
----@return number|nil Storage class override value, or nil if no override
+---@return boolean isLoose True when the container belongs to a loose bale or pallet
+function RmFreshManager:isLooseItemContainer(container)
+    local entity = container.runtimeEntity
+    local isLoose = container.entityType == "bale"
+        or (container.metadata ~= nil and container.metadata.isPallet == true)
+        or (entity ~= nil and entity.isPallet == true)
+    Log:trace("<<< isLooseItemContainer(%s) = %s", tostring(container.id), tostring(isLoose))
+    return isLoose
+end
+
+--- Player's storage class override: the shared "itemsInWorld" key for loose items, else the uniqueId
+---@param container table Container structure
+---@return number|nil override Storage class override value, or nil if no override
 function RmFreshManager:getStorageClassOverride(container)
-    -- Check "items in world": entityType=="bale" OR metadata.isPallet
-    if container.entityType == "bale" or (container.metadata and container.metadata.isPallet) then
+    if self:isLooseItemContainer(container) then
         local override = RmFreshSettings:getStorageClassOverride("itemsInWorld")
         Log:trace("OVERRIDE_LOOKUP: container=%s items_in_world -> %s",
             container.id or "?", override and self.STORAGE_CLASS_NAMES[override] or "nil")
@@ -150,27 +160,69 @@ function RmFreshManager:getStorageClassOverride(container)
         return override
     end
 
+    Log:trace("OVERRIDE_LOOKUP: container=%s has no uniqueId -> nil", container.id or "?")
     return nil
 end
 
---- Resolve full storage class info for a container (detected, override, effective, multiplier)
---- Used by fStorages display and future HUD
+--- Storage class info; for a loose item the setting is a minimum (max with detected), elsewhere a replacement
 ---@param container table Container structure
----@return table { detected, override, effective, multiplier }
+---@return table info { detected, override, base, effective, multiplier, maxBenefitClass }
 function RmFreshManager:resolveStorageClassInfo(container)
     local detected = container.metadata and container.metadata.storageClass or self.STORAGE_CLASS.SHELTERED
     local override = self:getStorageClassOverride(container)
-    local base = override or detected
+    local base
+    if override ~= nil and self:isLooseItemContainer(container) then
+        -- Enum order is benefit order, so max keeps the better of setting and roof; DISABLED (5) wins every max
+        base = math.max(override, detected)
+    else
+        base = override or detected
+    end
     local maxBenefitClass = RmFreshSettings:getMaxBenefitClass(container.fillTypeIndex)
     local effective = self:_resolveEffectiveClass(base, maxBenefitClass)
     local multiplier = RmFreshSettings:getClassMultiplier(effective)
+    Log:trace("<<< resolveStorageClassInfo(%s) detected=%s override=%s base=%s effective=%s",
+        tostring(container.id), tostring(detected), tostring(override), tostring(base), tostring(effective))
     return {
         detected = detected,
         override = override,
+        base = base,
         effective = effective,
         multiplier = multiplier,
         maxBenefitClass = maxBenefitClass,
     }
+end
+
+--- Write a runtime-detected storage class and re-send the container to clients (server only)
+---@param containerId string Container ID
+---@param storageClass number New detected storage class
+---@return boolean changed True when the class changed and the container was re-sent
+function RmFreshManager:setDetectedStorageClass(containerId, storageClass)
+    if g_server == nil then
+        Log:trace("SHELTER_CLASS: %s skipped (not the server)", tostring(containerId))
+        return false
+    end
+
+    local container = self.containers[containerId]
+    if container == nil then
+        Log:trace("SHELTER_CLASS: %s unknown container", tostring(containerId))
+        return false
+    end
+
+    container.metadata = container.metadata or {}
+    local oldClass = container.metadata.storageClass
+    if oldClass == storageClass then
+        Log:trace("SHELTER_CLASS: %s unchanged (%s)", containerId, tostring(storageClass))
+        return false
+    end
+
+    container.metadata.storageClass = storageClass
+    local wo = container.identityMatch and container.identityMatch.worldObject
+    Log:debug("SHELTER_CLASS: container=%s uniqueId=%s %s -> %s", containerId, tostring(wo and wo.uniqueId),
+        tostring(self.STORAGE_CLASS_NAMES[oldClass]), tostring(self.STORAGE_CLASS_NAMES[storageClass]))
+
+    -- OP_UPDATE carries batches only; OP_REGISTER re-sends the whole container, class included
+    self:broadcastContainerUpdate(containerId, RmFreshUpdateEvent.OP_REGISTER, container)
+    return true
 end
 
 --- Resolve effective storage class by applying ceiling logic
@@ -740,21 +792,25 @@ function RmFreshManager:getAllContainers()
     return self.containers
 end
 
---- Build a grouped, sorted list of storage entities for the Settings UI
---- Groups containers by building/vehicle (uniqueId), separates bales/pallets into "Items in World"
+--- Settings UI storage list: one row per building/vehicle, loose items in one "Items in World" row at the end
 ---@param farmId number|nil Filter by farm ownership (nil = all farms)
----@return table Array of { uniqueId, entityName, entityType, detectedClass, containerCount, key }
+---@return table rows Array of { uniqueId, entityName, entityType, detectedClass, containerCount, key }
 function RmFreshManager:getStorageListForSettings(farmId)
     local buildingMap = {}   -- uniqueId -> { ... }
     local hasItemsInWorld = false
+    local looseLowestDetected = nil -- the Loose Items row shows its worst detected class
 
     for _, container in pairs(self.containers) do
         -- Filter by farm if specified; always exclude unowned/spectator (farmId 0)
         if (farmId == nil or container.farmId == farmId)
             and (container.farmId or 0) ~= FarmManager.SPECTATOR_FARM_ID then
             -- Separate bales/pallets into "items in world"
-            if container.entityType == "bale" or (container.metadata and container.metadata.isPallet) then
+            if self:isLooseItemContainer(container) then
                 hasItemsInWorld = true
+                local detected = self:resolveStorageClassInfo(container).detected
+                if looseLowestDetected == nil or detected < looseLowestDetected then
+                    looseLowestDetected = detected
+                end
             else
                 -- Group by uniqueId
                 local wo = container.identityMatch and container.identityMatch.worldObject
@@ -811,23 +867,21 @@ function RmFreshManager:getStorageListForSettings(farmId)
             uniqueId = "itemsInWorld",
             entityName = g_i18n:getText("fresh_storage_items_in_world"),
             entityType = "itemsInWorld",
-            detectedClass = self.STORAGE_CLASS.EXPOSED,
+            detectedClass = looseLowestDetected,
             containerCount = 0,
             key = "itemsInWorld",
         })
     end
 
-    Log:debug("STORAGE_LIST: %d entries (%d placeables, %d vehicles, itemsInWorld=%s) farmId=%s",
-        #result, #placeables, #vehicles, tostring(hasItemsInWorld), tostring(farmId))
+    Log:debug("STORAGE_LIST: %d entries (%d placeables, %d vehicles, itemsInWorld=%s looseDetected=%s) farmId=%s",
+        #result, #placeables, #vehicles, tostring(hasItemsInWorld), tostring(looseLowestDetected), tostring(farmId))
     return result
 end
 
---- Get all storages grouped by uniqueId with class info and totals for inventory detail views
---- Groups containers by building/vehicle (uniqueId), separates bales/pallets into "Items in World"
---- Unlike getStorageListForSettings, includes amount totals and fillType counts for display
---- Returns unsorted array - caller is responsible for sorting
+--- Inventory storage list with totals and class, one row per building/vehicle plus "Items in World"; unsorted
 ---@param farmId number|nil Filter by farm ownership (nil returns empty)
----@return table Array of { uniqueId, entityName, entityType, totalAmount, fillTypeCount, storageClass, className }
+---@return table rows Array of { uniqueId, entityName, entityType, totalAmount, fillTypeCount, storageClass,
+---  className }
 function RmFreshManager:getStorageList(farmId)
     -- farmId=nil or 0 means no farm context - return empty (matches getInventorySummary pattern)
     if farmId == nil or farmId == 0 then
@@ -839,6 +893,7 @@ function RmFreshManager:getStorageList(farmId)
     local itemsInWorldAmount = 0
     local itemsInWorldFillTypes = {} -- fillTypeName -> true
     local hasItemsInWorld = false
+    local looseLowestBase = nil -- the Loose Items row shows its worst class among items with stock
 
     for _, container in pairs(self.containers) do
         if container.farmId == farmId
@@ -854,12 +909,18 @@ function RmFreshManager:getStorageList(farmId)
                 containerAmount = containerAmount + batch.amount
             end
 
-            if container.entityType == "bale" or (container.metadata and container.metadata.isPallet) then
+            if self:isLooseItemContainer(container) then
                 -- Bales/pallets -> "Items in World" bucket
                 hasItemsInWorld = true
                 itemsInWorldAmount = itemsInWorldAmount + containerAmount
                 if fillTypeName and containerAmount > 0 then
                     itemsInWorldFillTypes[fillTypeName] = true
+                end
+                if containerAmount > 0 and RmFreshSettings.storageAgingEnabled then
+                    local base = self:resolveStorageClassInfo(container).base
+                    if looseLowestBase == nil or base < looseLowestBase then
+                        looseLowestBase = base
+                    end
                 end
             else
                 -- Group by uniqueId
@@ -918,15 +979,11 @@ function RmFreshManager:getStorageList(farmId)
         local fillTypeCount = 0
         for _ in pairs(itemsInWorldFillTypes) do fillTypeCount = fillTypeCount + 1 end
 
-        local storageClass = nil
+        local storageClass = looseLowestBase
         local className = nil
-        if RmFreshSettings.storageAgingEnabled then
-            local iwOverride = RmFreshSettings:getStorageClassOverride("itemsInWorld")
-            storageClass = iwOverride or self.STORAGE_CLASS.EXPOSED
-            local classKey = self.STORAGE_CLASS_NAMES[storageClass]
-            if classKey then
-                className = g_i18n:getText("fresh_class_" .. classKey)
-            end
+        local classKey = storageClass ~= nil and self.STORAGE_CLASS_NAMES[storageClass] or nil
+        if classKey then
+            className = g_i18n:getText("fresh_class_" .. classKey)
         end
 
         table.insert(result, {
@@ -940,7 +997,7 @@ function RmFreshManager:getStorageList(farmId)
         })
     end
 
-    Log:debug("STORAGE_LIST_DETAIL: %d entries farmId=%d", #result, farmId)
+    Log:debug("STORAGE_LIST_DETAIL: %d entries farmId=%d looseClass=%s", #result, farmId, tostring(looseLowestBase))
     return result
 end
 
@@ -1111,12 +1168,13 @@ function RmFreshManager:rescanForNewPerishables()
     Log:trace("<<< rescanForNewPerishables = %d", totalRegistered)
 end
 
---- Called every in-game hour
---- SERVER ONLY - processes aging, expirations, and triggers sync
---- CRITICAL: Server guard prevents client execution (clients receive state via sync events)
+--- Hourly server pass: reconcile, re-check loose items for a roof, then age and expire (clients get synced state)
 ---@return nil
 function RmFreshManager:onHourChanged()
-    if g_server == nil then return end -- Server only - NEVER SKIP THIS
+    if g_server == nil then -- Server only - NEVER SKIP THIS
+        Log:trace("HOURLY: skipped (not the server)")
+        return
+    end
 
     -- Crash safeguard (boundary): a fault anywhere below must not propagate out of
     -- this g_messageCenter callback, so other periodic game updates (e.g. animal
@@ -1136,6 +1194,11 @@ function RmFreshManager:onHourChanged()
 
         -- Cleanup phantom batches (floating-point artifacts with amount < 0.001)
         self:cleanupEmptyBatches()
+
+        -- Own guard so a detector fault cannot skip aging; before the expiration gate so it always runs
+        runProtected("shelterRecheck", function()
+            RmShelterDetector.recheckAll(g_currentMission.time)
+        end)
 
         -- Check if expiration is enabled globally (AC #12)
         if not RmFreshSettings:isExpirationEnabled() then
@@ -3085,12 +3148,10 @@ function RmFreshManager:getFillTypeDetail(fillTypeName, farmId)
     }
 end
 
---- Get per-fillType breakdown for a specific storage (inventory detail view)
---- Two code paths: normal (by uniqueId) and "itemsInWorld" (by entityType/isPallet)
---- Batch references are shared (not copied) - callers must not mutate
+--- Per-fillType breakdown of one storage or of all loose items; batch tables are shared, callers must not mutate
 ---@param uniqueId string Storage uniqueId or "itemsInWorld"
 ---@param farmId number|nil Filter by farm (nil returns empty)
----@return table { uniqueId, entityName, entityType, storageClass, className, totalAmount, fillTypes = [...] }
+---@return table detail { uniqueId, entityName, entityType, storageClass, className, totalAmount, fillTypes }
 function RmFreshManager:getStorageDetail(uniqueId, farmId)
     local emptyResult = {
         uniqueId = uniqueId,
@@ -3119,6 +3180,7 @@ function RmFreshManager:getStorageDetail(uniqueId, farmId)
     local headerEntityType = nil
     local headerStorageClass = nil
     local headerClassName = nil
+    local looseLowestBase = nil -- Items in World header: worst class among loose items with batches
 
     for _, container in pairs(self.containers) do
         if container.farmId == farmId
@@ -3127,8 +3189,7 @@ function RmFreshManager:getStorageDetail(uniqueId, farmId)
             -- Match criteria depends on path
             local matches = false
             if isItemsInWorld then
-                matches = container.entityType == "bale"
-                    or (container.metadata and container.metadata.isPallet)
+                matches = self:isLooseItemContainer(container)
             else
                 local wo = container.identityMatch and container.identityMatch.worldObject
                 matches = wo and wo.uniqueId == uniqueId
@@ -3150,19 +3211,10 @@ function RmFreshManager:getStorageDetail(uniqueId, farmId)
                             headerEntityType = container.entityType
                         end
 
-                        -- Header-level class: building operational class (override or detected)
-                        if storageAgingEnabled then
-                            if isItemsInWorld then
-                                local iwOverride = RmFreshSettings:getStorageClassOverride("itemsInWorld")
-                                headerStorageClass = iwOverride or self.STORAGE_CLASS.EXPOSED
-                            else
-                                local headerClassInfo = self:resolveStorageClassInfo(container)
-                                headerStorageClass = headerClassInfo.override or headerClassInfo.detected
-                            end
-                            local classKey = self.STORAGE_CLASS_NAMES[headerStorageClass]
-                            if classKey then
-                                headerClassName = g_i18n:getText("fresh_class_" .. classKey)
-                            end
+                        -- Header-level class for a building: operational class (override or detected)
+                        if storageAgingEnabled and not isItemsInWorld then
+                            local headerClassInfo = self:resolveStorageClassInfo(container)
+                            headerStorageClass = headerClassInfo.override or headerClassInfo.detected
                         end
                     end
 
@@ -3180,9 +3232,15 @@ function RmFreshManager:getStorageDetail(uniqueId, farmId)
 
                     local group = fillTypeMap[fillTypeName]
 
-                    -- Resolve class info per fillType (effective varies due to maxBenefitClass)
-                    if group.classInfo == nil then
-                        group.classInfo = self:resolveStorageClassInfo(container)
+                    -- Resolve class info per fillType (effective varies due to maxBenefitClass).
+                    -- Loose items of one product can differ, so that row keeps its worst container's info.
+                    local info = self:resolveStorageClassInfo(container)
+                    if group.classInfo == nil or (isItemsInWorld and info.effective < group.classInfo.effective) then
+                        group.classInfo = info
+                    end
+                    if isItemsInWorld and storageAgingEnabled
+                        and (looseLowestBase == nil or info.base < looseLowestBase) then
+                        looseLowestBase = info.base
                     end
 
                     -- Accumulate batches and amounts
@@ -3196,6 +3254,14 @@ function RmFreshManager:getStorageDetail(uniqueId, farmId)
                 end
             end
         end
+    end
+
+    if isItemsInWorld then
+        headerStorageClass = looseLowestBase
+    end
+    local headerClassKey = headerStorageClass ~= nil and self.STORAGE_CLASS_NAMES[headerStorageClass] or nil
+    if headerClassKey then
+        headerClassName = g_i18n:getText("fresh_class_" .. headerClassKey)
     end
 
     -- Build fillTypes result array
@@ -3245,8 +3311,8 @@ function RmFreshManager:getStorageDetail(uniqueId, farmId)
         totalAmount = totalAmount + group.amount
     end
 
-    Log:debug("STORAGE_DETAIL: uniqueId=%s fillTypes=%d totalAmount=%.0f farmId=%d",
-        uniqueId, #fillTypes, totalAmount, farmId)
+    Log:debug("STORAGE_DETAIL: uniqueId=%s fillTypes=%d totalAmount=%.0f farmId=%d headerClass=%s",
+        uniqueId, #fillTypes, totalAmount, farmId, tostring(headerStorageClass))
 
     return {
         uniqueId = uniqueId,

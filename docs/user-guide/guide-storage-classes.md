@@ -39,20 +39,33 @@ The difference between leaving strawberries on an outdoor pallet versus putting 
 
 ## How Storage Classes Are Assigned
 
-Fresh automatically detects the storage class based on the container type:
+Fresh automatically detects the storage class based on the container type and, for loose bales, pallets, and big bags, on whether they stand under a roof:
 
 | Container Type | Default Class | Rationale |
 |----------------|--------------|-----------|
-| **Pallets** | Exposed | Sitting on the ground, no protection |
-| **Big bags** | Exposed | Open-topped, outdoor storage |
+| **Pallets** | Exposed outdoors, Sheltered under a roof | Rain and sun reach a pallet in the open |
+| **Big bags** | Exposed outdoors, Sheltered under a roof | Rain and sun reach a big bag in the open |
 | **Open-top vehicles** (fill volumes) | Exposed | Trailers, tippers with exposed cargo |
 | **Enclosed vehicles** | Sheltered | Covered trailers, tankers |
-| **Bales** | Exposed | Left in the field or yard |
+| **Bales** | Exposed outdoors, Sheltered under a roof | Left in the field or yard, or stacked in a shed |
 | **Feed troughs** (husbandry food) | Sheltered | Under roof at husbandry |
 | **Silos and storage** (placeables) | Indoor | Enclosed building storage |
 | **Production point storage** | Indoor | Factory/processing buildings |
 | **Object storage** (warehouses) | Indoor | Enclosed building storage for items |
 | **Milk storage** (husbandry milk) | Cooled | Refrigerated milk tanks |
+
+### Bales and pallets under a roof
+
+Fresh checks where each loose bale, pallet, and big bag stands. When you put one down under a shed, carport, or barn roof, it becomes **Sheltered** a second or two after it stops moving. Carry it back out and it returns to **Exposed**. Fresh also re-checks every loose item once an in-game hour, so building or selling a shed over a resting bale takes effect within the hour.
+
+A few places do not count as a roof:
+
+- A road or river bank, even though some maps mark them as covered ground.
+- Buildings whose roof is not modeled as a building, such as the small cow barn.
+- Buildings that do not mark a covered floor area, such as some of the garden sheds sold in the shop, and mod buildings whose author did not mark one.
+- A closed trailer's own roof: a pallet inside one counts as Exposed unless the trailer stands under a building roof.
+
+After loading a savegame, bales and pallets show Exposed for a second or two until the first check runs.
 
 ---
 
@@ -98,11 +111,11 @@ These products have longer shelf lives (6-24 months) and max out at Indoor stora
 
 ### Bales
 
-Bales default to Exposed class. Fresh grass windrow bales (1-month shelf life) are particularly vulnerable:
+Bales in the open are Exposed; bales under a roof are Sheltered. Fresh grass windrow bales (1-month shelf life) are particularly vulnerable:
 
 - Wrap grass bales for silage as soon as possible - fermentation pauses aging
 - Dry grass bales last much longer (18 months) but still benefit from sheltered storage
-- Consider using storage class overrides if you have a covered bale storage area
+- Stack bales in a shed or under a carport to move them from Exposed to Sheltered
 
 ### Animal Feed
 
@@ -112,9 +125,11 @@ Feed in husbandry troughs is classified as Sheltered. Most feed types (pig food,
 
 ## Storage Class Overrides
 
-If the automatic detection doesn't match your situation - for example, you have a covered area for pallets or a refrigerated mod building - you can override the storage class.
+If the automatic detection doesn't match your situation - for example, a shelter Fresh does not count as a roof or a refrigerated mod building - you can override the storage class.
 
 Open the Fresh Menu (Right Shift + F) -> Settings tab -> Storage sub-tab. Each tracked storage shows its detected class and an override dropdown to change it.
+
+For a building or vehicle, the class you choose replaces the detected one. The **Loose Items** entry works differently: the class you choose there is a **minimum** for every loose bale, pallet, and big bag. An item under a roof keeps Sheltered even when you choose Exposed, so choosing Exposed now behaves like Default. Choose Sheltered or better to give every loose item at least that class, roof or not.
 
 ---
 

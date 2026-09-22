@@ -94,7 +94,7 @@ Each tracked storage shows:
 
 Vehicles appear in the list as soon as they are on the map, even when empty. This lets you configure storage class overrides before loading any goods.
 
-A special **Loose Items** entry covers all bales, pallets, and big bags not placed in a dedicated storage. Overriding this entry applies to all loose items at once.
+A special **Loose Items** entry covers all bales, pallets, and big bags not placed in a dedicated storage. Fresh detects each loose item as Exposed in the open or Sheltered under a roof, and the entry's detected class shows the lowest class among your loose items. The class you choose here is a **minimum** for all loose items at once: an item under a roof stays Sheltered even when you choose Exposed, and choosing Sheltered or better lifts every loose item to at least that class.
 
 Use this when automatic detection doesn't match your setup - for example, if a mod building provides refrigerated storage but Fresh detects it as Indoor.
 

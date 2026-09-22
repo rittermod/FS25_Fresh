@@ -1545,40 +1545,46 @@ end
 -- fSetStorage / fClearStorage Commands
 -- ============================================================================
 
---- Resolve override key from index or "items" keyword
---- Returns overrideKey string, display label, or nil + error message
+--- Resolve an fList index or the "items" keyword to an override key and label, or nil plus an error message
 ---@param indexOrKey string Index number or "items"
----@return string|nil overrideKey
+---@return string|nil overrideKey uniqueId or "itemsInWorld", nil on failure
 ---@return string labelOrError Display label (success) or error message (failure)
 function RmFreshConsole:resolveOverrideKey(indexOrKey)
     if string.lower(indexOrKey) == "items" then
+        Log:trace("<<< resolveOverrideKey(%s) = itemsInWorld (keyword)", indexOrKey)
         return "itemsInWorld", "Items in World"
     end
 
     local index = tonumber(indexOrKey)
     if not index then
+        Log:trace("<<< resolveOverrideKey(%s) = nil (not a number)", indexOrKey)
         return nil, "Usage: fSetStorage <#|items> <class>"
     end
 
     if next(self.targets) == nil then
+        Log:trace("<<< resolveOverrideKey(%s) = nil (no fList targets)", indexOrKey)
         return nil, "No containers indexed. Run fList first."
     end
     if index < 1 or index > #self.targets then
+        Log:trace("<<< resolveOverrideKey(%s) = nil (out of range 1-%d)", indexOrKey, #self.targets)
         return nil, string.format("Invalid index. Valid range: 1-%d", #self.targets)
     end
 
     local containerId = self.targets[index]
     if not containerId then
+        Log:trace("<<< resolveOverrideKey(%s) = nil (no target at index)", indexOrKey)
         return nil, "Invalid index. Run fList first."
     end
 
     local container = RmFreshManager.containers[containerId]
     if not container then
+        Log:trace("<<< resolveOverrideKey(%s) = nil (container %s gone)", indexOrKey, containerId)
         return nil, "Container not found"
     end
 
     -- Bales and pallets use combined "itemsInWorld" override (not per-item uniqueId)
-    if container.entityType == "bale" or (container.metadata and container.metadata.isPallet) then
+    if RmFreshManager:isLooseItemContainer(container) then
+        Log:trace("<<< resolveOverrideKey(%s) = itemsInWorld (loose item %s)", indexOrKey, containerId)
         return "itemsInWorld", "Items in World"
     end
 
@@ -1586,10 +1592,12 @@ function RmFreshConsole:resolveOverrideKey(indexOrKey)
     local wo = container.identityMatch and container.identityMatch.worldObject
     local uniqueId = wo and wo.uniqueId
     if not uniqueId then
+        Log:trace("<<< resolveOverrideKey(%s) = nil (container %s has no uniqueId)", indexOrKey, containerId)
         return nil, "Container has no uniqueId (cannot override)"
     end
 
     local label = container.metadata and container.metadata.location or uniqueId
+    Log:debug("OVERRIDE_KEY: index=%s container=%s -> %s", indexOrKey, containerId, uniqueId)
     return uniqueId, label
 end
 

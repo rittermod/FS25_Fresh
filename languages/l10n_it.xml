@@ -106,6 +106,7 @@
         <text name="fresh_storage_override_tooltip" text="Sovrascrivi la classe di deposito per questa posizione. Automatico usa la classe rilevata. Le classi superiori rallentano l'invecchiamento, Disabilitato ferma l'invecchiamento."/>
         <text name="fresh_storage_items_in_world" text="Oggetti sfusi"/>
         <text name="fresh_storage_items_in_world_tooltip" text="Comprende balle, pallet e bigbag non posizionati in un deposito dedicato."/>
+        <text name="fresh_storage_items_in_world_minimum" text="Bales and pallets under a roof are detected as Sheltered. The class chosen here is the minimum for all loose items."/>
         <text name="fresh_storage_detected" text="Rilevato"/>
 
         <!-- Tooltip format strings -->

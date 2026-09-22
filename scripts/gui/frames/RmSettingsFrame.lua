@@ -711,12 +711,25 @@ function RmSettingsFrame:buildStorageClassOptionTexts()
     return texts
 end
 
+--- Tooltip for the Loose Items row: what the row covers, then that the chosen class is a minimum
+---@return string text Localized tooltip text
+function RmSettingsFrame.buildLooseItemsTooltip()
+    local text = g_i18n:getText("fresh_storage_items_in_world_tooltip") .. " "
+        .. g_i18n:getText("fresh_storage_items_in_world_minimum")
+    Log:trace("<<< buildLooseItemsTooltip = %d chars", #text)
+    return text
+end
+
 --- Populate Storage tab by cloning one row per storage entity
 function RmSettingsFrame:populateStorageTab()
     local layout = self.sc4Layout
     local template = self.sc4RowTemplate
 
-    if not template or not layout then return end
+    if not template or not layout then
+        Log:trace("SETT CLONE STORAGE: skipped (template=%s layout=%s)",
+            tostring(template ~= nil), tostring(layout ~= nil))
+        return
+    end
 
     -- Save focus context as safety guard
     local savedFocusData = FocusManager.currentFocusData
@@ -761,10 +774,11 @@ function RmSettingsFrame:populateStorageTab()
             -- Set tooltip (dedicated tooltip for Items in World)
             local tooltipElement = multiOption:getDescendantByName("storageTooltip")
             if tooltipElement then
-                local tooltipKey = entry.key == "itemsInWorld"
-                    and "fresh_storage_items_in_world_tooltip"
-                    or "fresh_storage_override_tooltip"
-                tooltipElement:setText(g_i18n:getText(tooltipKey))
+                if entry.key == "itemsInWorld" then
+                    tooltipElement:setText(RmSettingsFrame.buildLooseItemsTooltip())
+                else
+                    tooltipElement:setText(g_i18n:getText("fresh_storage_override_tooltip"))
+                end
             end
 
             -- Disable for non-admin
