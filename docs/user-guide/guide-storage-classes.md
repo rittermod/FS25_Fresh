@@ -56,22 +56,27 @@ Fresh automatically detects the storage class based on the container type and, f
 
 ### Bales and pallets under a roof
 
-Fresh checks where each loose bale, pallet, and big bag stands. When you put one down under a shed, carport, or barn roof, it becomes **Sheltered** a second or two after it stops moving. Carry it back out and it returns to **Exposed**. Fresh also re-checks every loose item once an in-game hour, so building or selling a shed over a resting bale takes effect within the hour.
-
-A few places do not count as a roof:
-
-- A road or river bank, even though some maps mark them as covered ground.
-- Buildings whose roof is not modeled as a building, such as the small cow barn.
-- Buildings that do not mark a covered floor area, such as some of the garden sheds sold in the shop, and mod buildings whose author did not mark one.
-- A closed trailer's own roof: a pallet inside one counts as Exposed unless the trailer stands under a building roof.
+Fresh checks where each loose bale, pallet, and big bag stands. When you put one down under a shed, carport, or barn roof, it becomes **Sheltered** a second or two after it stops moving. Carry it back out and it returns to **Exposed**. Fresh also re-checks every loose item once an in-game hour, so building or selling a shed over a resting bale takes effect within the hour. Not every building counts as a roof; see [What counts as a roof](#what-counts-as-a-roof).
 
 ### Vehicles: covers and roofs
 
 Fresh classes each compartment of a vehicle on its own. A compartment with a load heap is **Sheltered** while its tarp or cover is closed and **Exposed** while it is open, and the class changes as soon as you open or close the cover. On trailers built to open their tarp while tipping, tipping opens it and it stays open until you close it. A compartment that its cover does not reach counts as Exposed.
 
-A vehicle parked under a roof becomes **Sheltered** once it is parked and nobody sits in it or its tractor; a roof never lowers a class, so a tanker stays Sheltered outdoors. Combines and trailers without a cover stay **Exposed** outside, because a grain tank lid is not a cover. Fresh also re-checks every vehicle once an in-game hour, so a vehicle under a roof turns Sheltered at the next hour even while someone sits in it.
+A vehicle parked under a roof becomes **Sheltered** once it is parked and nobody sits in it or its tractor; a roof never lowers a class, so a tanker stays Sheltered outdoors. Combines and trailers without a cover stay **Exposed** outside, because a grain tank lid is not a cover. Fresh also re-checks every vehicle once an in-game hour, so a vehicle under a roof turns Sheltered at the next hour even while someone sits in it. The roof check is the same one bales use, so the buildings listed in [What counts as a roof](#what-counts-as-a-roof) do not shelter a vehicle either.
 
 After loading a savegame, bales and pallets show Exposed, and vehicles the class of their own covers, for a second or two until the first roof check runs.
+
+### What counts as a roof
+
+Fresh sees a roof only where two things meet at the spot an item or a parked vehicle stands: the building marks the floor there as a covered area, and the roof overhead is modeled as a building. Most sheds, carports, and barns have both. Some buildings and shelters lack one or the other, and Fresh cannot detect those as a roof:
+
+- A road or river bank, even though some maps mark them as covered ground.
+- Buildings whose roof is not modeled as a building, such as the small cow barn.
+- Buildings that do not mark a covered floor area, such as some of the garden sheds sold in the shop, and mod buildings whose author did not mark one.
+- Buildings that are part of the map itself, when the map author did not mark their floor as covered.
+- A closed trailer's own roof: a pallet inside one counts as Exposed unless the trailer stands under a building roof.
+
+If a shelter you use does not count, set the class yourself with a [storage class override](#storage-class-overrides).
 
 ---
 

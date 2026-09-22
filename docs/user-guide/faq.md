@@ -171,6 +171,8 @@ Fresh assigns storage classes automatically based on container type and, for loo
 | Object storage (warehouses) | Indoor |
 | Husbandry milk storage | Cooled |
 
+Not every building counts as a roof: some sheds and shelters lack the covered floor area or the building roof Fresh looks for. See [What counts as a roof](guide-storage-classes.md#what-counts-as-a-roof) for the list.
+
 If the automatic detection doesn't match your setup, use storage class overrides. See the [Storage Classes Guide](guide-storage-classes.md#storage-class-overrides) for how to override.
 
 ---
