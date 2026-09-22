@@ -1,9 +1,11 @@
 -- RmShelterDetector.lua
--- Purpose: Detect whether a loose bale or pallet stands under a roof and keep its storage class current
+-- Purpose: Detect whether a bale, pallet or vehicle stands under a roof and keep its storage class current
 -- Author: Ritter
 -- Architecture: Server only. Owns the indoor-mask read and the roof ray, so neither the manager nor an
---   adapter touches them. A poll re-checks an item once it has moved and come to rest; the hourly pass
---   re-checks every loose item. Class writes go through RmFreshManager:setDetectedStorageClass.
+--   adapter touches them. A poll re-checks an entity once it has moved and come to rest; the hourly pass
+--   re-checks every entity. A container's class is the better of its adapter's enclosure class
+--   (getEnclosureClasses, EXPOSED without one) and the entity's roof result. Class writes go through
+--   RmFreshManager:setDetectedStorageClass.
 
 RmShelterDetector = {}
 
@@ -26,7 +28,7 @@ RmShelterDetector.RAY_LENGTH = 30
 -- STATE
 -- =============================================================================
 
---- runtimeEntity -> { lastMoveTime, storageClass, faulted }; every pass replaces the whole table
+--- runtimeEntity -> { lastMoveTime, roofClass, faulted }; every pass replaces the whole table
 RmShelterDetector.records = {}
 
 --- The installed updateable, nil when none is installed (a client installs none)
@@ -59,31 +61,61 @@ local function runProtected(label, fn)
     return ok
 end
 
---- Write one class to every container of an entity through the manager
----@param containerIds table Array of container ids belonging to the entity
----@param storageClass number Storage class to write
+--- True for a container the detector classes: a bale or vehicle (pallets included) with a live entity
+---@param containerId string Container ID
+---@param container table Container structure
+---@return boolean polled True when the detector may write this container's class
+local function isPolled(containerId, container)
+    local candidate = container.runtimeEntity ~= nil
+        and (container.entityType == "bale" or container.entityType == "vehicle")
+    if candidate and not RmFreshManager:shouldProcessContainer(containerId) then
+        Log:trace("SHELTER_POLL: %s skipped (test isolation)", tostring(containerId))
+        return false
+    end
+    return candidate
+end
+
+--- Enclosure classes of an entity's containers from its adapter; an adapter without the reader yields none
+---@param adapter table Adapter for the entity's type
+---@param entity table Runtime entity
+---@return table classes containerId -> storage class (a missing entry counts as EXPOSED)
+local function getEnclosure(adapter, entity)
+    if adapter.getEnclosureClasses == nil then
+        Log:trace("SHELTER_ENCLOSURE: uniqueId=%s adapter has no enclosure reader", tostring(entity.uniqueId))
+        return {}
+    end
+    return adapter:getEnclosureClasses(entity)
+end
+
+--- Write max(enclosure, roof) to each container whose class differs; the roof never lowers a class
+---@param containerIds table Array of container ids belonging to one entity
+---@param enclosure table containerId -> enclosure class
+---@param roofClass number|nil The entity's roof result, nil when it has none (counts as EXPOSED)
 ---@return number changed Number of containers whose class changed
-local function writeClass(containerIds, storageClass)
+local function writeClasses(containerIds, enclosure, roofClass)
+    local SC = RmFreshManager.STORAGE_CLASS
+    local roof = roofClass or SC.EXPOSED
     local changed = 0
     for _, containerId in ipairs(containerIds) do
-        if RmFreshManager:setDetectedStorageClass(containerId, storageClass) then
+        local target = math.max(enclosure[containerId] or SC.EXPOSED, roof)
+        local container = RmFreshManager:getContainer(containerId)
+        local current = container and container.metadata and container.metadata.storageClass
+        if current ~= target and RmFreshManager:setDetectedStorageClass(containerId, target) then
             changed = changed + 1
         end
     end
-    Log:trace("<<< writeClass(%d containers, class=%s) changed=%d", #containerIds, tostring(storageClass), changed)
+    Log:trace("<<< writeClasses(%d containers, roof=%s) changed=%d", #containerIds, tostring(roofClass), changed)
     return changed
 end
 
---- Collect the loose-item containers the poll may touch, grouped by their runtime entity
+--- Collect the containers the poll may touch, grouped by their runtime entity
 ---@return table order Entities in first-seen order
 ---@return table groups entity -> { entityType, containerIds }
-local function collectLooseEntities()
+local function collectEntities()
     local order = {}
     local groups = {}
     for containerId, container in pairs(RmFreshManager:getAllContainers()) do
-        if container.runtimeEntity ~= nil
-            and RmFreshManager:isLooseItemContainer(container)
-            and RmFreshManager:shouldProcessContainer(containerId) then
+        if isPolled(containerId, container) then
             local entity = container.runtimeEntity
             local group = groups[entity]
             if group == nil then
@@ -94,12 +126,12 @@ local function collectLooseEntities()
             table.insert(group.containerIds, containerId)
         end
     end
-    Log:trace("<<< collectLooseEntities = %d entities", #order)
+    Log:trace("<<< collectEntities = %d entities", #order)
     return order, groups
 end
 
---- Probe one entity when it is due, or bring its containers in line with its recorded class
----@param entity table Runtime entity (bale or pallet)
+--- Probe one entity when it is due, or bring its containers in line with its recorded roof result
+---@param entity table Runtime entity (bale, pallet or vehicle)
 ---@param group table { entityType, containerIds }
 ---@param oldRecord table|nil Record from the previous pass
 ---@param now number Current g_currentMission.time in ms
@@ -126,23 +158,24 @@ local function processEntity(entity, group, oldRecord, now, force, counts)
 
     local checkedMoveTime = oldRecord and oldRecord.lastMoveTime
     if not force and not RmShelterDetector.isSettled(lastMoveTime, checkedMoveTime, now) then
-        -- A container added to a resting, checked item (rescan, dynamic registration) takes its recorded class
-        if oldRecord ~= nil and oldRecord.storageClass ~= nil then
-            counts.changed = counts.changed + writeClass(group.containerIds, oldRecord.storageClass)
+        -- Catch-up without a ray: a container added at rest, or an enclosure change, meets the recorded roof
+        if oldRecord ~= nil then
+            counts.changed = counts.changed
+                + writeClasses(group.containerIds, getEnclosure(adapter, entity), oldRecord.roofClass)
         end
         Log:trace("SHELTER_POLL: uniqueId=%s not due (lastMoveTime=%s checked=%s now=%s)",
             uniqueId, tostring(lastMoveTime), tostring(checkedMoveTime), tostring(now))
         return oldRecord
     end
 
-    local storageClass, isIndoor, hasRoof = RmShelterDetector.probe(x, y, z)
+    local roofClass, isIndoor, hasRoof = RmShelterDetector.probe(x, y, z)
     counts.probed = counts.probed + 1
     Log:trace("SHELTER_PROBE: uniqueId=%s x=%.2f z=%.2f indoor=%s roof=%s hitDistance=%s class=%s",
         uniqueId, x, z, tostring(isIndoor), tostring(hasRoof),
-        tostring(RmShelterDetector.lastHitDistance), tostring(RmFreshManager.STORAGE_CLASS_NAMES[storageClass]))
+        tostring(RmShelterDetector.lastHitDistance), tostring(RmFreshManager.STORAGE_CLASS_NAMES[roofClass]))
 
-    counts.changed = counts.changed + writeClass(group.containerIds, storageClass)
-    return { lastMoveTime = lastMoveTime, storageClass = storageClass, faulted = false }
+    counts.changed = counts.changed + writeClasses(group.containerIds, getEnclosure(adapter, entity), roofClass)
+    return { lastMoveTime = lastMoveTime, roofClass = roofClass, faulted = false }
 end
 
 -- =============================================================================
@@ -230,12 +263,12 @@ function RmShelterDetector.probe(x, y, z)
     return RmShelterDetector.classify(isIndoor, hasRoof), isIndoor, hasRoof
 end
 
---- One pass over every loose item: probe the due ones, catch up resting siblings, prune gone entities
+--- One pass over every bale, pallet and vehicle: probe the due ones, catch up resting ones, prune gone entities
 ---@param now number Current g_currentMission.time (ms)
----@param force boolean true probes every item regardless of motion (hourly pass)
+---@param force boolean true probes every entity regardless of motion (hourly pass)
 ---@return table counts { entities, probed, changed, skipped, faulted }
 function RmShelterDetector.pollOnce(now, force)
-    local order, groups = collectLooseEntities()
+    local order, groups = collectEntities()
     local counts = { entities = #order, probed = 0, changed = 0, skipped = 0, faulted = 0 }
     local oldRecords = RmShelterDetector.records
     local newRecords = {}
@@ -252,7 +285,7 @@ function RmShelterDetector.pollOnce(now, force)
             counts.faulted = counts.faulted + 1
             newRecords[entity] = {
                 lastMoveTime = oldRecord and oldRecord.lastMoveTime,
-                storageClass = oldRecord and oldRecord.storageClass,
+                roofClass = oldRecord and oldRecord.roofClass,
                 faulted = true,
             }
         end
@@ -268,7 +301,7 @@ function RmShelterDetector.pollOnce(now, force)
     return counts
 end
 
---- Hourly pass: re-probe every loose item, moved or not (a shed built or sold over a resting item)
+--- Hourly pass: re-probe every entity, moved or not (a shed built or sold over a resting one)
 ---@param now number Current g_currentMission.time (ms)
 ---@return table counts { entities, probed, changed, skipped, faulted }
 function RmShelterDetector.recheckAll(now)
@@ -276,6 +309,33 @@ function RmShelterDetector.recheckAll(now)
     Log:debug("SHELTER_RECHECK: entities=%d probed=%d changed=%d skipped=%d faulted=%d",
         counts.entities, counts.probed, counts.changed, counts.skipped, counts.faulted)
     return counts
+end
+
+--- Re-class one entity's containers from its live enclosure and its recorded roof result, casting no ray
+---@param entity table Runtime entity (the cover hook passes a vehicle)
+---@return number changed Number of containers whose class changed
+function RmShelterDetector.refreshEntity(entity)
+    local containerIds = {}
+    local entityType = nil
+    for containerId, container in pairs(RmFreshManager:getAllContainers()) do
+        if container.runtimeEntity == entity and isPolled(containerId, container) then
+            table.insert(containerIds, containerId)
+            entityType = container.entityType
+        end
+    end
+    if #containerIds == 0 then
+        -- A savegame's cover restore or a shop preview can run before any container exists
+        Log:trace("SHELTER_REFRESH: uniqueId=%s has no containers to class", tostring(entity.uniqueId))
+        return 0
+    end
+
+    local record = RmShelterDetector.records[entity]
+    local roofClass = record and record.roofClass
+    local enclosure = getEnclosure(RmFreshManager:getAdapterForType(entityType), entity)
+    local changed = writeClasses(containerIds, enclosure, roofClass)
+    Log:debug("SHELTER_REFRESH: uniqueId=%s containers=%d roof=%s changed=%d", tostring(entity.uniqueId),
+        #containerIds, tostring(roofClass), changed)
+    return changed
 end
 
 -- =============================================================================

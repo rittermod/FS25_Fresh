@@ -792,7 +792,7 @@ function RmFreshManager:getAllContainers()
     return self.containers
 end
 
---- Settings UI storage list: one row per building/vehicle, loose items in one "Items in World" row at the end
+--- Settings UI storage list: one row per building/vehicle (a vehicle shows its lowest class), loose items last
 ---@param farmId number|nil Filter by farm ownership (nil = all farms)
 ---@return table rows Array of { uniqueId, entityName, entityType, detectedClass, containerCount, key }
 function RmFreshManager:getStorageListForSettings(farmId)
@@ -829,10 +829,21 @@ function RmFreshManager:getStorageListForSettings(farmId)
                             runtimeEntity = container.runtimeEntity,
                         }
                     else
-                        buildingMap[uniqueId].containerCount = buildingMap[uniqueId].containerCount + 1
+                        local entry = buildingMap[uniqueId]
+                        entry.containerCount = entry.containerCount + 1
                         -- Backfill runtimeEntity if first container had nil
-                        if not buildingMap[uniqueId].runtimeEntity and container.runtimeEntity then
-                            buildingMap[uniqueId].runtimeEntity = container.runtimeEntity
+                        if not entry.runtimeEntity and container.runtimeEntity then
+                            entry.runtimeEntity = container.runtimeEntity
+                        end
+                        -- A vehicle's compartments can differ in class, so its row shows the lowest; a
+                        -- placeable keeps first-found (a husbandry mixes storage and food classes)
+                        if entry.entityType == "vehicle" then
+                            local detected = self:resolveStorageClassInfo(container).detected
+                            if detected < entry.detectedClass then
+                                entry.detectedClass = detected
+                                Log:trace("STORAGE_LIST: vehicle uniqueId=%s lowest detected now %s",
+                                    tostring(uniqueId), tostring(detected))
+                            end
                         end
                     end
                 end
@@ -878,7 +889,7 @@ function RmFreshManager:getStorageListForSettings(farmId)
     return result
 end
 
---- Inventory storage list with totals and class, one row per building/vehicle plus "Items in World"; unsorted
+--- Unsorted inventory rows with totals and class: one per building/vehicle (vehicle: lowest class), Items in World
 ---@param farmId number|nil Filter by farm ownership (nil returns empty)
 ---@return table rows Array of { uniqueId, entityName, entityType, totalAmount, fillTypeCount, storageClass,
 ---  className }
@@ -927,11 +938,14 @@ function RmFreshManager:getStorageList(farmId)
                 local wo = container.identityMatch and container.identityMatch.worldObject
                 local uniqueId = wo and wo.uniqueId
                 if uniqueId then
+                    -- A vehicle's row takes the lowest class among its compartments with stock; a building
+                    -- keeps its first container's class
+                    local isVehicle = container.entityType == "vehicle"
                     if not buildingMap[uniqueId] then
                         -- Resolve building operational class (override or detected - deterministic)
                         local storageClass = nil
                         local className = nil
-                        if RmFreshSettings.storageAgingEnabled then
+                        if RmFreshSettings.storageAgingEnabled and (not isVehicle or containerAmount > 0) then
                             local classInfo = self:resolveStorageClassInfo(container)
                             storageClass = classInfo.override or classInfo.detected
                             local classKey = self.STORAGE_CLASS_NAMES[storageClass]
@@ -954,6 +968,17 @@ function RmFreshManager:getStorageList(farmId)
                         group.totalAmount = group.totalAmount + containerAmount
                         if fillTypeName and containerAmount > 0 then
                             group.fillTypes[fillTypeName] = true
+                        end
+                        if isVehicle and containerAmount > 0 and RmFreshSettings.storageAgingEnabled then
+                            local classInfo = self:resolveStorageClassInfo(container)
+                            local base = classInfo.override or classInfo.detected
+                            if group.storageClass == nil or base < group.storageClass then
+                                group.storageClass = base
+                                local classKey = self.STORAGE_CLASS_NAMES[base]
+                                group.className = classKey and g_i18n:getText("fresh_class_" .. classKey) or nil
+                                Log:trace("STORAGE_LIST_DETAIL: vehicle uniqueId=%s lowest class now %s",
+                                    tostring(uniqueId), tostring(base))
+                            end
                         end
                     end
                 end
@@ -1168,7 +1193,7 @@ function RmFreshManager:rescanForNewPerishables()
     Log:trace("<<< rescanForNewPerishables = %d", totalRegistered)
 end
 
---- Hourly server pass: reconcile, re-check loose items for a roof, then age and expire (clients get synced state)
+--- Hourly server pass: reconcile, roof re-check of bales, pallets, and vehicles, then age and expire (clients synced)
 ---@return nil
 function RmFreshManager:onHourChanged()
     if g_server == nil then -- Server only - NEVER SKIP THIS
@@ -3148,7 +3173,7 @@ function RmFreshManager:getFillTypeDetail(fillTypeName, farmId)
     }
 end
 
---- Per-fillType breakdown of one storage or of all loose items; batch tables are shared, callers must not mutate
+--- Per-fillType breakdown of a storage or all loose items (vehicle: lowest class); shared batch refs, do not mutate
 ---@param uniqueId string Storage uniqueId or "itemsInWorld"
 ---@param farmId number|nil Filter by farm (nil returns empty)
 ---@return table detail { uniqueId, entityName, entityType, storageClass, className, totalAmount, fillTypes }
@@ -3233,10 +3258,21 @@ function RmFreshManager:getStorageDetail(uniqueId, farmId)
                     local group = fillTypeMap[fillTypeName]
 
                     -- Resolve class info per fillType (effective varies due to maxBenefitClass).
-                    -- Loose items of one product can differ, so that row keeps its worst container's info.
+                    -- Loose items of one product can differ, and so can a vehicle's compartments, so those
+                    -- rows keep their worst container's info; a building keeps its first.
+                    local isVehicle = not isItemsInWorld and container.entityType == "vehicle"
                     local info = self:resolveStorageClassInfo(container)
-                    if group.classInfo == nil or (isItemsInWorld and info.effective < group.classInfo.effective) then
+                    if group.classInfo == nil
+                        or ((isItemsInWorld or isVehicle) and info.effective < group.classInfo.effective) then
                         group.classInfo = info
+                    end
+                    if isVehicle and storageAgingEnabled then
+                        local base = info.override or info.detected
+                        if headerStorageClass == nil or base < headerStorageClass then
+                            headerStorageClass = base
+                            Log:trace("STORAGE_DETAIL: vehicle uniqueId=%s lowest header class now %s",
+                                tostring(uniqueId), tostring(base))
+                        end
                     end
                     if isItemsInWorld and storageAgingEnabled
                         and (looseLowestBase == nil or info.base < looseLowestBase) then

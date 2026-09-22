@@ -1,7 +1,6 @@
 -- RmVehicleAdapter.lua
 -- Purpose: Thin vehicle adapter - bridges FS25 vehicle events to centralized FreshManager
 -- Author: Ritter
--- CRITICAL: Must stay under 150 lines to validate thin adapter architecture
 
 RmVehicleAdapter = {}
 RmVehicleAdapter.SPEC_TABLE_NAME = ("spec_%s.rmVehicleAdapter"):format(g_currentModName)
@@ -60,34 +59,83 @@ end
 -- STORAGE CLASS DETECTION
 -- =============================================================================
 
---- Registration class by vehicle shape: pallet/bigBag or open-top (FillVolume) EXPOSED, enclosed SHELTERED
+--- Enclosure class of one fill unit: a pallet, or a heap no closed cover lists, is EXPOSED; else SHELTERED
 ---@param vehicle table Vehicle entity
----@return number storageClass Storage class enum value
-function RmVehicleAdapter.detectStorageClass(vehicle)
+---@param fillUnitIndex number Fill unit index (1-based)
+---@return number storageClass EXPOSED or SHELTERED
+function RmVehicleAdapter.detectStorageClass(vehicle, fillUnitIndex)
     local SC = RmFreshManager.STORAGE_CLASS
+    local uniqueId = tostring(vehicle.uniqueId)
 
-    Log:trace(">>> detectStorageClass: isPallet=%s fillVolume=%s fillUnit=%s",
-        tostring(vehicle.isPallet),
-        tostring(vehicle.spec_fillVolume ~= nil),
-        tostring(vehicle.spec_fillUnit ~= nil))
-
-    -- Pallet/bigBag (isPallet covers both): EXPOSED at registration; the shelter detector refines it at rest
+    -- Pallet/bigBag (isPallet covers both): EXPOSED; the shelter detector's roof check decides its class
     if vehicle.isPallet then
-        Log:trace("<<< detectStorageClass = EXPOSED (pallet, registration default)")
+        Log:trace("ENCLOSURE: uniqueId=%s fu=%s pallet class=EXPOSED", uniqueId, tostring(fillUnitIndex))
         return SC.EXPOSED
     end
-    -- Open-top heap (trailer with FillVolume): exposed
-    if vehicle.spec_fillVolume ~= nil then
-        Log:trace("<<< detectStorageClass = EXPOSED (fillVolume spec)")
-        return SC.EXPOSED
+
+    -- Every fillable type carries spec_fillVolume, so read the unit's heap list; types without FillVolume
+    -- (tractors and the like) have no accessor at all
+    local hasHeap = false
+    if vehicle.getFillVolumeIndicesByFillUnitIndex ~= nil then
+        hasHeap = #vehicle:getFillVolumeIndicesByFillUnitIndex(fillUnitIndex) > 0
     end
-    -- Enclosed container (spec_fillUnit only): sheltered
-    Log:trace("<<< detectStorageClass = SHELTERED (no fillVolume spec)")
-    return SC.SHELTERED
+    if not hasHeap then
+        Log:trace("ENCLOSURE: uniqueId=%s fu=%s heap=false class=SHELTERED", uniqueId, tostring(fillUnitIndex))
+        return SC.SHELTERED
+    end
+
+    -- A unit can sit under several covers and only one cover is open at a time, so scan every cover over
+    -- the unit; with none listed (no Cover spec, or bought without the optional cover) the heap is open
+    local specCover = vehicle.spec_cover
+    local covers = specCover ~= nil and specCover.fillUnitIndexToCovers ~= nil
+        and specCover.fillUnitIndexToCovers[fillUnitIndex] or nil
+    local state = specCover and specCover.state
+    local isOpen = true
+    if covers ~= nil and #covers > 0 then
+        isOpen = false
+        for _, cover in ipairs(covers) do
+            if cover.index == state then
+                isOpen = true
+                break
+            end
+        end
+    end
+
+    local storageClass = isOpen and SC.EXPOSED or SC.SHELTERED
+    Log:trace("ENCLOSURE: uniqueId=%s fu=%s heap=true state=%s covers=%d open=%s class=%s",
+        uniqueId, tostring(fillUnitIndex), tostring(state), covers and #covers or 0, tostring(isOpen),
+        tostring(RmFreshManager.STORAGE_CLASS_NAMES[storageClass]))
+    return storageClass
 end
 
---- Probe origin for the shelter detector: the pallet's root node (its base), plus when it last moved
----@param vehicle table Pallet or big bag vehicle
+--- Enclosure class for every container of a vehicle, evaluating the rule once per fill unit
+---@param vehicle table Vehicle entity
+---@return table classes containerId -> storage class; empty when the vehicle has no container map
+function RmVehicleAdapter:getEnclosureClasses(vehicle)
+    local classes = {}
+    local spec = vehicle[RmVehicleAdapter.SPEC_TABLE_NAME]
+    if spec == nil or spec.containerIds == nil then
+        Log:trace("ENCLOSURE_MAP: uniqueId=%s has no container map", tostring(vehicle.uniqueId))
+        return classes
+    end
+
+    local units, containers = 0, 0
+    for fillUnitIndex, fuMap in pairs(spec.containerIds) do
+        if type(fuMap) == "table" and next(fuMap) ~= nil then
+            local unitClass = RmVehicleAdapter.detectStorageClass(vehicle, fillUnitIndex)
+            units = units + 1
+            for _, containerId in pairs(fuMap) do
+                classes[containerId] = unitClass
+                containers = containers + 1
+            end
+        end
+    end
+    Log:trace("ENCLOSURE_MAP: uniqueId=%s units=%d containers=%d", tostring(vehicle.uniqueId), units, containers)
+    return classes
+end
+
+--- Probe origin for the shelter detector: the vehicle's root node, plus when it last moved (pallets and vehicles)
+---@param vehicle table Vehicle entity, pallet or big bag included
 ---@return number|nil x World x, nil when the vehicle has no root node
 ---@return number|nil y World y
 ---@return number|nil z World z
@@ -99,6 +147,7 @@ function RmVehicleAdapter:getShelterProbe(vehicle)
         return nil
     end
     local x, y, z = getWorldTranslation(rootNode)
+    -- lastMoveTime also advances every tick while someone sits in the vehicle or the tractor it is attached to
     return x, y, z, vehicle.lastMoveTime
 end
 
@@ -238,12 +287,17 @@ function RmVehicleAdapter.registerEventListeners(vehicleType)
     SpecializationUtil.registerEventListener(vehicleType, "onReadStream", RmVehicleAdapter)
 end
 
+--- Chain Fresh's hooks onto a vehicle type's function table (runs once per type at type finalization)
+---@param vehicleType table Vehicle type being finalized
 function RmVehicleAdapter.registerOverwrittenFunctions(vehicleType)
+    Log:trace("VEHICLE_OVERWRITES: type=%s", tostring(vehicleType.name))
     SpecializationUtil.registerOverwrittenFunction(vehicleType, "showInfo", RmVehicleAdapter.showInfo)
     -- Transfer age preservation: must use registerOverwrittenFunction (not late-bound
     -- Utils.overwrittenFunction) because late hooks don't reach already-loaded vehicles.
     -- Safe no-op for vehicle types without Dischargeable (skips if function absent).
     SpecializationUtil.registerOverwrittenFunction(vehicleType, "dischargeToObject", RmTransferCoordinator.dischargeToObject)
+    -- A cover opening or closing re-classes the vehicle's containers; a no-op on types without Cover
+    SpecializationUtil.registerOverwrittenFunction(vehicleType, "setCoverState", RmVehicleAdapter.setCoverState)
 end
 
 -- =============================================================================
@@ -351,22 +405,30 @@ function RmVehicleAdapter.deferRegistration(vehicle)
     Log:trace("<<< deferRegistration (scheduled, timeout=%dms)", DEFER_TIMEOUT_MS)
 end
 
---- Perform actual container registration
---- Pre-registers one container per perishable supported fillType per fillUnit
---- Aligns with PlaceableAdapter pattern: iterate supportedFillTypes, register even when empty
+--- Pre-register one container per perishable supported fill type per fill unit, each with its unit's class
+---@param vehicle table Vehicle entity
+---@param entityId string Vehicle uniqueId
 function RmVehicleAdapter.doRegistration(vehicle, entityId)
     local spec = vehicle[RmVehicleAdapter.SPEC_TABLE_NAME]
-    if spec == nil then return end
+    if spec == nil then
+        Log:trace("VEHICLE_REGISTER: uniqueId=%s has no spec table", tostring(entityId))
+        return
+    end
 
-    -- Check if already registered (any containers present)
-    if next(spec.containerIds) ~= nil then return end
+    -- A savegame load registers through the fill restore before this runs, so containers may already exist
+    if next(spec.containerIds) ~= nil then
+        Log:trace("VEHICLE_REGISTER: uniqueId=%s already has containers", tostring(entityId))
+        return
+    end
 
     local fillUnits = vehicle.spec_fillUnit and vehicle.spec_fillUnit.fillUnits
-    if fillUnits == nil then return end
-
-    local storageClass = RmVehicleAdapter.detectStorageClass(vehicle)
+    if fillUnits == nil then
+        Log:trace("VEHICLE_REGISTER: uniqueId=%s has no fill units", tostring(entityId))
+        return
+    end
 
     for fillUnitIndex, fillUnit in ipairs(fillUnits) do
+        local storageClass = RmVehicleAdapter.detectStorageClass(vehicle, fillUnitIndex)
         -- Iterate all supported fill types (not just current fillType)
         local supportedFillTypes = vehicle:getFillUnitSupportedFillTypes(fillUnitIndex) or {}
 
@@ -406,21 +468,23 @@ function RmVehicleAdapter.doRegistration(vehicle, entityId)
                     Log:debug("VEHICLE_REGISTERED_EMPTY: fillType=%s containerId=%s name=%s (pre-registered)",
                         fillTypeName, containerId or "nil", safeGetName(vehicle))
                 end
-                Log:debug("STORAGE_DETECT: container=%s type=vehicle class=%s(%d)",
-                    containerId or "nil", RmFreshManager.STORAGE_CLASS_NAMES[storageClass], storageClass)
+                Log:debug("STORAGE_DETECT: container=%s type=vehicle uniqueId=%s fu=%d class=%s(%d)",
+                    tostring(containerId), tostring(entityId), fillUnitIndex,
+                    tostring(RmFreshManager.STORAGE_CLASS_NAMES[storageClass]), storageClass)
             end
         end
     end
 end
 
---- Rescan all vehicles for newly-perishable fillUnits
---- Called when settings change makes a fillType perishable
---- Iterates supportedFillTypes per fill unit (not just current fillType)
+--- Register newly perishable supported fill types on every vehicle's fill units (after a settings change)
 ---@return number count Number of new containers registered
 function RmVehicleAdapter.rescanForPerishables()
-    if not g_currentMission or not g_currentMission.vehicleSystem then return 0 end
-
     Log:trace(">>> RmVehicleAdapter.rescanForPerishables()")
+    if not g_currentMission or not g_currentMission.vehicleSystem then
+        Log:trace("<<< RmVehicleAdapter.rescanForPerishables = 0 (no vehicle system)")
+        return 0
+    end
+
     local count = 0
     for _, vehicle in ipairs(g_currentMission.vehicleSystem.vehicles) do
         local spec = vehicle[RmVehicleAdapter.SPEC_TABLE_NAME]
@@ -452,12 +516,16 @@ function RmVehicleAdapter.rescanForPerishables()
                             local fillTypeName = g_fillTypeManager:getFillTypeNameByIndex(fillTypeIndex)
                             if fuMap[fillTypeName] == nil then
                                 local identityMatch = RmVehicleAdapter:buildIdentityMatch(vehicle, fillUnitIndex, fillTypeName)
-                                local rescanStorageClass = RmVehicleAdapter.detectStorageClass(vehicle)
+                                local rescanStorageClass = RmVehicleAdapter.detectStorageClass(vehicle, fillUnitIndex)
                                 local containerId, wasReconciled = RmFreshManager:registerContainer(
                                     "vehicle", identityMatch, vehicle,
                                     { location = safeGetName(vehicle), storageClass = rescanStorageClass, isPallet = vehicle.isPallet or false }
                                 )
                                 fuMap[fillTypeName] = containerId
+                                Log:debug("STORAGE_DETECT: container=%s type=vehicle uniqueId=%s fu=%d class=%s(%d)",
+                                    tostring(containerId), tostring(vehicle.uniqueId), fillUnitIndex,
+                                    tostring(RmFreshManager.STORAGE_CLASS_NAMES[rescanStorageClass]),
+                                    rescanStorageClass)
 
                                 -- Add initial batch only if fill unit currently holds this type
                                 if not wasReconciled and containerId then
@@ -508,10 +576,24 @@ end
 -- FILL CHANGE HOOK
 -- =============================================================================
 
+--- Report a fill change to the manager, registering a container on the first perishable fill (server only)
+---@param fillUnitIndex number Fill unit index (1-based)
+---@param fillLevelDelta number Fill change; -math.huge drains the old type on a fill type switch
+---@param fillTypeIndex number Fill type index of the change
+---@param ... any Further arguments the engine passes (unused)
 function RmVehicleAdapter:onFillUnitFillLevelChanged(fillUnitIndex, fillLevelDelta, fillTypeIndex, ...)
-    if not self.isServer then return end  -- Server only
-    if fillUnitIndex <= 0 then return end  -- Invalid index guard
-    if fillLevelDelta == 0 then return end
+    if not self.isServer then
+        Log:trace("FILL_CHANGE: uniqueId=%s client, skipped", tostring(self.uniqueId))
+        return
+    end
+    if fillUnitIndex <= 0 then
+        Log:trace("FILL_CHANGE: uniqueId=%s invalid fu=%s", tostring(self.uniqueId), tostring(fillUnitIndex))
+        return
+    end
+    if fillLevelDelta == 0 then
+        Log:trace("FILL_CHANGE: uniqueId=%s fu=%d zero delta", tostring(self.uniqueId), fillUnitIndex)
+        return
+    end
 
     -- Guard against infinity
     -- Negative infinity: FS25 fill type switch drain event (-math.huge drains old type)
@@ -534,7 +616,10 @@ function RmVehicleAdapter:onFillUnitFillLevelChanged(fillUnitIndex, fillLevelDel
     end
 
     local spec = self[RmVehicleAdapter.SPEC_TABLE_NAME]
-    if spec == nil then return end
+    if spec == nil then
+        Log:trace("FILL_CHANGE: uniqueId=%s has no spec table", tostring(self.uniqueId))
+        return
+    end
 
     local fillTypeName = g_fillTypeManager:getFillTypeNameByIndex(fillTypeIndex)
     local fuMap = spec.containerIds and spec.containerIds[fillUnitIndex]
@@ -550,7 +635,7 @@ function RmVehicleAdapter:onFillUnitFillLevelChanged(fillUnitIndex, fillLevelDel
     -- Dynamic registration: if no container but fill is perishable and being added
     if containerId == nil and fillLevelDelta > 0 and RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
         local identityMatch = RmVehicleAdapter:buildIdentityMatch(self, fillUnitIndex, fillTypeName)
-        local dynStorageClass = RmVehicleAdapter.detectStorageClass(self)
+        local dynStorageClass = RmVehicleAdapter.detectStorageClass(self, fillUnitIndex)
         local wasReconciled
         containerId, wasReconciled = RmFreshManager:registerContainer(
             "vehicle", identityMatch, self,
@@ -558,6 +643,10 @@ function RmVehicleAdapter:onFillUnitFillLevelChanged(fillUnitIndex, fillLevelDel
         )
         spec.containerIds[fillUnitIndex] = spec.containerIds[fillUnitIndex] or {}
         spec.containerIds[fillUnitIndex][fillTypeName] = containerId
+        -- A savegame load registers here, from the fill restore, before onLoadFinished
+        Log:debug("STORAGE_DETECT: container=%s type=vehicle uniqueId=%s fu=%d class=%s(%d)",
+            tostring(containerId), tostring(self.uniqueId), fillUnitIndex,
+            tostring(RmFreshManager.STORAGE_CLASS_NAMES[dynStorageClass]), dynStorageClass)
 
         if wasReconciled then
             -- Reconciled from save - batches already loaded, skip fill change processing
@@ -573,6 +662,38 @@ function RmVehicleAdapter:onFillUnitFillLevelChanged(fillUnitIndex, fillLevelDel
     if containerId then
         RmFreshManager:onFillChanged(containerId, fillUnitIndex, fillLevelDelta, fillTypeIndex)
     end
+end
+
+-- =============================================================================
+-- COVER HOOK
+-- =============================================================================
+
+--- Re-class the vehicle's containers after its cover state is set; clients get the class through the server
+---@param self table Vehicle entity
+---@param superFunc function The chained setCoverState
+---@param state number New cover state: 0 = every cover closed, i = cover i open
+---@param noEventSend boolean|nil True when the change must not be sent as an event
+---@return any result Whatever the chained setCoverState returned
+function RmVehicleAdapter.setCoverState(self, superFunc, state, noEventSend)
+    -- The original runs first, so the re-class reads the state it has just set
+    local result = superFunc(self, state, noEventSend)
+
+    -- The call also runs on clients (join stream, event, trigger callback); only the server classes
+    if not self.isServer then
+        Log:trace("COVER_HOOK: uniqueId=%s state=%s client, no re-class", tostring(self.uniqueId), tostring(state))
+        return result
+    end
+
+    -- A fault here must never reach the cover change or replace its return; the next poll catches up
+    local ok, changed = pcall(RmShelterDetector.refreshEntity, self)
+    if ok then
+        Log:debug("COVER_HOOK: uniqueId=%s state=%s changed=%s", tostring(self.uniqueId), tostring(state),
+            tostring(changed))
+    else
+        Log:warning("COVER_HOOK: re-class failed for uniqueId=%s state=%s: %s", tostring(self.uniqueId),
+            tostring(state), tostring(changed))
+    end
+    return result
 end
 
 -- =============================================================================
@@ -637,20 +758,43 @@ end
 -- DISPLAY HOOK
 -- =============================================================================
 
---- Show freshness status in vehicle HUD info
---- NETWORK SAFE: Uses spec.containerIds (populated on both server and client)
---- Display one line per fillType, showing shortest expiration time
+--- Container whose oldest batch expires first: (expiration - oldestAge) / multiplier, 0 multiplier = never
+---@param candidates table Array of { containerId, oldestAge, expiration, multiplier }
+---@return string|nil containerId The soonest-expiring candidate, nil when there are none
+function RmVehicleAdapter.pickSoonestExpiring(candidates)
+    local bestId, bestRemaining = nil, nil
+    for _, candidate in ipairs(candidates) do
+        -- Same arithmetic as RmBatch.formatExpiresIn: an expired batch ranks first whatever its multiplier
+        local remaining = candidate.expiration - candidate.oldestAge
+        if remaining > 0 then
+            remaining = candidate.multiplier == 0 and math.huge or remaining / candidate.multiplier
+        end
+        if bestRemaining == nil or remaining < bestRemaining then
+            bestId, bestRemaining = candidate.containerId, remaining
+        end
+    end
+    Log:trace("<<< pickSoonestExpiring(%d candidates) = %s remaining=%s", #candidates, tostring(bestId),
+        tostring(bestRemaining))
+    return bestId
+end
+
+--- One "Expires in" HUD line per fill type, from its soonest-expiring container; runs on clients too
+---@param superFunc function The chained showInfo
+---@param box table HUD info box to add lines to
 function RmVehicleAdapter:showInfo(superFunc, box)
     superFunc(self, box)
 
     local spec = self[RmVehicleAdapter.SPEC_TABLE_NAME]
-    if not spec or not spec.containerIds then return end
+    if not spec or not spec.containerIds then
+        Log:trace("VEHICLE_HUD: uniqueId=%s has no container map", tostring(self.uniqueId))
+        return
+    end
 
-    -- Group by fillTypeIndex: track oldest batch, total amount, and expiring amount
+    -- Group by fillTypeIndex: expiry candidates, total amount, and expiring amount
     local daysPerPeriod = (g_currentMission and g_currentMission.environment
         and g_currentMission.environment.daysPerPeriod) or 1
     local warningHours = RmFreshSettings:getWarningHours()
-    local byFillType = {} -- fillTypeIndex -> { containerId, oldestAge, totalAmount, expiringAmount }
+    local byFillType = {} -- fillTypeIndex -> { candidates, totalAmount, expiringAmount }
 
     for _, fuMap in pairs(spec.containerIds) do
         if type(fuMap) == "table" then
@@ -658,18 +802,8 @@ function RmVehicleAdapter:showInfo(superFunc, box)
                 local container = RmFreshManager:getContainer(containerId)
                 if container and container.batches and #container.batches > 0 then
                     local ftIndex = container.fillTypeIndex
-                    local oldestAge = container.batches[1].ageInPeriods
-
                     if not byFillType[ftIndex] then
-                        byFillType[ftIndex] = {
-                            containerId = containerId,
-                            oldestAge = oldestAge,
-                            totalAmount = 0,
-                            expiringAmount = 0,
-                        }
-                    elseif oldestAge > byFillType[ftIndex].oldestAge then
-                        byFillType[ftIndex].containerId = containerId
-                        byFillType[ftIndex].oldestAge = oldestAge
+                        byFillType[ftIndex] = { candidates = {}, totalAmount = 0, expiringAmount = 0 }
                     end
 
                     local entry = byFillType[ftIndex]
@@ -678,6 +812,14 @@ function RmVehicleAdapter:showInfo(superFunc, box)
                         -- Resolve storage class multiplier for accurate time calculations
                         local classInfo = RmFreshManager:resolveStorageClassInfo(container)
                         local multiplier = classInfo and classInfo.multiplier or 1.0
+                        -- Compartments of one product can differ in class, so the oldest batch is not
+                        -- always the one that expires first
+                        table.insert(entry.candidates, {
+                            containerId = containerId,
+                            oldestAge = container.batches[1].ageInPeriods,
+                            expiration = config.expiration,
+                            multiplier = multiplier,
+                        })
                         for _, batch in ipairs(container.batches) do
                             entry.totalAmount = entry.totalAmount + batch.amount
                             if batch.amount >= RmBatch.MIN_AMOUNT
@@ -700,7 +842,8 @@ function RmVehicleAdapter:showInfo(superFunc, box)
     local hasWarning = false
 
     for ftIndex, data in pairs(byFillType) do
-        local info = RmFreshManager:getDisplayInfo(data.containerId)
+        local soonestId = RmVehicleAdapter.pickSoonestExpiring(data.candidates)
+        local info = soonestId and RmFreshManager:getDisplayInfo(soonestId)
         if info then
             local label = g_i18n:getText("fresh_expires_in")
             -- Append localized fillType name when multiple fillTypes

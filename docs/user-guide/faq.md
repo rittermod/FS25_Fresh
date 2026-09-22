@@ -158,13 +158,13 @@ Bales track the same way as other containers but with two special behaviors:
 
 ## How do storage classes get detected?
 
-Fresh assigns storage classes automatically based on container type and, for loose bales, pallets, and big bags, on whether they stand under a roof:
+Fresh assigns storage classes automatically based on container type and, for loose bales, pallets, big bags, and parked vehicles, on whether they stand under a roof:
 
 | Container | Default Class |
 |-----------|--------------|
 | Pallets, big bags | Exposed outdoors, Sheltered under a roof |
-| Open-top trailers/tippers | Exposed |
-| Enclosed vehicles/tankers | Sheltered |
+| Vehicle compartments with a load heap (tippers, seeders) | Sheltered with the cover closed, Exposed with it open or with no cover; Sheltered when parked under a roof |
+| Vehicle tanks and closed hoppers (tankers, sprayers) | Sheltered |
 | Bales | Exposed outdoors, Sheltered under a roof |
 | Feed troughs | Sheltered |
 | Silos, production buildings | Indoor |

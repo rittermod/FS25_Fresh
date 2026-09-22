@@ -101,8 +101,8 @@ Where you store goods affects how quickly they age. Fresh has six storage classe
 
 | Class | Aging Rate | Example |
 |-------|-----------|---------|
-| **Exposed** | 1.5x faster | Pallets and bales left outdoors |
-| **Sheltered** | 1.0x (baseline) | Pallets and bales under a roof, covered storage, feed troughs |
+| **Exposed** | 1.5x faster | Pallets and bales left outdoors, trailers with an open or no cover |
+| **Sheltered** | 1.0x (baseline) | Pallets, bales, and parked vehicles under a roof, tarped trailers, tankers, feed troughs |
 | **Indoor** | 0.8x slower | Enclosed silos, production buildings |
 | **Cooled** | 0.3x slower | Refrigerated storage |
 | **Frozen** | 0.10x slower | Freezer storage (nearly stops aging) |
