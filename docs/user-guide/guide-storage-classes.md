@@ -45,7 +45,7 @@ Fresh automatically detects the storage class based on the container type and, f
 |----------------|--------------|-----------|
 | **Pallets** | Exposed outdoors, Sheltered under a roof | Rain and sun reach a pallet in the open |
 | **Big bags** | Exposed outdoors, Sheltered under a roof | Rain and sun reach a big bag in the open |
-| **Vehicle compartments with a load heap** (tippers, seeders, forage wagons) | Sheltered with the cover closed; Exposed with it open or with no cover; Sheltered when parked under a roof | Each compartment is judged by its own cover |
+| **Vehicle compartments with a load heap** (tippers, seeders, forage wagons) | Sheltered with the cover closed; Exposed with it open, or with no cover it can follow; Sheltered when parked under a roof | Judged per compartment - its own cover, or the trailer's tarp when the compartment can take a covered compartment's load |
 | **Vehicle tanks and closed hoppers** (tankers, sprayers) | Sheltered | The load has no open heap |
 | **Bales** | Exposed outdoors, Sheltered under a roof | Left in the field or yard, or stacked in a shed |
 | **Feed troughs** (husbandry food) | Sheltered | Under roof at husbandry |
@@ -60,11 +60,13 @@ Fresh checks where each loose bale, pallet, and big bag stands. When you put one
 
 ### Vehicles: covers and roofs
 
-Fresh classes each compartment of a vehicle on its own. A compartment with a load heap is **Sheltered** while its tarp or cover is closed and **Exposed** while it is open, and the class changes as soon as you open or close the cover. On trailers built to open their tarp while tipping, tipping opens it and it stays open until you close it. A compartment that its cover does not reach counts as Exposed.
+Fresh classes each compartment of a vehicle on its own. A compartment with a load heap is **Sheltered** while its tarp or cover is closed and **Exposed** while it is open, and the class changes as soon as you open or close the cover. On trailers built to open their tarp while tipping, tipping opens it and it stays open until you close it.
+
+On some trailers one tarp spans compartments that the trailer's own data does not list under it. The Convey-All CST 1550 is one: its tarp covers all six compartments, but its data lists only the first two. A compartment left out this way follows the tarp when it can take the same kind of load as a covered compartment, so it is **Sheltered** while every cover is closed and **Exposed** while any cover is open. A compartment built for a different load counts as Exposed - the open sugarcane hopper on a billet planter whose only cover is the lid over its fertilizer tank stays Exposed with that lid closed.
 
 A vehicle parked under a roof becomes **Sheltered** once it is parked and nobody sits in it or its tractor; a roof never lowers a class, so a tanker stays Sheltered outdoors. Combines and trailers without a cover stay **Exposed** outside, because a grain tank lid is not a cover. Fresh also re-checks every vehicle once an in-game hour, so a vehicle under a roof turns Sheltered at the next hour even while someone sits in it. The roof check is the same one bales use, so the buildings listed in [What counts as a roof](#what-counts-as-a-roof) do not shelter a vehicle either.
 
-After loading a savegame, bales and pallets show Exposed, and vehicles the class of their own covers, for a second or two until the first roof check runs.
+After loading a savegame, bales and pallets show Exposed, and vehicles the class their covers give, for a second or two until the first roof check runs.
 
 ### What counts as a roof
 

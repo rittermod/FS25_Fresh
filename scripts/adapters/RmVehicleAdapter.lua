@@ -59,7 +59,36 @@ end
 -- STORAGE CLASS DETECTION
 -- =============================================================================
 
---- Enclosure class of one fill unit: a pallet, or a heap no closed cover lists, is EXPOSED; else SHELTERED
+--- True when this fill unit can take a load that a cover-listed unit of the same vehicle can take
+---@param vehicle table Vehicle entity
+---@param fillUnitIndex number Fill unit index of the unit no cover lists
+---@param specCover table The vehicle's Cover spec table; the caller has already checked hasCovers
+---@return boolean shares True when at least one supported fill type is shared with a listed unit
+local function sharesCoveredFillType(vehicle, fillUnitIndex, specCover)
+    local uniqueId = tostring(vehicle.uniqueId)
+    local supported = vehicle:getFillUnitSupportedFillTypes(fillUnitIndex) or {}
+
+    for listedUnit, covers in pairs(specCover.fillUnitIndexToCovers or {}) do
+        -- An empty cover list is not a listed unit, the same test the heap branch makes
+        if listedUnit ~= fillUnitIndex and covers ~= nil and #covers > 0 then
+            local listedTypes = vehicle:getFillUnitSupportedFillTypes(listedUnit) or {}
+            for fillTypeIndex in pairs(supported) do
+                if listedTypes[fillTypeIndex] then
+                    -- Several listed units can share, and pairs order is unspecified: this names A
+                    -- matching unit, never the only one
+                    Log:trace("ENCLOSURE_SHARE: uniqueId=%s fu=%s matched listed fu=%s result=true",
+                        uniqueId, tostring(fillUnitIndex), tostring(listedUnit))
+                    return true
+                end
+            end
+        end
+    end
+
+    Log:trace("ENCLOSURE_SHARE: uniqueId=%s fu=%s result=false", uniqueId, tostring(fillUnitIndex))
+    return false
+end
+
+--- Enclosure class of one fill unit: a pallet, or a heap not under a closed cover (own or shared), is EXPOSED
 ---@param vehicle table Vehicle entity
 ---@param fillUnitIndex number Fill unit index (1-based)
 ---@return number storageClass EXPOSED or SHELTERED
@@ -85,13 +114,15 @@ function RmVehicleAdapter.detectStorageClass(vehicle, fillUnitIndex)
     end
 
     -- A unit can sit under several covers and only one cover is open at a time, so scan every cover over
-    -- the unit; with none listed (no Cover spec, or bought without the optional cover) the heap is open
+    -- the unit; with none listed the heap is open unless the shared rung below claims it
     local specCover = vehicle.spec_cover
     local covers = specCover ~= nil and specCover.fillUnitIndexToCovers ~= nil
         and specCover.fillUnitIndexToCovers[fillUnitIndex] or nil
     local state = specCover and specCover.state
     local isOpen = true
+    local rung = "unlisted"
     if covers ~= nil and #covers > 0 then
+        rung = "listed"
         isOpen = false
         for _, cover in ipairs(covers) do
             if cover.index == state then
@@ -99,11 +130,17 @@ function RmVehicleAdapter.detectStorageClass(vehicle, fillUnitIndex)
                 break
             end
         end
+    elseif specCover ~= nil and specCover.hasCovers
+        and sharesCoveredFillType(vehicle, fillUnitIndex, specCover) then
+        -- One tarp can span compartments the cover data does not list, so a compartment that can take
+        -- a covered compartment's load follows the tarp instead of counting as open
+        rung = "shared"
+        isOpen = state ~= 0
     end
 
     local storageClass = isOpen and SC.EXPOSED or SC.SHELTERED
-    Log:trace("ENCLOSURE: uniqueId=%s fu=%s heap=true state=%s covers=%d open=%s class=%s",
-        uniqueId, tostring(fillUnitIndex), tostring(state), covers and #covers or 0, tostring(isOpen),
+    Log:trace("ENCLOSURE: uniqueId=%s fu=%s heap=true state=%s covers=%d rung=%s open=%s class=%s",
+        uniqueId, tostring(fillUnitIndex), tostring(state), covers and #covers or 0, rung, tostring(isOpen),
         tostring(RmFreshManager.STORAGE_CLASS_NAMES[storageClass]))
     return storageClass
 end
