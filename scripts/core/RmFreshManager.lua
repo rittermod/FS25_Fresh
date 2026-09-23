@@ -2897,7 +2897,8 @@ end
 
 --- Get inventory summary aggregated by fillType for a specific farm
 --- @param farmId number The farm to filter by (REQUIRED - use g_currentMission:getFarmId())
---- @return table { fillTypeName = { totalAmount, oldestAge, containerCount, isWarning }, ... }
+--- @return table fillTypeName -> { totalAmount, expiringAmount, soonestRemaining, soonestAge, soonestMultiplier,
+---   containerCount, isWarning }; soonest* describe the batch with the least real time left
 function RmFreshManager:getInventorySummary(farmId)
     local summary = {}
 
@@ -2933,8 +2934,10 @@ function RmFreshManager:getInventorySummary(farmId)
                         fillTypeIndex = container.fillTypeIndex,
                         totalAmount = 0,
                         expiringAmount = 0, -- Amount within warning hours
-                        oldestAge = 0,
-                        oldestMultiplier = 1.0, -- Multiplier of container holding oldest batch
+                        -- Batch with the least real time left; math.huge / multiplier 0 read as never
+                        soonestRemaining = math.huge,
+                        soonestAge = 0,
+                        soonestMultiplier = 0,
                         containerCount = 0,
                         isWarning = false,
                     }
@@ -2943,9 +2946,14 @@ function RmFreshManager:getInventorySummary(farmId)
                 local entry = summary[fillTypeName]
                 local threshold = RmFreshSettings:getExpiration(fillTypeName)
 
-                -- Resolve storage class multiplier for this container
+                -- Resolve storage class multiplier for this container; aging uses 1.0 when storage aging is off
                 local classInfo = self:resolveStorageClassInfo(container)
                 local multiplier = classInfo and classInfo.multiplier or 1.0
+                if not RmFreshSettings.storageAgingEnabled then
+                    Log:trace("INVENTORY_MULT: container=%s fillType=%s storage aging off, multiplier %.2f -> 1.0",
+                        containerId, fillTypeName, multiplier)
+                    multiplier = 1.0
+                end
 
                 if multiplier ~= 1.0 then
                     Log:trace("INVENTORY_MULT: container=%s fillType=%s multiplier=%.2f (class=%s)",
@@ -2956,10 +2964,20 @@ function RmFreshManager:getInventorySummary(farmId)
                 -- Sum amounts from all batches, tracking expiring amounts
                 for _, batch in ipairs(container.batches) do
                     entry.totalAmount = entry.totalAmount + batch.amount
-                    -- Track oldest age across all batches (and its multiplier for display)
-                    if batch.ageInPeriods > entry.oldestAge then
-                        entry.oldestAge = batch.ageInPeriods
-                        entry.oldestMultiplier = multiplier
+                    -- Rank by real time left: expired first, multiplier 0 never, divide last (keeps 0 / 0 out)
+                    if threshold and batch.amount >= RmBatch.MIN_AMOUNT then
+                        local remaining = threshold - batch.ageInPeriods
+                        if remaining > 0 then
+                            remaining = multiplier == 0 and math.huge or remaining / multiplier
+                        end
+                        if remaining < entry.soonestRemaining then
+                            entry.soonestRemaining = remaining
+                            entry.soonestAge = batch.ageInPeriods
+                            entry.soonestMultiplier = multiplier
+                            Log:trace("INVENTORY_SOONEST: fillType=%s container=%s age=%s multiplier=%s remaining=%s",
+                                fillTypeName, containerId, tostring(batch.ageInPeriods), tostring(multiplier),
+                                tostring(remaining))
+                        end
                     end
                     -- Track expiring amount (batches within warning hours, epsilon guard)
                     -- Disabled containers (multiplier=0) never expire
@@ -2995,30 +3013,25 @@ end
 
 --- Get sorted inventory list for display
 --- @param farmId number The farm to filter by (REQUIRED)
---- @param sortBy string|nil "fillType" (default), "amount", "age"
+--- @param sortBy string|nil "fillType" (default), "expiring" (expiring amount), "age" (soonest expiry first)
 --- @return table Array of inventory entries sorted
 function RmFreshManager:getInventoryList(farmId, sortBy)
     local summary = self:getInventorySummary(farmId)
     local list = {}
-    local daysPerPeriod = (g_currentMission and g_currentMission.environment and g_currentMission.environment.daysPerPeriod) or 1
+    local daysPerPeriod = (g_currentMission and g_currentMission.environment
+        and g_currentMission.environment.daysPerPeriod) or 1
 
     for _, entry in pairs(summary) do
         -- Add display-friendly fields
         entry.fillTypeTitle = g_fillTypeManager:getFillTypeTitleByIndex(entry.fillTypeIndex) or entry.fillTypeName
-        -- Calculate time until expiry (threshold - current age), adjusted for storage class
         local threshold = RmFreshSettings:getExpiration(entry.fillTypeName)
-        local multiplier = entry.oldestMultiplier or 1.0
-        local expiresIn = threshold and (threshold - entry.oldestAge) or 0
-        if multiplier > 0 then
-            entry.expiresIn = math.max(0, expiresIn / multiplier) -- Store for sorting (in real periods)
-        else
-            entry.expiresIn = math.huge -- Disabled: never expires, sort last
-        end
-        if multiplier ~= 1.0 then
-            Log:trace("INVENTORY_DISPLAY: fillType=%s oldestMultiplier=%.2f expiresIn=%.2f",
-                entry.fillTypeName, multiplier, entry.expiresIn)
-        end
-        entry.ageDisplay = RmBatch.formatExpiresIn({ageInPeriods = entry.oldestAge}, threshold or 1.0, daysPerPeriod, multiplier)
+        -- Sort key in real periods: expired 0, never math.huge
+        entry.expiresIn = math.max(0, entry.soonestRemaining)
+        Log:trace("INVENTORY_DISPLAY: fillType=%s soonestAge=%s soonestMultiplier=%s expiresIn=%s",
+            entry.fillTypeName, tostring(entry.soonestAge), tostring(entry.soonestMultiplier),
+            tostring(entry.expiresIn))
+        entry.ageDisplay = RmBatch.formatExpiresIn({ ageInPeriods = entry.soonestAge }, threshold or 1.0,
+            daysPerPeriod, entry.soonestMultiplier)
         entry.amountDisplay = g_i18n:formatNumber(entry.totalAmount, 0) .. " L"
         -- Add expiring amount display (shows how much is at/above warning threshold)
         if entry.expiringAmount > 0 then
@@ -3040,8 +3053,13 @@ function RmFreshManager:getInventoryList(farmId, sortBy)
             return a.totalAmount > b.totalAmount
         end)
     elseif sortBy == "age" then
-        -- Sort by expiresIn ASC (soonest to expire first)
-        table.sort(list, function(a, b) return a.expiresIn < b.expiresIn end)
+        -- Sort by expiresIn ASC (soonest to expire first); title breaks ties so the order is stable
+        table.sort(list, function(a, b)
+            if a.expiresIn ~= b.expiresIn then
+                return a.expiresIn < b.expiresIn
+            end
+            return a.fillTypeTitle < b.fillTypeTitle
+        end)
     else
         table.sort(list, function(a, b) return a.fillTypeTitle < b.fillTypeTitle end)
     end
