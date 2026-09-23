@@ -158,6 +158,7 @@ end
 -- RIGHT PANEL REFRESH
 -- =============================================================================
 
+--- Reload the right panel for the selected fillType: one merged row per storage, largest first
 function RmFillTypeDetailFrame:refreshDetailPanel()
     if self.selectedFillType == nil then return end
 
@@ -174,62 +175,8 @@ function RmFillTypeDetailFrame:refreshDetailPanel()
 
     self.currentDetail = detail
 
-    -- Aggregate containers that share the same uniqueId (e.g., multiple pallets in one building)
-    local aggregated = {}
-    local byUniqueId = {}
-    for _, entry in ipairs(detail.containers or {}) do
-        local key = entry.uniqueId
-        if key and byUniqueId[key] then
-            -- Merge into existing entry
-            local existing = byUniqueId[key]
-            existing.amount = existing.amount + entry.amount
-            for _, batch in ipairs(entry.batches or {}) do
-                table.insert(existing.mergedBatches, batch)
-            end
-        else
-            -- New entry (copy fields, create merged batches array)
-            local merged = {
-                containerId = entry.containerId,
-                entityType = entry.entityType,
-                storageName = entry.storageName,
-                uniqueId = entry.uniqueId,
-                amount = entry.amount,
-                mergedBatches = {},
-                effectiveClass = entry.effectiveClass,
-                className = entry.className,
-                multiplier = entry.multiplier,
-                expiresInDisplay = entry.expiresInDisplay,
-            }
-            for _, batch in ipairs(entry.batches or {}) do
-                table.insert(merged.mergedBatches, batch)
-            end
-            table.insert(aggregated, merged)
-            if key then
-                byUniqueId[key] = merged
-            end
-        end
-    end
-
-    -- Use mergedBatches for age distribution, recalculate expiresInDisplay for merged entries
-    local daysPerPeriod = (g_currentMission and g_currentMission.environment
-        and g_currentMission.environment.daysPerPeriod) or 1
-    for _, entry in ipairs(aggregated) do
-        entry.batches = entry.mergedBatches
-        entry.mergedBatches = nil
-        -- Recalculate expiry from oldest batch across all merged containers
-        local oldestAge = 0
-        for _, batch in ipairs(entry.batches) do
-            if batch.ageInPeriods > oldestAge then
-                oldestAge = batch.ageInPeriods
-            end
-        end
-        if detail.threshold then
-            entry.expiresInDisplay = RmBatch.formatExpiresIn(
-                { ageInPeriods = oldestAge }, detail.threshold, daysPerPeriod, entry.multiplier)
-        end
-    end
-
-    self.detailData = aggregated
+    -- One row per storage: containers sharing a uniqueId merge (e.g., pallets in one building, vehicle compartments)
+    self.detailData = RmFreshManager:mergeFillTypeDetailRows(detail)
 
     -- Sort by amount descending, tie-break by storageName ascending
     table.sort(self.detailData, function(a, b)

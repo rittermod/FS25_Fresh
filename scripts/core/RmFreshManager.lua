@@ -2982,12 +2982,9 @@ function RmFreshManager:getInventorySummary(farmId)
                 -- Sum amounts from all batches, tracking expiring amounts
                 for _, batch in ipairs(container.batches) do
                     entry.totalAmount = entry.totalAmount + batch.amount
-                    -- Rank by real time left: expired first, multiplier 0 never, divide last (keeps 0 / 0 out)
+                    -- Rank by real time left; residue below MIN_AMOUNT never ranks
                     if threshold and batch.amount >= RmBatch.MIN_AMOUNT then
-                        local remaining = threshold - batch.ageInPeriods
-                        if remaining > 0 then
-                            remaining = multiplier == 0 and math.huge or remaining / multiplier
-                        end
+                        local remaining = RmBatch.getRealRemaining(batch, threshold, multiplier)
                         if remaining < entry.soonestRemaining then
                             entry.soonestRemaining = remaining
                             entry.soonestAge = batch.ageInPeriods
@@ -3085,12 +3082,11 @@ function RmFreshManager:getInventoryList(farmId, sortBy)
     return list
 end
 
---- Get per-storage batch breakdown for a specific fillType (inventory detail view)
---- Returns all containers holding this fillType with batch refs, class info, and expiry display
---- Batch references are shared (not copied) - callers must not mutate
+--- Per-container rows for one fillType; shared batch refs, callers must not mutate
 ---@param fillTypeName string FillType name (e.g., "WHEAT")
 ---@param farmId number|nil Filter by farm (nil returns empty)
----@return table { fillTypeName, fillTypeIndex, fillTypeTitle, totalAmount, threshold, containers = [...] }
+---@return table detail { fillTypeName, fillTypeIndex, fillTypeTitle, totalAmount, threshold, containers }; each
+---   container carries soonestRemaining, soonestAge, soonestMultiplier
 function RmFreshManager:getFillTypeDetail(fillTypeName, farmId)
     local emptyResult = {
         fillTypeName = fillTypeName,
@@ -3135,38 +3131,42 @@ function RmFreshManager:getFillTypeDetail(fillTypeName, farmId)
                     resultFillTypeIndex = container.fillTypeIndex
                 end
 
-                -- Sum batch amounts
-                local amount = 0
-                local oldestAge = 0
-                for _, batch in ipairs(container.batches) do
-                    amount = amount + batch.amount
-                    if batch.ageInPeriods > oldestAge then
-                        oldestAge = batch.ageInPeriods
-                    end
-                end
-
-                -- Resolve class info
-                local classInfo = self:resolveStorageClassInfo(container)
+                -- Multiplier aging applies; the class fields show only while storage aging is on
+                local multiplier, classInfo = self:getAgingMultiplier(container)
                 local effectiveClass = nil
                 local className = nil
-                local multiplier = classInfo.multiplier
-
                 if storageAgingEnabled then
                     effectiveClass = classInfo.effective
                     local classKey = self.STORAGE_CLASS_NAMES[effectiveClass]
                     if classKey then
                         className = g_i18n:getText("fresh_class_" .. classKey)
                     end
-                else
-                    -- When storage aging disabled, force multiplier to 1.0
-                    multiplier = 1.0
                 end
 
-                -- Expiry display using oldest batch
+                -- Sum batch amounts and rank by real time left; residue below MIN_AMOUNT never ranks
+                local amount = 0
+                local soonestRemaining, soonestAge, soonestMultiplier = math.huge, 0, 0
+                for _, batch in ipairs(container.batches) do
+                    amount = amount + batch.amount
+                    if threshold and batch.amount >= RmBatch.MIN_AMOUNT then
+                        local remaining = RmBatch.getRealRemaining(batch, threshold, multiplier)
+                        if remaining < soonestRemaining then
+                            soonestRemaining, soonestAge, soonestMultiplier = remaining, batch.ageInPeriods, multiplier
+                        end
+                    end
+                end
+
+                -- Expiry display from the soonest batch; no rankable batch reads as never
                 local expiresInDisplay = ""
                 if threshold then
                     expiresInDisplay = RmBatch.formatExpiresIn(
-                        { ageInPeriods = oldestAge }, threshold, daysPerPeriod, multiplier)
+                        { ageInPeriods = soonestAge }, threshold, daysPerPeriod, soonestMultiplier)
+                    Log:trace("FILLTYPE_SOONEST: container=%s age=%s multiplier=%s remaining=%s",
+                        tostring(container.id), tostring(soonestAge), tostring(soonestMultiplier),
+                        tostring(soonestRemaining))
+                else
+                    Log:trace("FILLTYPE_SOONEST: container=%s skipped, no threshold for %s",
+                        tostring(container.id), tostring(fillTypeName))
                 end
 
                 -- UniqueId for grouping context
@@ -3184,6 +3184,9 @@ function RmFreshManager:getFillTypeDetail(fillTypeName, farmId)
                     className = className,
                     multiplier = multiplier,
                     expiresInDisplay = expiresInDisplay,
+                    soonestRemaining = soonestRemaining,
+                    soonestAge = soonestAge,
+                    soonestMultiplier = soonestMultiplier,
                 })
 
                 totalAmount = totalAmount + amount
@@ -3207,6 +3210,65 @@ function RmFreshManager:getFillTypeDetail(fillTypeName, farmId)
         threshold = threshold,
         containers = containers,
     }
+end
+
+--- One row per uniqueId: the soonest entry's time wins, a vehicle keeps its lowest class, the rest is the first's
+---@param detail table getFillTypeDetail result
+---@return table rows New row tables with concatenated batch refs; detail and its entries are not mutated
+function RmFreshManager:mergeFillTypeDetailRows(detail)
+    local rows = {}
+    local byUniqueId = {}
+    local winnerByUniqueId = {}
+
+    for _, entry in ipairs(detail.containers) do
+        local key = entry.uniqueId
+        local row = key and byUniqueId[key]
+        if row == nil then
+            row = {
+                containerId = entry.containerId,
+                entityType = entry.entityType,
+                storageName = entry.storageName,
+                uniqueId = key,
+                amount = entry.amount,
+                batches = {},
+                effectiveClass = entry.effectiveClass,
+                className = entry.className,
+                multiplier = entry.multiplier,
+                expiresInDisplay = entry.expiresInDisplay,
+                soonestRemaining = entry.soonestRemaining,
+                soonestAge = entry.soonestAge,
+                soonestMultiplier = entry.soonestMultiplier,
+            }
+            table.insert(rows, row)
+            if key then
+                byUniqueId[key] = row
+                winnerByUniqueId[key] = entry.containerId
+            end
+        else
+            row.amount = row.amount + entry.amount
+            if entry.soonestRemaining < row.soonestRemaining then
+                row.expiresInDisplay = entry.expiresInDisplay
+                row.soonestRemaining = entry.soonestRemaining
+                row.soonestAge = entry.soonestAge
+                row.soonestMultiplier = entry.soonestMultiplier
+                winnerByUniqueId[key] = entry.containerId
+            end
+            if row.entityType == "vehicle" and entry.effectiveClass ~= nil
+                and (row.effectiveClass == nil or entry.effectiveClass < row.effectiveClass) then
+                row.effectiveClass = entry.effectiveClass
+                row.className = entry.className
+            end
+            Log:trace("FILLTYPE_MERGE: uniqueId=%s merged %s, winner=%s class=%s", tostring(key),
+                tostring(entry.containerId), tostring(winnerByUniqueId[key]), tostring(row.effectiveClass))
+        end
+        for _, batch in ipairs(entry.batches) do
+            table.insert(row.batches, batch)
+        end
+    end
+
+    Log:debug("FILLTYPE_MERGE: fillType=%s rows %d -> %d", tostring(detail.fillTypeName),
+        #detail.containers, #rows)
+    return rows
 end
 
 --- Per-fillType breakdown of a storage or all loose items (vehicle: lowest class); shared batch refs, do not mutate
@@ -3286,8 +3348,13 @@ function RmFreshManager:getStorageDetail(uniqueId, farmId)
                             fillTypeIndex = container.fillTypeIndex,
                             amount = 0,
                             batches = {},
-                            oldestAge = 0,
+                            threshold = RmFreshSettings:getExpiration(fillTypeName),
+                            -- Batch with the least real time left; math.huge / multiplier 0 read as never
+                            soonestRemaining = math.huge,
+                            soonestAge = 0,
+                            soonestMultiplier = 0,
                             classInfo = nil, -- Will be set from first container
+                            classMultiplier = nil, -- Aging multiplier of the container classInfo came from
                         }
                     end
 
@@ -3297,10 +3364,11 @@ function RmFreshManager:getStorageDetail(uniqueId, farmId)
                     -- Loose items of one product can differ, and so can a vehicle's compartments, so those
                     -- rows keep their worst container's info; a building keeps its first.
                     local isVehicle = not isItemsInWorld and container.entityType == "vehicle"
-                    local info = self:resolveStorageClassInfo(container)
+                    local multiplier, info = self:getAgingMultiplier(container)
                     if group.classInfo == nil
                         or ((isItemsInWorld or isVehicle) and info.effective < group.classInfo.effective) then
                         group.classInfo = info
+                        group.classMultiplier = multiplier
                     end
                     if isVehicle and storageAgingEnabled then
                         local base = info.override or info.detected
@@ -3315,12 +3383,20 @@ function RmFreshManager:getStorageDetail(uniqueId, farmId)
                         looseLowestBase = info.base
                     end
 
-                    -- Accumulate batches and amounts
+                    -- Accumulate batches and amounts; rank by real time left, residue below MIN_AMOUNT never ranks
                     for _, batch in ipairs(container.batches) do
                         group.amount = group.amount + batch.amount
                         table.insert(group.batches, batch) -- Shallow ref
-                        if batch.ageInPeriods > group.oldestAge then
-                            group.oldestAge = batch.ageInPeriods
+                        if group.threshold and batch.amount >= RmBatch.MIN_AMOUNT then
+                            local remaining = RmBatch.getRealRemaining(batch, group.threshold, multiplier)
+                            if remaining < group.soonestRemaining then
+                                group.soonestRemaining = remaining
+                                group.soonestAge = batch.ageInPeriods
+                                group.soonestMultiplier = multiplier
+                                Log:trace("STORAGE_SOONEST: fillType=%s container=%s age=%s multiplier=%s remaining=%s",
+                                    fillTypeName, tostring(container.id), tostring(batch.ageInPeriods),
+                                    tostring(multiplier), tostring(remaining))
+                            end
                         end
                     end
                 end
@@ -3344,7 +3420,6 @@ function RmFreshManager:getStorageDetail(uniqueId, farmId)
         local classInfo = group.classInfo
         local effectiveClass = nil
         local effectiveClassName = nil
-        local multiplier = classInfo and classInfo.multiplier or 1.0
 
         if storageAgingEnabled and classInfo then
             effectiveClass = classInfo.effective
@@ -3352,16 +3427,15 @@ function RmFreshManager:getStorageDetail(uniqueId, farmId)
             if classKey then
                 effectiveClassName = g_i18n:getText("fresh_class_" .. classKey)
             end
-        elseif not storageAgingEnabled then
-            multiplier = 1.0
         end
 
-        -- Expiry display from oldest batch
-        local threshold = RmFreshSettings:getExpiration(group.fillTypeName)
+        -- Expiry display from the soonest batch; no rankable batch reads as never
         local expiresInDisplay = ""
-        if threshold then
+        if group.threshold then
             expiresInDisplay = RmBatch.formatExpiresIn(
-                { ageInPeriods = group.oldestAge }, threshold, daysPerPeriod, multiplier)
+                { ageInPeriods = group.soonestAge }, group.threshold, daysPerPeriod, group.soonestMultiplier)
+        else
+            Log:trace("STORAGE_SOONEST: fillType=%s skipped, no threshold", group.fillTypeName)
         end
 
         local fillTypeTitle = g_fillTypeManager:getFillTypeTitleByIndex(group.fillTypeIndex)
@@ -3375,7 +3449,7 @@ function RmFreshManager:getStorageDetail(uniqueId, farmId)
             batches = group.batches, -- Shallow concat of batch refs, caller must not mutate
             effectiveClass = effectiveClass,
             effectiveClassName = effectiveClassName,
-            multiplier = multiplier,
+            multiplier = group.classMultiplier,
             expiresInDisplay = expiresInDisplay,
             batchCount = #group.batches,
         })

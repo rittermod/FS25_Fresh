@@ -2,7 +2,7 @@
 -- Purpose: Reusable batch operations for perishable goods (container-agnostic)
 -- Author: Ritter
 -- Architecture: Part of core/ foundation (Pure utility, no FS25 API except g_i18n)
--- Functions: 13 (create, age, isExpired, format, FIFO consume, merge, etc.)
+-- Functions: create, age, isExpired, format, real remaining time, FIFO consume, merge, etc.
 
 RmBatch = {}
 
@@ -75,7 +75,7 @@ end
 
 --- Format remaining time until expiration for display
 --- Uses daysPerPeriod to adapt display to game time settings
---- Breakpoints: <48h → hours, <60d (1440h) → days, >=60d → months
+--- Breakpoints: <48h -> hours, <60d (1440h) -> days, >=60d -> months
 --- DEPENDENCY: Requires FS25 environment with g_i18n loaded and Fresh localization keys registered:
 ---   fresh_expired, fresh_expires_hour, fresh_expires_hours, fresh_expires_day,
 ---   fresh_expires_days, fresh_expires_month, fresh_expires_months, fresh_expires_never
@@ -119,6 +119,22 @@ function RmBatch.formatExpiresIn(batch, threshold, daysPerPeriod, multiplier)
         local months = remainingPeriods / multiplier
         return string.format(g_i18n:getText("fresh_expires_months"), months)
     end
+end
+
+--- Real periods left, for ranking; a non-positive value is threshold - age in age periods (only sign and order count)
+---@param batch table PerishableBatch
+---@param threshold number Expiration threshold in periods (callers skip ranking when it is nil)
+---@param multiplier number Aging multiplier (0 = never expires)
+---@return number remaining threshold - age when expired, math.huge when multiplier is 0, else divided by it
+function RmBatch.getRealRemaining(batch, threshold, multiplier)
+    local remaining = threshold - batch.ageInPeriods
+    if remaining <= 0 then
+        return remaining
+    end
+    if multiplier == 0 then
+        return math.huge
+    end
+    return remaining / multiplier
 end
 
 --- Format remaining time as compact string for HUD suffixes
@@ -327,7 +343,7 @@ function RmBatch.mergeSimilarBatches(batches, threshold)
             local weightedAge = (current.amount * current.ageInPeriods +
                 nextBatch.amount * nextBatch.ageInPeriods) / totalAmount
 
-            Log:trace("MERGE_OP: %.0fL@%.4f + %.0fL@%.4f → %.0fL@%.4f (diff=%.4f)",
+            Log:trace("MERGE_OP: %.0fL@%.4f + %.0fL@%.4f -> %.0fL@%.4f (diff=%.4f)",
                 current.amount, current.ageInPeriods,
                 nextBatch.amount, nextBatch.ageInPeriods,
                 totalAmount, weightedAge, ageDiff)
@@ -346,7 +362,7 @@ function RmBatch.mergeSimilarBatches(batches, threshold)
 
     -- Log result summary
     if mergeCount > 0 then
-        Log:debug("MERGE_RESULT: %d→%d batches (%d merges)", initialCount, #batches, mergeCount)
+        Log:debug("MERGE_RESULT: %d->%d batches (%d merges)", initialCount, #batches, mergeCount)
     end
 
     return mergeCount
