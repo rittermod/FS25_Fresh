@@ -274,13 +274,13 @@ function RmFreshConsole:consoleCommandList(typeStr)
         local fillTypeName = container.identityMatch and container.identityMatch.storage
             and container.identityMatch.storage.fillTypeName or "?"
 
-        -- Human-readable expiry time (adjusted for storage class multiplier)
+        -- Human-readable expiry time at the multiplier aging applies
         local expiresText = ""
         if oldest then
             local threshold = RmFreshSettings:getExpiration(fillTypeName)
             if threshold then
-                local classInfo = RmFreshManager:resolveStorageClassInfo(container)
-                local multiplier = classInfo and classInfo.multiplier or 1.0
+                local multiplier = RmFreshManager:getAgingMultiplier(container)
+                Log:trace("CONSOLE_LIST: container=%s multiplier=%.2f", tostring(container.id), multiplier)
                 expiresText = " (" .. RmBatch.formatExpiresIn(oldest, threshold, daysPerPeriod, multiplier) .. ")"
             end
         end
@@ -492,14 +492,15 @@ function RmFreshConsole:consoleCommandInspect(indexStr)
     local daysPerPeriod = (g_currentMission and g_currentMission.environment and g_currentMission.environment.daysPerPeriod) or 1
     local ageStr = oldest and RmBatch.formatAge(oldest, daysPerPeriod) or "0h"
 
-    -- Human-readable expires-in (adjusted for storage class multiplier)
+    -- Human-readable expires-in at the multiplier aging applies (the class line above keeps the class's own)
     local expiresStr = ""
     if oldest then
         local fillTypeName = container.identityMatch and container.identityMatch.storage
             and container.identityMatch.storage.fillTypeName
         local threshold = fillTypeName and RmFreshSettings:getExpiration(fillTypeName)
         if threshold then
-            local multiplier = classInfo.multiplier
+            local multiplier = RmFreshManager:getAgingMultiplier(container)
+            Log:trace("CONSOLE_INSPECT: container=%s multiplier=%.2f", tostring(container.id), multiplier)
             expiresStr = string.format(", expires in %s", RmBatch.formatExpiresIn(oldest, threshold, daysPerPeriod, multiplier))
         end
     end
@@ -515,7 +516,8 @@ end
 -- fBatches Command
 -- ============================================================================
 
---- Console command: Show batches for a container ---@param indexStr string Container index from fList
+--- Console command: Show batches for a container
+---@param indexStr string Container index from fList
 ---@return string Console output message
 function RmFreshConsole:consoleCommandBatches(indexStr)
     if next(self.targets) == nil then
@@ -545,8 +547,8 @@ function RmFreshConsole:consoleCommandBatches(indexStr)
     local name = self:getEntityName(container)
     local daysPerPeriod = (g_currentMission and g_currentMission.environment and g_currentMission.environment.daysPerPeriod) or 1
     local threshold = RmFreshSettings:getExpiration(fillTypeName)
-    local classInfo = RmFreshManager:resolveStorageClassInfo(container)
-    local multiplier = classInfo and classInfo.multiplier or 1.0
+    local multiplier = RmFreshManager:getAgingMultiplier(container)
+    Log:trace("CONSOLE_BATCHES: container=%s multiplier=%.2f", tostring(containerId), multiplier)
 
     print(string.format("Container #%d \"%s\" (%s):", index, name, fillTypeName))
 

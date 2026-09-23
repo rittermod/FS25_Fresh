@@ -1,7 +1,6 @@
 -- RmPlaceableAdapter.lua
 -- Purpose: Thin placeable adapter - bridges FS25 placeable storage events to centralized FreshManager
 -- Author: Ritter
--- CRITICAL: Must stay under 150 lines (core skeleton) to validate thin adapter architecture
 -- Note: Storage discovery, fill callbacks, and display logic added in subsequent stories (25-2 to 25-6)
 
 RmPlaceableAdapter = {}
@@ -1006,9 +1005,7 @@ end
 -- DISPLAY HOOK
 -- =============================================================================
 
---- Show freshness status in placeable HUD info
---- CRITICAL: Placeables use updateInfo(superFunc, infoTable), NOT showInfo(superFunc, box)!
---- Pattern: Modify entries in infoTable AFTER superFunc populates them
+--- Append an expiring suffix to the entries superFunc added (updateInfo, not showInfo); none with expiration off
 ---@param superFunc function Original updateInfo function
 ---@param infoTable table Info table to modify
 function RmPlaceableAdapter:updateInfo(superFunc, infoTable)
@@ -1016,6 +1013,11 @@ function RmPlaceableAdapter:updateInfo(superFunc, infoTable)
 
     local startCount = #infoTable -- Track count BEFORE superFunc
     superFunc(self, infoTable)
+
+    if not RmFreshSettings:isExpirationEnabled() then
+        Log:trace("<<< updateInfo (placeable=%s expiration disabled)", self.uniqueId or "?")
+        return
+    end
 
     local spec = self[RmPlaceableAdapter.SPEC_TABLE_NAME]
     if spec == nil then
@@ -1040,10 +1042,9 @@ function RmPlaceableAdapter:updateInfo(superFunc, infoTable)
             local batches = RmFreshManager:getBatches(containerId)
             local config = RmFreshSettings:getThresholdByIndex(fillTypeIndex)
 
-            -- Resolve storage class multiplier for accurate time calculations
+            -- Multiplier aging applies; an unknown container keeps 1.0
             local container = RmFreshManager:getContainer(containerId)
-            local classInfo = container and RmFreshManager:resolveStorageClassInfo(container) or nil
-            local multiplier = classInfo and classInfo.multiplier or 1.0
+            local multiplier = container and RmFreshManager:getAgingMultiplier(container) or 1.0
 
             for _, batch in ipairs(batches or {}) do
                 if batch.amount >= RmBatch.MIN_AMOUNT

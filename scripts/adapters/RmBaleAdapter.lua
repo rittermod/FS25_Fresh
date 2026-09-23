@@ -653,13 +653,15 @@ end
 -- DISPLAY HOOK
 -- =============================================================================
 
---- Show freshness/fermentation status in bale HUD info
---- Appended to Bale.showInfo - runs AFTER game's display
---- NO server guard needed - display runs on all machines
---- NETWORK SAFE: Uses entity reference lookup (works on server and client)
+--- Freshness lines in the bale HUD, appended after the game's own; none with expiration off; runs on clients too
 ---@param bale table Bale entity
 ---@param box table InfoBox for adding lines
 function RmBaleAdapter.showInfoHook(bale, box)
+    if not RmFreshSettings:isExpirationEnabled() then
+        Log:trace("BALE_SHOW_INFO: expiration disabled, no Fresh lines for bale %s", tostring(bale and bale.uniqueId))
+        return
+    end
+
     -- Use entity reference lookup (works on both server and client)
     local containerId = RmFreshManager:getContainerIdByEntity(bale)
     if not containerId then

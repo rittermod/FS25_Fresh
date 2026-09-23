@@ -192,6 +192,18 @@ function RmFreshManager:resolveStorageClassInfo(container)
     }
 end
 
+--- Multiplier the aging loop applies: the class multiplier, or 1.0 for every class with storage aging off
+---@param container table Container structure
+---@return number multiplier Aging multiplier (0 = never ages)
+---@return table classInfo resolveStorageClassInfo result, resolved in both cases
+function RmFreshManager:getAgingMultiplier(container)
+    local classInfo = self:resolveStorageClassInfo(container)
+    local multiplier = RmFreshSettings.storageAgingEnabled and classInfo.multiplier or 1.0
+    Log:trace("<<< getAgingMultiplier(%s) = %.2f (storageAging=%s class=%.2f)", tostring(container.id), multiplier,
+        tostring(RmFreshSettings.storageAgingEnabled), classInfo.multiplier)
+    return multiplier, classInfo
+end
+
 --- Write a runtime-detected storage class and re-send the container to clients (server only)
 ---@param containerId string Container ID
 ---@param storageClass number New detected storage class
@@ -2054,12 +2066,9 @@ function RmFreshManager:_applyAgingToContainer(containerId, container, increment
         -- Sync fillType for bales before aging (handles GRASS->SILAGE transformation)
         self:syncBaleFillType(containerId, container)
 
-        -- Resolve storage class multiplier for this container (with override support)
-        local storageMultiplier = 1.0
+        -- Storage class multiplier (with override support); 1.0 for every class with storage aging off
+        local storageMultiplier, info = self:getAgingMultiplier(container)
         if RmFreshSettings.storageAgingEnabled then
-            local info = self:resolveStorageClassInfo(container)
-            storageMultiplier = info.multiplier
-
             Log:trace("    STORAGE: container=%s detected=%s(%d) override=%s effective=%s(%d) mult=%.2f",
                 containerId,
                 self.STORAGE_CLASS_NAMES[info.detected] or "?", info.detected,
@@ -2366,21 +2375,29 @@ end
 -- DISPLAY & ADAPTER SUPPORT
 -- =============================================================================
 
---- Get display information for a container
---- Returns formatted expiration info for UI display
---- Used by adapters in showInfo() hooks
+--- Expiry line for an adapter HUD, at the multiplier aging applies; nil when expiration is off
 ---@param containerId string Container ID
 ---@return table|nil Display info { text = string, isWarning = boolean, isExpiring = boolean } or nil
 function RmFreshManager:getDisplayInfo(containerId)
+    if not RmFreshSettings:isExpirationEnabled() then
+        Log:trace("DISPLAY_INFO: expiration disabled, no line for %s", tostring(containerId))
+        return nil
+    end
+
     local container = self.containers[containerId]
-    if not container then return nil end
+    if not container then
+        Log:trace("DISPLAY_INFO: no container %s", tostring(containerId))
+        return nil
+    end
 
     -- Skip display if fillType is not currently perishable
     if not RmFreshSettings:isPerishableByIndex(container.fillTypeIndex) then
+        Log:trace("DISPLAY_INFO: %s fillType not perishable", tostring(containerId))
         return nil
     end
 
     if not container.batches or #container.batches == 0 then
+        Log:trace("DISPLAY_INFO: %s has no batches", tostring(containerId))
         return nil
     end
 
@@ -2388,15 +2405,17 @@ function RmFreshManager:getDisplayInfo(containerId)
     local config = RmFreshSettings:getThresholdByIndex(container.fillTypeIndex)
     local daysPerPeriod = (g_currentMission and g_currentMission.environment and g_currentMission.environment.daysPerPeriod) or
         1
-    local classInfo = self:resolveStorageClassInfo(container)
-    local multiplier = classInfo and classInfo.multiplier or 1.0
+    local multiplier = self:getAgingMultiplier(container)
 
     local text = RmBatch.formatExpiresIn(oldest, config.expiration, daysPerPeriod, multiplier)
     local warningHours = RmFreshSettings:getWarningHours()
+    local isWarning = RmBatch.isNearExpiration(oldest, warningHours, config.expiration, daysPerPeriod, multiplier)
+    Log:trace("<<< getDisplayInfo(%s) = '%s' multiplier=%.2f warning=%s", tostring(containerId), text, multiplier,
+        tostring(isWarning))
 
     return {
         text = text,
-        isWarning = RmBatch.isNearExpiration(oldest, warningHours, config.expiration, daysPerPeriod, multiplier),
+        isWarning = isWarning,
         isExpiring = oldest.ageInPeriods >= config.expiration,
     }
 end
@@ -2774,12 +2793,18 @@ end
 ---
 --- @param hours number Hours until expiration threshold (e.g., 24 for "next day")
 --- @param farmId number|nil Filter by farm (nil = all farms, for admin/debug)
---- @return table { totalAmount, thresholdHours, containers[] }
+--- @return table { totalAmount, thresholdHours, containers[] }; with expiration off, totalAmount 0 and no containers
 ---   containers sorted by expiresInHours ascending (soonest first)
 ---   each container: { containerId, entityType, fillTypeName, expiringAmount, expiresInHours, farmId, name }
 function RmFreshManager:getExpiringWithin(hours, farmId)
     -- Default to 24 hours if not specified
     hours = hours or 24
+
+    if not RmFreshSettings:isExpirationEnabled() then
+        Log:trace("EXPIRING_WITHIN: expiration disabled, nothing expiring (hours=%s farmId=%s)",
+            tostring(hours), tostring(farmId))
+        return { totalAmount = 0, thresholdHours = hours, containers = {} }
+    end
 
     -- Get environment time settings for period->hours conversion
     local daysPerPeriod = 1
@@ -2810,9 +2835,8 @@ function RmFreshManager:getExpiringWithin(hours, farmId)
                 local config = RmFreshSettings:getThresholdByIndex(container.fillTypeIndex)
                 local expirationThreshold = config.expiration
 
-                -- Resolve storage class multiplier for accurate time calculations
-                local classInfo = self:resolveStorageClassInfo(container)
-                local multiplier = classInfo and classInfo.multiplier or 1.0
+                -- Multiplier aging applies; classInfo still names the class for display
+                local multiplier, classInfo = self:getAgingMultiplier(container)
 
                 if multiplier ~= 1.0 then
                     Log:trace("EXPIRING_WITHIN: container=%s multiplier=%.2f (class=%s)",
@@ -2946,14 +2970,8 @@ function RmFreshManager:getInventorySummary(farmId)
                 local entry = summary[fillTypeName]
                 local threshold = RmFreshSettings:getExpiration(fillTypeName)
 
-                -- Resolve storage class multiplier for this container; aging uses 1.0 when storage aging is off
-                local classInfo = self:resolveStorageClassInfo(container)
-                local multiplier = classInfo and classInfo.multiplier or 1.0
-                if not RmFreshSettings.storageAgingEnabled then
-                    Log:trace("INVENTORY_MULT: container=%s fillType=%s storage aging off, multiplier %.2f -> 1.0",
-                        containerId, fillTypeName, multiplier)
-                    multiplier = 1.0
-                end
+                -- Multiplier aging applies: 1.0 for every class when storage aging is off
+                local multiplier, classInfo = self:getAgingMultiplier(container)
 
                 if multiplier ~= 1.0 then
                     Log:trace("INVENTORY_MULT: container=%s fillType=%s multiplier=%.2f (class=%s)",

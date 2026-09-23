@@ -16,7 +16,7 @@ Changes you make here are saved **inside the current savegame** - they do not ca
 
 | Setting | Default | Options | Description |
 |---------|---------|---------|-------------|
-| **Enable Expiration** | On | Off / On | Toggles all aging and expiration. When off, products never age or expire. |
+| **Enable Expiration** | On | Off / On | Toggles all aging and expiration. When off, products never age or expire, and the expiry lines and age bars are hidden. |
 | **Show Warnings** | On | Off / On | Show expiry warnings in info boxes when looking at storages and vehicles. |
 | **Show Age Display** | On | Off / On | Show color-coded age distribution bars when near storages. |
 | **Warning Threshold** | 24 hours | 6h / 12h / 24h / 48h / 72h | Info box text turns yellow when a product expires within this time. Items with shorter shelf lives may always show as expiring. |

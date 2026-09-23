@@ -815,11 +815,16 @@ function RmVehicleAdapter.pickSoonestExpiring(candidates)
     return bestId
 end
 
---- One "Expires in" HUD line per fill type, from its soonest-expiring container; runs on clients too
+--- One "Expires in" HUD line per fill type, from its soonest-expiring container; none with expiration off
 ---@param superFunc function The chained showInfo
 ---@param box table HUD info box to add lines to
 function RmVehicleAdapter:showInfo(superFunc, box)
     superFunc(self, box)
+
+    if not RmFreshSettings:isExpirationEnabled() then
+        Log:trace("VEHICLE_HUD: uniqueId=%s expiration disabled, no Fresh lines", tostring(self.uniqueId))
+        return
+    end
 
     local spec = self[RmVehicleAdapter.SPEC_TABLE_NAME]
     if not spec or not spec.containerIds then
@@ -846,9 +851,7 @@ function RmVehicleAdapter:showInfo(superFunc, box)
                     local entry = byFillType[ftIndex]
                     if RmFreshSettings:isPerishableByIndex(ftIndex) then
                         local config = RmFreshSettings:getThresholdByIndex(ftIndex)
-                        -- Resolve storage class multiplier for accurate time calculations
-                        local classInfo = RmFreshManager:resolveStorageClassInfo(container)
-                        local multiplier = classInfo and classInfo.multiplier or 1.0
+                        local multiplier = RmFreshManager:getAgingMultiplier(container)
                         -- Compartments of one product can differ in class, so the oldest batch is not
                         -- always the one that expires first
                         table.insert(entry.candidates, {

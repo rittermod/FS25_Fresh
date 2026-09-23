@@ -539,9 +539,7 @@ function RmHusbandryFoodAdapter:removeFood(superFunc, absDeltaFillLevel, fillTyp
     return result
 end
 
---- HUD display hook for freshness info
---- Pattern: Follow RmPlaceableAdapter:updateInfo (lines 766-829)
---- CRITICAL: Call superFunc FIRST - it populates infoTable with fill type entries
+--- Add or suffix expiring food entries after superFunc fills the table; none with expiration off
 ---@param superFunc function Original updateInfo function
 ---@param infoTable table Info table to modify
 function RmHusbandryFoodAdapter:updateInfo(superFunc, infoTable)
@@ -549,6 +547,11 @@ function RmHusbandryFoodAdapter:updateInfo(superFunc, infoTable)
 
     local startCount = #infoTable -- Track count BEFORE superFunc
     superFunc(self, infoTable)
+
+    if not RmFreshSettings:isExpirationEnabled() then
+        Log:trace("<<< updateInfo (husbandryFood=%s expiration disabled)", self.uniqueId or "?")
+        return
+    end
 
     local spec = self[RmHusbandryFoodAdapter.SPEC_TABLE_NAME]
     if spec == nil then
@@ -573,10 +576,9 @@ function RmHusbandryFoodAdapter:updateInfo(superFunc, infoTable)
             local batches = RmFreshManager:getBatches(containerId)
             local config = RmFreshSettings:getThresholdByIndex(fillTypeIndex)
 
-            -- Resolve storage class multiplier for accurate time calculations
+            -- Multiplier aging applies; an unknown container keeps 1.0
             local container = RmFreshManager:getContainer(containerId)
-            local classInfo = container and RmFreshManager:resolveStorageClassInfo(container) or nil
-            local multiplier = classInfo and classInfo.multiplier or 1.0
+            local multiplier = container and RmFreshManager:getAgingMultiplier(container) or 1.0
 
             for _, batch in ipairs(batches or {}) do
                 if batch.amount >= RmBatch.MIN_AMOUNT

@@ -988,9 +988,7 @@ function RmObjectStorageAdapter.countExpiringInObjectInfo(objectInfo, placeable)
                 local fillTypeIndex = container.fillTypeIndex
                 if fillTypeIndex and RmFreshSettings:isPerishableByIndex(fillTypeIndex) then
                     local config = RmFreshSettings:getThresholdByIndex(fillTypeIndex)
-                    -- Resolve storage class multiplier for accurate time calculations
-                    local classInfo = RmFreshManager:resolveStorageClassInfo(container)
-                    local multiplier = classInfo and classInfo.multiplier or 1.0
+                    local multiplier = RmFreshManager:getAgingMultiplier(container)
                     -- Check first batch (oldest in FIFO order)
                     if RmBatch.isNearExpiration(container.batches[1], warningHours, config.expiration, daysPerPeriod, multiplier) then
                         count = count + 1
@@ -1004,6 +1002,8 @@ function RmObjectStorageAdapter.countExpiringInObjectInfo(objectInfo, placeable)
         end
     end
 
+    Log:trace("<<< countExpiringInObjectInfo(%s) = %d soonest=%s", tostring(placeable.uniqueId), count,
+        tostring(soonestHours))
     return count, count > 0 and soonestHours or 0
 end
 
@@ -1033,20 +1033,29 @@ function RmObjectStorageAdapter.getExpiringCount(objectInfo, placeable, objectIn
     return 0, 0
 end
 
---- Show freshness status in placeable HUD info
---- Shows expiring item counts per objectInfo category
---- CRITICAL: Placeables use updateInfo(superFunc, infoTable), NOT showInfo!
+--- Append expiring item counts per objectInfo entry (updateInfo, not showInfo); none with expiration off
 ---@param superFunc function Original updateInfo function
 ---@param infoTable table Info table to modify
 function RmObjectStorageAdapter:updateInfo(superFunc, infoTable)
     local startIndex = #infoTable -- Track BEFORE super populates entries
     superFunc(self, infoTable)
 
+    if not RmFreshSettings:isExpirationEnabled() then
+        Log:trace("HUD_EXPIRING: storage=%s expiration disabled, no Fresh suffix", tostring(self.uniqueId))
+        return
+    end
+
     local spec = self[RmObjectStorageAdapter.SPEC_TABLE_NAME]
-    if not spec then return end
+    if not spec then
+        Log:trace("HUD_EXPIRING: storage=%s has no Fresh spec", tostring(self.uniqueId))
+        return
+    end
 
     local specOS = self.spec_objectStorage
-    if not specOS or not specOS.objectInfos then return end
+    if not specOS or not specOS.objectInfos then
+        Log:trace("HUD_EXPIRING: storage=%s has no objectInfos", tostring(self.uniqueId))
+        return
+    end
 
     local maxEntries = PlaceableObjectStorage.MAX_HUD_INFO_ENTRIES or 10
 

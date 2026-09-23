@@ -65,6 +65,19 @@ function RmFreshAgeDisplay.uninstall()
     Log:debug("FRESH_AGE_DISPLAY: Uninstalled")
 end
 
+--- Age boxes draw only with the age display setting on and expiration enabled
+---@return boolean enabled True when the age boxes may draw
+function RmFreshAgeDisplay.isEnabled()
+    if not RmFreshSettings:getGlobal("showAgeDisplay") then
+        return false
+    end
+    if not RmFreshSettings:isExpirationEnabled() then
+        Log:trace("FRESH_AGE_DISPLAY: expiration disabled, age boxes hidden")
+        return false
+    end
+    return true
+end
+
 -- =============================================================================
 -- PLACEABLE DISPLAY
 -- =============================================================================
@@ -72,8 +85,7 @@ end
 --- Hook: Populate box for placeable display
 ---@param placeable table The placeable (self in onDraw)
 function RmFreshAgeDisplay.onPlaceableDrawHook(placeable)
-    -- Check if feature is enabled
-    if not RmFreshSettings:getGlobal("showAgeDisplay") then
+    if not RmFreshAgeDisplay.isEnabled() then
         return
     end
 
@@ -119,8 +131,7 @@ end
 --- showInfo runs before rendering - box display must happen in draw()
 ---@param bale table The bale entity
 function RmFreshAgeDisplay.drawForBale(bale)
-    -- Check if feature is enabled
-    if not RmFreshSettings:getGlobal("showAgeDisplay") then
+    if not RmFreshAgeDisplay.isEnabled() then
         return
     end
 
@@ -138,8 +149,7 @@ end
 ---@param vehicle table The vehicle
 ---@param box table The info box (unused, kept for API compatibility)
 function RmFreshAgeDisplay.drawForVehicle(vehicle, box)
-    -- Check if feature is enabled
-    if not RmFreshSettings:getGlobal("showAgeDisplay") then
+    if not RmFreshAgeDisplay.isEnabled() then
         return
     end
 
@@ -165,8 +175,7 @@ function RmFreshAgeDisplay:draw()
         return
     end
 
-    -- Check if feature is enabled
-    if not RmFreshSettings:getGlobal("showAgeDisplay") then
+    if not RmFreshAgeDisplay.isEnabled() then
         return
     end
 
