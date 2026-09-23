@@ -658,33 +658,33 @@ end
 ---@param box table InfoBox for adding lines
 function RmBaleAdapter.showInfoHook(bale, box)
     if not RmFreshSettings:isExpirationEnabled() then
-        Log:trace("BALE_SHOW_INFO: expiration disabled, no Fresh lines for bale %s", tostring(bale and bale.uniqueId))
+        -- Log:trace("BALE_SHOW_INFO: expiration disabled, no Fresh lines for bale %s", tostring(bale and bale.uniqueId))
         return
     end
 
     -- Use entity reference lookup (works on both server and client)
     local containerId = RmFreshManager:getContainerIdByEntity(bale)
     if not containerId then
-        Log:trace("BALE_SHOW_INFO: no containerId for bale (not tracked or non-perishable)")
+        -- Log:trace("BALE_SHOW_INFO: no containerId for bale (not tracked or non-perishable)")
         return
     end
 
     -- Fermenting bales: skip display (base game shows fermentation %)
     if RmBaleAdapter:isFermenting(bale) then
-        Log:trace("BALE_SHOW_INFO: %s fermenting, skipping display", containerId)
+        -- Log:trace("BALE_SHOW_INFO: %s fermenting, skipping display", containerId)
         return
     end
 
     -- Non-fermenting: show expires-in, add warning line if near expiration
     local info = RmFreshManager:getDisplayInfo(containerId)
     if info then
-        Log:trace("BALE_SHOW_INFO: %s displaying '%s'", containerId, info.text)
+        -- Log:trace("BALE_SHOW_INFO: %s displaying '%s'", containerId, info.text)
         box:addLine(g_i18n:getText("fresh_expires_in"), info.text)
         if info.isWarning then
             box:addLine(g_i18n:getText("fresh_near_expiration"), nil, true)
         end
     else
-        Log:trace("BALE_SHOW_INFO: %s no display info from Manager", containerId)
+        -- Log:trace("BALE_SHOW_INFO: %s no display info from Manager", containerId)
     end
 
     -- Draw age distribution display (if enabled)

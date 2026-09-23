@@ -1002,8 +1002,8 @@ function RmObjectStorageAdapter.countExpiringInObjectInfo(objectInfo, placeable)
         end
     end
 
-    Log:trace("<<< countExpiringInObjectInfo(%s) = %d soonest=%s", tostring(placeable.uniqueId), count,
-        tostring(soonestHours))
+    -- Log:trace("<<< countExpiringInObjectInfo(%s) = %d soonest=%s", tostring(placeable.uniqueId), count,
+        -- tostring(soonestHours))
     return count, count > 0 and soonestHours or 0
 end
 
@@ -1041,19 +1041,19 @@ function RmObjectStorageAdapter:updateInfo(superFunc, infoTable)
     superFunc(self, infoTable)
 
     if not RmFreshSettings:isExpirationEnabled() then
-        Log:trace("HUD_EXPIRING: storage=%s expiration disabled, no Fresh suffix", tostring(self.uniqueId))
+        -- Log:trace("HUD_EXPIRING: storage=%s expiration disabled, no Fresh suffix", tostring(self.uniqueId))
         return
     end
 
     local spec = self[RmObjectStorageAdapter.SPEC_TABLE_NAME]
     if not spec then
-        Log:trace("HUD_EXPIRING: storage=%s has no Fresh spec", tostring(self.uniqueId))
+        -- Log:trace("HUD_EXPIRING: storage=%s has no Fresh spec", tostring(self.uniqueId))
         return
     end
 
     local specOS = self.spec_objectStorage
     if not specOS or not specOS.objectInfos then
-        Log:trace("HUD_EXPIRING: storage=%s has no objectInfos", tostring(self.uniqueId))
+        -- Log:trace("HUD_EXPIRING: storage=%s has no objectInfos", tostring(self.uniqueId))
         return
     end
 
@@ -1077,7 +1077,7 @@ function RmObjectStorageAdapter:updateInfo(superFunc, infoTable)
                 -- Yellow highlighting for warning
                 entry.accentuate = true
 
-                Log:trace("HUD_EXPIRING: objectInfo[%d] = %d expiring, soonest=%s", i, expiringCount, timeStr)
+                -- Log:trace("HUD_EXPIRING: objectInfo[%d] = %d expiring, soonest=%s", i, expiringCount, timeStr)
             end
         end
     end

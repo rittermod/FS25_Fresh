@@ -72,7 +72,7 @@ function RmFreshAgeDisplay.isEnabled()
         return false
     end
     if not RmFreshSettings:isExpirationEnabled() then
-        Log:trace("FRESH_AGE_DISPLAY: expiration disabled, age boxes hidden")
+        -- Log:trace("FRESH_AGE_DISPLAY: expiration disabled, age boxes hidden")
         return false
     end
     return true
@@ -315,10 +315,10 @@ function RmFreshAgeDisplay.buildRows(containers)
                     end
                 end
 
-                Log:trace("BUILDROWS: %s class=%s(%s)",
-                    fillTypeName,
-                    data.worstClass and tostring(data.worstClass) or "nil",
-                    storageClassName or "n/a")
+                -- Log:trace("BUILDROWS: %s class=%s(%s)",
+                    -- fillTypeName,
+                    -- data.worstClass and tostring(data.worstClass) or "nil",
+                    -- storageClassName or "n/a")
 
                 table.insert(rows, {
                     fillTypeIndex = fillTypeIndex,

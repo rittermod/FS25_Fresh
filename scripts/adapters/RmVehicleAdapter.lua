@@ -810,8 +810,8 @@ function RmVehicleAdapter.pickSoonestExpiring(candidates)
             bestId, bestRemaining = candidate.containerId, remaining
         end
     end
-    Log:trace("<<< pickSoonestExpiring(%d candidates) = %s remaining=%s", #candidates, tostring(bestId),
-        tostring(bestRemaining))
+    -- Log:trace("<<< pickSoonestExpiring(%d candidates) = %s remaining=%s", #candidates, tostring(bestId),
+        -- tostring(bestRemaining))
     return bestId
 end
 
@@ -822,13 +822,13 @@ function RmVehicleAdapter:showInfo(superFunc, box)
     superFunc(self, box)
 
     if not RmFreshSettings:isExpirationEnabled() then
-        Log:trace("VEHICLE_HUD: uniqueId=%s expiration disabled, no Fresh lines", tostring(self.uniqueId))
+        -- Log:trace("VEHICLE_HUD: uniqueId=%s expiration disabled, no Fresh lines", tostring(self.uniqueId))
         return
     end
 
     local spec = self[RmVehicleAdapter.SPEC_TABLE_NAME]
     if not spec or not spec.containerIds then
-        Log:trace("VEHICLE_HUD: uniqueId=%s has no container map", tostring(self.uniqueId))
+        -- Log:trace("VEHICLE_HUD: uniqueId=%s has no container map", tostring(self.uniqueId))
         return
     end
 

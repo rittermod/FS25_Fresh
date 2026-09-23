@@ -135,7 +135,7 @@ function RmFreshManager:isLooseItemContainer(container)
     local isLoose = container.entityType == "bale"
         or (container.metadata ~= nil and container.metadata.isPallet == true)
         or (entity ~= nil and entity.isPallet == true)
-    Log:trace("<<< isLooseItemContainer(%s) = %s", tostring(container.id), tostring(isLoose))
+    -- Log:trace("<<< isLooseItemContainer(%s) = %s", tostring(container.id), tostring(isLoose))
     return isLoose
 end
 
@@ -145,8 +145,8 @@ end
 function RmFreshManager:getStorageClassOverride(container)
     if self:isLooseItemContainer(container) then
         local override = RmFreshSettings:getStorageClassOverride("itemsInWorld")
-        Log:trace("OVERRIDE_LOOKUP: container=%s items_in_world -> %s",
-            container.id or "?", override and self.STORAGE_CLASS_NAMES[override] or "nil")
+        -- Log:trace("OVERRIDE_LOOKUP: container=%s items_in_world -> %s",
+            -- container.id or "?", override and self.STORAGE_CLASS_NAMES[override] or "nil")
         return override
     end
 
@@ -155,12 +155,12 @@ function RmFreshManager:getStorageClassOverride(container)
     local uniqueId = wo and wo.uniqueId
     if uniqueId then
         local override = RmFreshSettings:getStorageClassOverride(uniqueId)
-        Log:trace("OVERRIDE_LOOKUP: container=%s uniqueId=%s -> %s",
-            container.id or "?", uniqueId, override and self.STORAGE_CLASS_NAMES[override] or "nil")
+        -- Log:trace("OVERRIDE_LOOKUP: container=%s uniqueId=%s -> %s",
+            -- container.id or "?", uniqueId, override and self.STORAGE_CLASS_NAMES[override] or "nil")
         return override
     end
 
-    Log:trace("OVERRIDE_LOOKUP: container=%s has no uniqueId -> nil", container.id or "?")
+    -- Log:trace("OVERRIDE_LOOKUP: container=%s has no uniqueId -> nil", container.id or "?")
     return nil
 end
 
@@ -180,8 +180,8 @@ function RmFreshManager:resolveStorageClassInfo(container)
     local maxBenefitClass = RmFreshSettings:getMaxBenefitClass(container.fillTypeIndex)
     local effective = self:_resolveEffectiveClass(base, maxBenefitClass)
     local multiplier = RmFreshSettings:getClassMultiplier(effective)
-    Log:trace("<<< resolveStorageClassInfo(%s) detected=%s override=%s base=%s effective=%s",
-        tostring(container.id), tostring(detected), tostring(override), tostring(base), tostring(effective))
+    -- Log:trace("<<< resolveStorageClassInfo(%s) detected=%s override=%s base=%s effective=%s",
+        -- tostring(container.id), tostring(detected), tostring(override), tostring(base), tostring(effective))
     return {
         detected = detected,
         override = override,
@@ -199,8 +199,8 @@ end
 function RmFreshManager:getAgingMultiplier(container)
     local classInfo = self:resolveStorageClassInfo(container)
     local multiplier = RmFreshSettings.storageAgingEnabled and classInfo.multiplier or 1.0
-    Log:trace("<<< getAgingMultiplier(%s) = %.2f (storageAging=%s class=%.2f)", tostring(container.id), multiplier,
-        tostring(RmFreshSettings.storageAgingEnabled), classInfo.multiplier)
+    -- Log:trace("<<< getAgingMultiplier(%s) = %.2f (storageAging=%s class=%.2f)", tostring(container.id), multiplier,
+        -- tostring(RmFreshSettings.storageAgingEnabled), classInfo.multiplier)
     return multiplier, classInfo
 end
 
@@ -244,20 +244,20 @@ end
 ---@param maxBenefitClass number Maximum benefit class for this fillType
 ---@return number Effective storage class value
 function RmFreshManager:_resolveEffectiveClass(storageClass, maxBenefitClass)
-    Log:trace(">>> _resolveEffectiveClass(storageClass=%d [%s], maxBenefit=%d [%s])",
-        storageClass, self.STORAGE_CLASS_NAMES[storageClass] or "?",
-        maxBenefitClass, self.STORAGE_CLASS_NAMES[maxBenefitClass] or "?")
+    -- Log:trace(">>> _resolveEffectiveClass(storageClass=%d [%s], maxBenefit=%d [%s])",
+        -- storageClass, self.STORAGE_CLASS_NAMES[storageClass] or "?",
+        -- maxBenefitClass, self.STORAGE_CLASS_NAMES[maxBenefitClass] or "?")
 
     -- DISABLED bypasses ceiling - player opt-out always honored
     if storageClass == self.STORAGE_CLASS.DISABLED then
-        Log:trace("<<< _resolveEffectiveClass = %d (DISABLED overrides ceiling)", self.STORAGE_CLASS.DISABLED)
+        -- Log:trace("<<< _resolveEffectiveClass = %d (DISABLED overrides ceiling)", self.STORAGE_CLASS.DISABLED)
         return self.STORAGE_CLASS.DISABLED
     end
 
     -- Ceiling: cap benefit at maxBenefitClass
     local effective = math.min(storageClass, maxBenefitClass)
-    Log:trace("<<< _resolveEffectiveClass = %d (%s)",
-        effective, self.STORAGE_CLASS_NAMES[effective] or "?")
+    -- Log:trace("<<< _resolveEffectiveClass = %d (%s)",
+        -- effective, self.STORAGE_CLASS_NAMES[effective] or "?")
     return effective
 end
 
@@ -2380,24 +2380,24 @@ end
 ---@return table|nil Display info { text = string, isWarning = boolean, isExpiring = boolean } or nil
 function RmFreshManager:getDisplayInfo(containerId)
     if not RmFreshSettings:isExpirationEnabled() then
-        Log:trace("DISPLAY_INFO: expiration disabled, no line for %s", tostring(containerId))
+        -- Log:trace("DISPLAY_INFO: expiration disabled, no line for %s", tostring(containerId))
         return nil
     end
 
     local container = self.containers[containerId]
     if not container then
-        Log:trace("DISPLAY_INFO: no container %s", tostring(containerId))
+        -- Log:trace("DISPLAY_INFO: no container %s", tostring(containerId))
         return nil
     end
 
     -- Skip display if fillType is not currently perishable
     if not RmFreshSettings:isPerishableByIndex(container.fillTypeIndex) then
-        Log:trace("DISPLAY_INFO: %s fillType not perishable", tostring(containerId))
+        -- Log:trace("DISPLAY_INFO: %s fillType not perishable", tostring(containerId))
         return nil
     end
 
     if not container.batches or #container.batches == 0 then
-        Log:trace("DISPLAY_INFO: %s has no batches", tostring(containerId))
+        -- Log:trace("DISPLAY_INFO: %s has no batches", tostring(containerId))
         return nil
     end
 
@@ -2410,8 +2410,8 @@ function RmFreshManager:getDisplayInfo(containerId)
     local text = RmBatch.formatExpiresIn(oldest, config.expiration, daysPerPeriod, multiplier)
     local warningHours = RmFreshSettings:getWarningHours()
     local isWarning = RmBatch.isNearExpiration(oldest, warningHours, config.expiration, daysPerPeriod, multiplier)
-    Log:trace("<<< getDisplayInfo(%s) = '%s' multiplier=%.2f warning=%s", tostring(containerId), text, multiplier,
-        tostring(isWarning))
+    -- Log:trace("<<< getDisplayInfo(%s) = '%s' multiplier=%.2f warning=%s", tostring(containerId), text, multiplier,
+        -- tostring(isWarning))
 
     return {
         text = text,

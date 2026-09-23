@@ -543,23 +543,23 @@ end
 ---@param superFunc function Original updateInfo function
 ---@param infoTable table Info table to modify
 function RmHusbandryFoodAdapter:updateInfo(superFunc, infoTable)
-    Log:trace(">>> updateInfo(husbandryFood=%s)", self.uniqueId or "?")
+    -- Log:trace(">>> updateInfo(husbandryFood=%s)", self.uniqueId or "?")
 
     local startCount = #infoTable -- Track count BEFORE superFunc
     superFunc(self, infoTable)
 
     if not RmFreshSettings:isExpirationEnabled() then
-        Log:trace("<<< updateInfo (husbandryFood=%s expiration disabled)", self.uniqueId or "?")
+        -- Log:trace("<<< updateInfo (husbandryFood=%s expiration disabled)", self.uniqueId or "?")
         return
     end
 
     local spec = self[RmHusbandryFoodAdapter.SPEC_TABLE_NAME]
     if spec == nil then
-        Log:trace("<<< updateInfo (no spec)")
+        -- Log:trace("<<< updateInfo (no spec)")
         return
     end
     if spec.containerIds == nil or next(spec.containerIds) == nil then
-        Log:trace("<<< updateInfo (no containerIds)")
+        -- Log:trace("<<< updateInfo (no containerIds)")
         return
     end
 
@@ -601,7 +601,7 @@ function RmHusbandryFoodAdapter:updateInfo(superFunc, infoTable)
 
     -- Only modify entries when there's something expiring
     if totalExpiring == 0 then
-        Log:trace("<<< updateInfo (no expiring goods)")
+        -- Log:trace("<<< updateInfo (no expiring goods)")
         return
     end
 
@@ -640,7 +640,7 @@ function RmHusbandryFoodAdapter:updateInfo(superFunc, infoTable)
     -- TRACE exit log with expiring summary
     local expiringCount = 0
     for _ in pairs(expiringByFillType) do expiringCount = expiringCount + 1 end
-    Log:trace("<<< updateInfo: %d fillTypes with expiring goods", expiringCount)
+    -- Log:trace("<<< updateInfo: %d fillTypes with expiring goods", expiringCount)
 end
 
 -- =============================================================================
