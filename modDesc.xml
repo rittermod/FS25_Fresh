@@ -40,6 +40,18 @@ Documentation: https://github.com/rittermod/FS25_Fresh
 
 Changelog:
 
+1.1.0.0-dev.1:
+- Added roof detection for loose bales, pallets and big bags - one set down under a shed, carport or barn roof now ages as Sheltered instead of Exposed
+- Added covered vehicle loads - a compartment with a load heap ages as Sheltered while the tarp or cover over it is closed and Exposed while it is open, including compartments that share one tarp with the covered ones
+- Added roof detection for parked vehicles - a trailer parked under a shed roof, with nobody in it or its tractor, ages as Sheltered
+- Changed the Loose Items storage setting to a minimum class - a bale or pallet under a roof stays Sheltered even when the setting is Exposed
+- Restricted the admin console commands that edit stock, ages, expiry and storage classes to development builds; set storage classes in the Fresh settings menu
+- Fixed pallets and big bags on multiplayer clients showing a storage class that ignored the Loose Items setting (aging on the server was already correct)
+- Fixed tankers, sprayers, and closed hoppers aging as Exposed - a load with no open heap now ages as Sheltered
+- Fixed the Overview's Next Expiry showing the oldest batch's time when a newer batch in faster-spoiling storage runs out first
+- Fixed expiry times ignoring the Storage aging setting when it is off, and the Expires in lines and age bars still showing when expiration is off
+- Updated the storage classes guide and FAQ to explain which buildings count as a roof
+
 1.0.1.0:
 - Added optional external config (modSettings/FS25_Fresh/customDefaults.xml) to add or override shelf life, storage class and aging multipliers for any crop - including custom map/mod crops - without editing the mod (update-safe, re-read each launch, server-side in multiplayer)
 - Improved stability - a rare error while aging or expiring one item no longer interrupts the rest of the hourly/daily update
