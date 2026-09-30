@@ -525,7 +525,7 @@ end
 -- =============================================================================
 
 --- Hook for removeAbstractObjectFromStorage - transfers batches when object spawns
---- Strategy: Snapshot existing containers -> superFunc -> find new container -> transfer
+--- Uses the game's spawn callback to keep the transfer tied to the exact object
 ---@param superFunc function Original function
 ---@param abstractObject table The abstract object being spawned
 ---@param x number Spawn X position
@@ -563,62 +563,55 @@ function RmObjectStorageAdapter:removeAbstractObjectFromStorageHook(superFunc, a
             storedContainerId, sourceBatches and #sourceBatches or 0)
     end
 
-    -- Snapshot existing bale/vehicle containerIds BEFORE spawn
-    -- The spawned entity will register during superFunc
-    local existingContainerIds = {}
-    if className == "Bale" then
-        existingContainerIds = RmObjectStorageAdapter.snapshotBaleContainerIds()
-    elseif className == "Vehicle" then
-        existingContainerIds = RmObjectStorageAdapter.snapshotVehicleContainerIds()
-    end
-    Log:trace("    snapshot: %d existing containers", RmObjectStorageAdapter.tableCount(existingContainerIds))
-
-    -- Call original (spawns entity, which registers with its adapter)
-    superFunc(self, abstractObject, x, y, z, rx, ry, rz)
-
-    -- Find newly registered containerId (not in snapshot)
-    local destContainerId = nil
-    if className == "Bale" then
-        destContainerId = RmObjectStorageAdapter.findNewBaleContainerId(existingContainerIds)
-    elseif className == "Vehicle" then
-        destContainerId = RmObjectStorageAdapter.findNewVehicleContainerId(existingContainerIds)
-    end
-
-    if destContainerId and sourceBatches and #sourceBatches > 0 then
-        -- Clear BaleAdapter's initial batch before adding stored batches
-        -- (BaleAdapter creates age=0 batch on spawn, we replace with aged batch)
-        RmFreshManager:clearBatches(destContainerId)
-
-        -- Transfer batches from stored -> spawned
-        local batchCount = 0
-        local totalAmount = 0
-
+    local transfer = nil
+    if storedContainerId and sourceBatches and #sourceBatches > 0 then
+        local batches = {}
         for _, batch in ipairs(sourceBatches) do
-            RmFreshManager:addBatch(destContainerId, batch.amount, batch.ageInPeriods)
-            batchCount = batchCount + 1
-            totalAmount = totalAmount + batch.amount
+            batches[#batches + 1] = {
+                amount = batch.amount,
+                ageInPeriods = batch.ageInPeriods
+            }
         end
-
-        Log:info("OBJECTSTORAGE_EXIT: stored -> %s (%d batches, %.0fL transferred)",
-            className, batchCount, totalAmount)
-        Log:debug("OBJECTSTORAGE_EXIT_DETAIL: source=%s -> dest=%s",
-            storedContainerId, destContainerId)
-    elseif destContainerId then
-        Log:debug("OBJECTSTORAGE_EXIT: %s spawned (no batches to transfer)", className)
-    else
-        -- Spawn might be async - schedule deferred check
-        if storedContainerId and sourceBatches and #sourceBatches > 0 then
-            Log:trace("    spawn async, scheduling deferred transfer")
-            RmObjectStorageAdapter.scheduleDeferredExitTransfer(
-                self, abstractObject, storedContainerId, sourceBatches, className)
-        end
+        transfer = {
+            sourceContainerId = storedContainerId,
+            batches = batches,
+            className = className
+        }
     end
 
-    -- Cleanup stored container
+    if transfer then
+        -- removeFromStorage receives this callback by value, so the original can be
+        -- restored as soon as superFunc returns even when the spawn finishes later.
+        local originalSpawnCallback = PlaceableObjectStorage.onObjectFromStorageSpawned
+        PlaceableObjectStorage.onObjectFromStorageSpawned = function(placeable, spawnedObject)
+            originalSpawnCallback(placeable, spawnedObject)
+            RmObjectStorageAdapter.attachPendingExitTransfer(spawnedObject, transfer)
+        end
+
+        local success, errorMessage = pcall(superFunc, self, abstractObject, x, y, z, rx, ry, rz)
+        PlaceableObjectStorage.onObjectFromStorageSpawned = originalSpawnCallback
+
+        if not success then
+            error(errorMessage, 0)
+        end
+    else
+        superFunc(self, abstractObject, x, y, z, rx, ry, rz)
+    end
+
+    -- The abstract object has left storage, so remove its local lookup entries.
     if storedContainerId then
         spec.abstractObjectContainers[abstractObject] = nil
-        RmFreshManager:unregisterContainer(storedContainerId)
-        Log:trace("    unregistered stored container: %s", storedContainerId)
+        for key, containerId in pairs(spec.containerIds) do
+            if containerId == storedContainerId then
+                spec.containerIds[key] = nil
+            end
+        end
+
+        -- Empty containers have no batch handoff to claim later.
+        if transfer == nil then
+            RmFreshManager:unregisterContainer(storedContainerId)
+            Log:trace("    unregistered empty stored container: %s", storedContainerId)
+        end
     else
         -- Log warning if we expected to find a containerId (perishable class)
         -- Non-perishable items won't have containers, so only warn for perishables
@@ -631,138 +624,37 @@ function RmObjectStorageAdapter:removeAbstractObjectFromStorageHook(superFunc, a
     Log:trace("<<< removeAbstractObjectFromStorageHook: done")
 end
 
---- Snapshot current bale containerIds from Manager
----@return table<string,boolean> Set of existing containerIds
-function RmObjectStorageAdapter.snapshotBaleContainerIds()
-    local snapshot = {}
-    local containers = RmFreshManager.containers or {}
-    for containerId, container in pairs(containers) do
-        if container.entityType == "bale" then
-            snapshot[containerId] = true
-        end
-    end
-    return snapshot
-end
-
---- Snapshot current vehicle containerIds from Manager
----@return table<string,boolean> Set of existing containerIds
-function RmObjectStorageAdapter.snapshotVehicleContainerIds()
-    local snapshot = {}
-    local containers = RmFreshManager.containers or {}
-    for containerId, container in pairs(containers) do
-        if container.entityType == "vehicle" then
-            snapshot[containerId] = true
-        end
-    end
-    return snapshot
-end
-
---- Find bale containerId that wasn't in snapshot (newly created)
----@param snapshot table<string,boolean> Previous containerIds
----@return string|nil containerId New containerId or nil
-function RmObjectStorageAdapter.findNewBaleContainerId(snapshot)
-    local containers = RmFreshManager.containers or {}
-    for containerId, container in pairs(containers) do
-        if container.entityType == "bale" and not snapshot[containerId] then
-            return containerId
-        end
-    end
-    return nil
-end
-
---- Find vehicle containerId that wasn't in snapshot (newly created)
----@param snapshot table<string,boolean> Previous containerIds
----@return string|nil containerId New containerId or nil
-function RmObjectStorageAdapter.findNewVehicleContainerId(snapshot)
-    local containers = RmFreshManager.containers or {}
-    for containerId, container in pairs(containers) do
-        if container.entityType == "vehicle" and not snapshot[containerId] then
-            return containerId
-        end
-    end
-    return nil
-end
-
---- Count table entries
----@param t table|nil
----@return number
-function RmObjectStorageAdapter.tableCount(t)
-    if t == nil then return 0 end
-    local count = 0
-    for _ in pairs(t) do count = count + 1 end
-    return count
-end
-
---- Schedule deferred exit transfer (for async spawns)
---- Polls for newly registered containers matching className
----@param placeable table The placeable
----@param abstractObject table The abstract object that was spawned
----@param storedContainerId string The stored container ID (already unregistered)
----@param sourceBatches table Array of batches to transfer
----@param className string "Bale" or "Vehicle"
-function RmObjectStorageAdapter.scheduleDeferredExitTransfer(placeable, abstractObject, storedContainerId, sourceBatches,
-                                                             className)
-    Log:trace(">>> scheduleDeferredExitTransfer(className=%s, batches=%d)",
-        className, sourceBatches and #sourceBatches or 0)
-
-    -- Snapshot current containers
-    local existingContainerIds = {}
-    if className == "Bale" then
-        existingContainerIds = RmObjectStorageAdapter.snapshotBaleContainerIds()
-    elseif className == "Vehicle" then
-        existingContainerIds = RmObjectStorageAdapter.snapshotVehicleContainerIds()
+--- Attach saved batches to the exact object returned by the game's spawn callback
+---@param spawnedObject table|nil Spawned bale or pallet
+---@param transfer table Pending transfer data
+---@return boolean claimed True when the destination was already registered
+function RmObjectStorageAdapter.attachPendingExitTransfer(spawnedObject, transfer)
+    if spawnedObject == nil then
+        Log:warning("OBJECTSTORAGE_EXIT: spawn callback returned no object; batches remain recoverable")
+        return false
     end
 
-    local startTime = g_currentMission.time
-    local maxWaitMs = 2000 -- 2 second timeout
+    spawnedObject.rmFreshPendingObjectStorageTransfer = transfer
 
-    g_currentMission:addUpdateable({
-        update = function(self, _dt)
-            -- Guard: mission teardown
-            if g_currentMission == nil then
-                g_currentMission:removeUpdateable(self)
-                return
-            end
+    local destinationContainerId = nil
+    if transfer.className == "Bale" then
+        destinationContainerId = RmBaleAdapter:getContainerIdForBale(spawnedObject)
+    elseif transfer.className == "Vehicle"
+        and spawnedObject.getFillUnitFillType
+        and spawnedObject.spec_fillUnit then
+        local fillTypeIndex = spawnedObject:getFillUnitFillType(1)
+        destinationContainerId =
+            RmVehicleAdapter:getContainerIdForFillUnit(spawnedObject, 1, fillTypeIndex)
+    end
 
-            -- Look for newly registered container
-            local destContainerId = nil
-            if className == "Bale" then
-                destContainerId = RmObjectStorageAdapter.findNewBaleContainerId(existingContainerIds)
-            elseif className == "Vehicle" then
-                destContainerId = RmObjectStorageAdapter.findNewVehicleContainerId(existingContainerIds)
-            end
+    if destinationContainerId then
+        return RmFreshManager:claimPendingObjectStorageTransfer(
+            spawnedObject, destinationContainerId, true)
+    end
 
-            if destContainerId then
-                -- Clear BaleAdapter's initial batch before adding stored batches
-                RmFreshManager:clearBatches(destContainerId)
-
-                -- Transfer batches to spawned entity
-                local batchCount = 0
-                local totalAmount = 0
-
-                for _, batch in ipairs(sourceBatches) do
-                    RmFreshManager:addBatch(destContainerId, batch.amount, batch.ageInPeriods)
-                    batchCount = batchCount + 1
-                    totalAmount = totalAmount + batch.amount
-                end
-
-                Log:info("OBJECTSTORAGE_EXIT_DEFERRED: -> %s (%d batches, %.0fL transferred)",
-                    className, batchCount, totalAmount)
-                Log:debug("OBJECTSTORAGE_EXIT_DEFERRED_DETAIL: dest=%s", destContainerId)
-
-                g_currentMission:removeUpdateable(self)
-                return
-            end
-
-            -- Timeout check
-            if (g_currentMission.time - startTime) > maxWaitMs then
-                Log:warning("OBJECTSTORAGE_EXIT_TIMEOUT: %s spawn not detected after %dms (batches lost)",
-                    className, maxWaitMs)
-                g_currentMission:removeUpdateable(self)
-                return
-            end
-        end
-    })
+    Log:trace("OBJECTSTORAGE_EXIT: waiting for spawned %s to register",
+        transfer.className or "object")
+    return false
 end
 
 -- =============================================================================
