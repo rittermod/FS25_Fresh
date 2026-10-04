@@ -24,7 +24,7 @@ end
 --- Constructor with delta data
 ---@param containerId string Container ID
 ---@param operation number Operation type (OP_REGISTER, OP_UPDATE, OP_UNREGISTER)
----@param data table|nil Operation data (container for REGISTER, batches for UPDATE, nil for UNREGISTER)
+---@param data table|nil Operation data (container for REGISTER, container state for UPDATE, nil for UNREGISTER)
 function RmFreshUpdateEvent.new(containerId, operation, data)
     local self = RmFreshUpdateEvent.emptyNew()
     self.containerId = containerId
@@ -68,12 +68,15 @@ function RmFreshUpdateEvent:writeStream(streamId, connection)
         -- Write metadata
         local location = ""
         local storageClass = RmFreshManager.STORAGE_CLASS.SHELTERED
+        local isPallet = false
         if container.metadata then
             location = container.metadata.location or ""
             storageClass = container.metadata.storageClass or RmFreshManager.STORAGE_CLASS.SHELTERED
+            isPallet = container.metadata.isPallet == true
         end
         streamWriteString(streamId, location)
         streamWriteUInt8(streamId, storageClass)
+        streamWriteBool(streamId, isPallet)
 
         -- Write flat batches array
         local batches = container.batches or {}
@@ -86,6 +89,10 @@ function RmFreshUpdateEvent:writeStream(streamId, connection)
         end
 
     elseif self.operation == RmFreshUpdateEvent.OP_UPDATE then
+        -- Write fields that may change while the container remains registered
+        streamWriteUInt16(streamId, self.data.fillTypeIndex or 0)
+        streamWriteString(streamId, self.data.fillTypeName or "")
+
         -- Write updated batches array (flat, not per-fillUnit)
         local batches = self.data.batches or {}
         local batchCount = #batches
@@ -125,6 +132,7 @@ function RmFreshUpdateEvent:readStream(streamId, connection)
         -- Read metadata
         local location = streamReadString(streamId)
         local storageClass = streamReadUInt8(streamId)
+        local isPallet = streamReadBool(streamId)
 
         -- Read flat batches
         local batchCount = streamReadUInt8(streamId)
@@ -149,10 +157,13 @@ function RmFreshUpdateEvent:readStream(streamId, connection)
                 storage = { fillTypeName = fillTypeName }
             },
             batches = batches,
-            metadata = { location = location, storageClass = storageClass }
+            metadata = { location = location, storageClass = storageClass, isPallet = isPallet }
         }
 
     elseif self.operation == RmFreshUpdateEvent.OP_UPDATE then
+        local fillTypeIndex = streamReadUInt16(streamId)
+        local fillTypeName = streamReadString(streamId)
+
         -- Read updated batches array (flat)
         local batchCount = streamReadUInt8(streamId)
         local batches = {}
@@ -164,7 +175,11 @@ function RmFreshUpdateEvent:readStream(streamId, connection)
             })
         end
 
-        self.data = { batches = batches }
+        self.data = {
+            fillTypeIndex = fillTypeIndex,
+            fillTypeName = fillTypeName,
+            batches = batches
+        }
 
     elseif self.operation == RmFreshUpdateEvent.OP_UNREGISTER then
         -- No payload for unregister
@@ -204,6 +219,10 @@ function RmFreshUpdateEvent:run(connection)
         local container = RmFreshManager.containers[self.containerId]
         if container then
             container.batches = self.data.batches
+            container.fillTypeIndex = self.data.fillTypeIndex
+            if container.identityMatch and container.identityMatch.storage then
+                container.identityMatch.storage.fillTypeName = self.data.fillTypeName
+            end
             Log:debug("UPDATE_EVENT_RUN: UPDATE containerId=%s batches=%d",
                 self.containerId, #self.data.batches)
         else
