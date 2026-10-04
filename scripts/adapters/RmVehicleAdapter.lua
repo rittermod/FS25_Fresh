@@ -8,9 +8,7 @@ RmVehicleAdapter.ENTITY_TYPE = "vehicle"
 
 local Log = RmLogging.getLogger("Fresh")
 
---- Safe getName wrapper - some vehicle types (e.g. Rideable/horse) override getName()
---- with code that throws when internal state isn't ready (cluster=nil during async load).
---- Base game bug: Rideable:getName() has no nil guard on spec.cluster.
+--- Some rideable vehicles throw from getName() while still loading; fall back to the type or config name.
 local function safeGetName(vehicle)
     local ok, name = pcall(function() return vehicle:getName() end)
     if ok and name then return name end
@@ -281,9 +279,7 @@ end
 -- LOOKUP API
 -- =============================================================================
 
---- Get containerId for a vehicle fillUnit and fillType
---- Used by TransferCoordinator to resolve source/destination containers
---- NETWORK SAFE: Works on both server and client (uses synced spec.containerIds)
+--- Get containerId for a vehicle fillUnit and fillType; works on server and client (synced containerIds).
 ---@param vehicle table Vehicle entity
 ---@param fillUnitIndex number Fill unit index (1-based)
 ---@param fillTypeIndex number Fill type index (required - resolves to fillTypeName for nested lookup)
@@ -362,8 +358,7 @@ function RmVehicleAdapter:onLoadFinished(savegame)
     local spec = self[RmVehicleAdapter.SPEC_TABLE_NAME]
     if spec == nil then return end  -- Safety check
 
-    -- Skip non-player vehicles (shop previews, map defaults, shop config)
-    -- VehiclePropertyState: NONE=1, OWNED=2, LEASED=3, MISSION=4, SHOP_CONFIG=5
+    -- Skip shop previews (SHOP_CONFIG) and system vehicles such as trains (NONE)
     local propertyState = self:getPropertyState()
     if propertyState == VehiclePropertyState.SHOP_CONFIG or
        propertyState == VehiclePropertyState.NONE then
@@ -387,8 +382,7 @@ end
 --- Polling timeout for deferred registration: 10 seconds (600 frames at 60fps)
 local DEFER_TIMEOUT_MS = 10000
 
---- Defer registration until uniqueId is available (for purchased vehicles)
---- uniqueId is assigned after onLoadFinished for shop purchases
+--- Defer registration: a purchased vehicle gets its uniqueId only after onLoadFinished.
 ---@param vehicle table Vehicle entity
 function RmVehicleAdapter.deferRegistration(vehicle)
     Log:trace(">>> deferRegistration(vehicle=%s)", safeGetName(vehicle))
@@ -715,7 +709,7 @@ function RmVehicleAdapter.setCoverState(self, superFunc, state, noEventSend)
     -- The original runs first, so the re-class reads the state it has just set
     local result = superFunc(self, state, noEventSend)
 
-    -- The call also runs on clients (join stream, event, trigger callback); only the server classes
+    -- The call also runs on clients; only the server classes
     if not self.isServer then
         Log:trace("COVER_HOOK: uniqueId=%s state=%s client, no re-class", tostring(self.uniqueId), tostring(state))
         return result
@@ -920,9 +914,7 @@ end
 -- EMPTY CONTAINER CALLBACK (from Manager after expiration)
 -- =============================================================================
 
---- Handle empty container after expiration
---- Called by Manager when container batches are empty
---- Only deletes pallets, not equipment like trailers (v1 pattern)
+--- Handle a container emptied by expiration; deletes pallets only, never equipment like trailers.
 ---@param containerId string Container ID
 function RmVehicleAdapter:onContainerEmpty(containerId)
     local container = RmFreshManager:getContainer(containerId)

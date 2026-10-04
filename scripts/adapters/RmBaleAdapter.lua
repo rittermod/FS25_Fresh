@@ -27,8 +27,7 @@ function RmBaleAdapter:getEntityId(bale)
     return bale.uniqueId -- FS25's stable uniqueId
 end
 
---- Detect if bale is currently fermenting (wrapped but not complete)
---- Uses FS25's built-in Bale:getIsFermenting() which handles all edge cases
+--- True while the bale is wrapped and still fermenting (Bale:getIsFermenting)
 function RmBaleAdapter:isFermenting(bale)
     if bale == nil then return false end
     if bale.getIsFermenting == nil then return false end -- Safety check
@@ -153,9 +152,7 @@ end
 -- LOOKUP API
 -- =============================================================================
 
---- Get containerId for a bale
---- Used by TransferCoordinator to resolve source containers
---- NETWORK SAFE: Works on both server and client (uses synced spec.containerId)
+--- Get a bale's containerId; works on server and client (synced spec.containerId).
 ---@param bale table Bale entity
 ---@return string|nil containerId or nil if not registered
 function RmBaleAdapter:getContainerIdForBale(bale)
@@ -203,11 +200,7 @@ end
 -- FILL LEVEL HOOK (overwrittenFunction pattern)
 -- =============================================================================
 
---- Hook for Bale.setFillLevel - captures delta and reports to Manager
---- CRITICAL: Calls superFunc FIRST for game stability, then wraps our logic in pcall
---- Handles two scenarios:
----   1. New bale (not registered) -> delegate to onFillLevelSet for registration
----   2. Existing bale (registered) -> calculate delta and report to Manager
+--- Bale.setFillLevel hook: superFunc first, then (in pcall) register a new bale or report the delta.
 ---@param bale table Bale entity
 ---@param superFunc function Original setFillLevel function
 ---@param newFillLevel number New fill level to set
@@ -253,7 +246,7 @@ function RmBaleAdapter.setFillLevelHook(bale, superFunc, newFillLevel, ...)
     end)
 
     if not ok then
-        -- Enhanced error logging with context per code review recommendation
+        -- Log the error with bale context
         local spec = bale[RmBaleAdapter.SPEC_TABLE_NAME]
         local containerId = spec and spec.containerId or "unregistered"
         local uniqueId = bale.uniqueId or "unknown"
@@ -292,14 +285,7 @@ function RmBaleAdapter.install()
     end))
 
     -- Hook Bale.setWrappingState for wrapper wrap detection
-    -- Uses appendedFunction because we just need to update tracking AFTER game processes wrapping
-    --
-    -- TIMING NOTE: Hook fires AFTER the game method executes.
-    -- If wrapping happens during active aging simulation, shouldAge check may
-    -- use old fermenting flag until next frame. This is acceptable because:
-    -- 1. Wrapping is rare mid-simulation (user action, not automated)
-    -- 2. One-frame delay is negligible for aging calculations
-    -- 3. Next aging cycle will use correct flag
+    -- Appended: tracking updates after the game wraps; shouldAge may read the old flag for one frame.
     Bale.setWrappingState = Utils.appendedFunction(
         Bale.setWrappingState,
         safeHook(function(bale, wrappingState, updateFermentation)
@@ -318,7 +304,7 @@ function RmBaleAdapter.install()
 
     -- Hook Bale.writeStream for MP sync (server -> client on join)
     -- Appends containerId after game's bale data so client can set up spec table
-    -- CRITICAL: Bales don't use NetworkUtil like vehicles - they have their own stream
+    -- CRITICAL: Bales are not specializations, so the containerId rides the bale's own stream
     Bale.writeStream = Utils.appendedFunction(
         Bale.writeStream,
         safeHook(function(bale, streamId, connection)
@@ -505,17 +491,7 @@ function RmBaleAdapter.doRegistration(bale, entityId, fermenting, fillTypeOverri
     end
 end
 
---- Called when bale is about to be deleted
---- TRANSFER FIX v2: Stage batches and apply amount-based retroactive correction
---- This enables age preservation for bale->placeable and bale->husbandry transfers
---- where FS25 deletes the bale WITHOUT calling setFillLevel() first
----
---- v2 FIX: Uses amount-based split correction to only correct the transferred amount,
---- preserving any original fresh content already in the destination.
----
---- For ObjectStorage: No conflict - ObjectStorage captures batches BEFORE this hook runs
---- For manual deletion: Batches staged but unused (overwritten by next transfer)
---- For expiration: No batches left (consumed by expiration), nothing to stage
+--- On delete, stage batches and correct only the transferred amount: a bale fed to a placeable is deleted unemptied.
 function RmBaleAdapter.onDeleteHook(bale)
     if g_server == nil then return end -- Server only
 
@@ -550,7 +526,7 @@ function RmBaleAdapter.onDeleteHook(bale)
                 if timeDiff < 1000 then
                     local destContainer = RmFreshManager:getContainer(correction.containerId)
                     if destContainer and destContainer.batches and #destContainer.batches > 0 then
-                        -- v2: Amount-based correction - only correct transferredAmount worth
+                        -- Amount-based correction - only correct transferredAmount worth
                         -- This preserves original fresh content in destination
                         local sourceAge = batchesToStage[1].age
                         local remainingToCorrect = transferredAmount
@@ -613,16 +589,7 @@ function RmBaleAdapter.onDeleteHook(bale)
     end
 end
 
---- Called when bale wrapping state changes
---- Updates spec.fermenting flag when wrapper wraps an existing bale
---- This handles the case where a baler creates unwrapped bale, then wrapper wraps it later
----
---- DUAL-TRACKING PATTERN: Both spec.fermenting and container.metadata.fermenting are updated.
---- - spec.fermenting: Source of truth on entity, used by shouldAge() for live bale checks
---- - container.metadata.fermenting: Mirror in Manager container, used when accessing
----   container data without entity reference (e.g., console inspect, save/load)
---- Keeping both in sync ensures consistent behavior regardless of access path.
----
+--- On a wrap, update spec.fermenting and its mirror container.metadata.fermenting together.
 ---@param bale table Bale entity
 ---@param wrappingState number New wrapping state (0=unwrapped, 1=wrapped)
 function RmBaleAdapter.onWrappingStateChanged(bale, wrappingState)
@@ -696,9 +663,8 @@ end
 -- =============================================================================
 -- MULTIPLAYER STREAM HOOKS
 -- =============================================================================
--- Bales sync via writeStream/readStream, not NetworkUtil.
--- We piggyback on this stream to sync containerId to clients.
--- Adapter handles stream format, Manager owns data.
+
+-- Bales sync through writeStream/readStream; the containerId rides that stream to clients.
 
 --- Server -> Client: Write containerId to stream
 ---@param bale table Bale entity

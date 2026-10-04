@@ -14,12 +14,9 @@ local modDirectory = g_currentModDirectory
 RmStorageDetailFrame.LEFT_VISIBLE_ROWS = 9   -- 740px / ~80px effective (100px - 20px overlap)
 RmStorageDetailFrame.RIGHT_VISIBLE_ROWS = 12  -- 600px / 48px per row
 
--- Category filter functions (entry → boolean)
--- Husbandry buildings register via both PlaceableAdapter ("placeable") and
--- HusbandryFoodAdapter ("husbandryfood"), sharing the same uniqueId.
--- getStorageList groups by uniqueId so the entityType is non-deterministic.
--- We detect husbandries via isHusbandry flag (set in enrichStorageData) to
--- ensure they always appear in Husbandries, never in Placeables.
+-- Category filter functions (entry -> boolean). A husbandry registers as both "placeable" and
+-- "husbandryfood" under one uniqueId, so a grouped entry's entityType is arbitrary; the isHusbandry
+-- flag (enrichStorageData) keeps husbandries in Husbandries, never in Placeables.
 RmStorageDetailFrame.CATEGORY_FILTERS = {
     [1] = function(entry) -- Placeables (excludes husbandries)
         return (entry.entityType == "placeable" or entry.entityType == "stored") and not entry.isHusbandry
@@ -131,9 +128,7 @@ end
 -- CATEGORY DOTS
 -- =============================================================================
 
---- Create dot indicators for the category selector (base game pattern)
---- Clones the RoundCorner dot template once per category into the dot box.
---- Each dot's getIsSelected() highlights when it matches the current selector state.
+--- Clone one RoundCorner dot per category into the dot box, selected when it matches the selector.
 function RmStorageDetailFrame:updateCategoryDots()
     -- Unlink template on first use (keep Lua reference for cloning)
     if self.categoryDotTemplate and self.categoryDotTemplate.parent then
@@ -211,9 +206,7 @@ function RmStorageDetailFrame:refreshData()
         #self.allStorageData, #self.storageData, self.currentCategory)
 end
 
---- Detect husbandry buildings and flag entries
---- Husbandry buildings may appear with entityType "placeable" due to
---- non-deterministic grouping in getStorageList (pairs() iteration order)
+--- Flag husbandry entries; getStorageList's pairs() grouping can label a husbandry "placeable".
 function RmStorageDetailFrame:enrichStorageData()
     -- Build set of husbandry uniqueIds from live placeables
     local husbandryIds = {}
@@ -232,7 +225,7 @@ end
 
 --- Resolve shop images for all storage entries using O(N+M) lookup map
 function RmStorageDetailFrame:resolveShopImages()
-    -- Build uniqueId → entity lookup map once
+    -- Build uniqueId -> entity lookup map once
     local entityMap = {}
     if g_currentMission.placeableSystem then
         for _, placeable in ipairs(g_currentMission.placeableSystem.placeables) do

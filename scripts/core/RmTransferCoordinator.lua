@@ -10,19 +10,19 @@
 --   BEFORE superFunc: Stage batches from source
 --     1. Resolve source container via adapter lookup
 --     2. Resolve destination container via adapter lookup
---     3. peekBatches(source, amount) → preview oldest batches
---     4. setTransferPending(destination, batches) → stage for destination
+--     3. peekBatches(source, amount) -> preview oldest batches
+--     4. setTransferPending(destination, batches) -> stage for destination
 --
 --   superFunc: Game performs actual fill movement
 --
 --   AFTER (in adapter's onFillChanged):
 --     5. Destination adapter checks getTransferPending()
---     6. If pending → add batches with transferred ages (preserves freshness)
---     7. If no pending → create fresh batch age=0 (normal flow)
+--     6. If pending -> add batches with transferred ages (preserves freshness)
+--     7. If no pending -> create fresh batch age=0 (normal flow)
 --
 -- HOOK TARGETS:
---   LoadingStation:addFillLevelToFillableObject → Storage → Vehicle
---   Dischargeable:dischargeToObject → Vehicle → Target (vehicle/storage/trigger)
+--   LoadingStation:addFillLevelToFillableObject -> Storage -> Vehicle
+--   Dischargeable:dischargeToObject -> Vehicle -> Target (vehicle/storage/trigger)
 --
 -- =============================================================================
 
@@ -34,9 +34,7 @@ local Log = RmLogging.getLogger("Fresh")
 -- INSTALLATION
 -- =============================================================================
 
---- Install transfer hooks
---- Called from main.lua onLoadMapFinished_v2 after Manager.initialize()
---- SERVER ONLY - clients don't track batches
+--- Install transfer hooks after the manager initializes; server only, since clients track no batches.
 function RmTransferCoordinator.install()
     if g_server == nil then
         Log:debug("TransferCoordinator: skipped on client")
@@ -51,10 +49,10 @@ function RmTransferCoordinator.install()
 end
 
 -- =============================================================================
--- LOADINGSTATION HOOK (Storage → Vehicle)
+-- LOADINGSTATION HOOK (Storage -> Vehicle)
 -- =============================================================================
 
---- Install LoadingStation hook for Storage → Vehicle transfers
+--- Install LoadingStation hook for Storage -> Vehicle transfers
 function RmTransferCoordinator.installLoadingStationHook()
     if LoadingStation == nil then
         Log:warning("LoadingStation not found - loading hook skipped")
@@ -69,8 +67,7 @@ function RmTransferCoordinator.installLoadingStationHook()
     Log:debug("LoadingStation hook installed")
 end
 
---- Wrapped LoadingStation transfer function
---- SIGNATURE from v1: (station, superFunc, fillableObject, fillUnitIndex, fillType, delta, fillInfo, toolType)
+--- Wrapped LoadingStation.addFillLevelToFillableObject (storage -> vehicle)
 ---@param station table LoadingStation instance (has sourceStorages table)
 ---@param superFunc function Original function
 ---@param fillableObject table Destination vehicle
@@ -94,7 +91,7 @@ function RmTransferCoordinator.loadingStationAddFillLevel(station, superFunc, fi
     -- Resolve destination first (vehicle fillUnit)
     local destContainerId = RmVehicleAdapter:getContainerIdForFillUnit(fillableObject, fillUnitIndex, fillType)
 
-    -- Resolve source: iterate station.sourceStorages (v1 pattern)
+    -- Resolve source: iterate station.sourceStorages
     -- LoadingStation can have multiple source storages - find first with fill
     local sourceContainerId = nil
     if station.sourceStorages ~= nil then
@@ -131,22 +128,16 @@ function RmTransferCoordinator.loadingStationAddFillLevel(station, superFunc, fi
 end
 
 -- =============================================================================
--- DISCHARGEABLE HOOK (Vehicle → Target)
+-- DISCHARGEABLE HOOK (Vehicle -> Target)
 -- =============================================================================
 
---- Dischargeable hook registration
---- NOTE: dischargeToObject is registered via RmVehicleAdapter.registerOverwrittenFunctions()
---- using SpecializationUtil.registerOverwrittenFunction(). This is REQUIRED because late
---- Utils.overwrittenFunction hooks don't reach already-loaded vehicle instances.
---- The LoadingStation hook does NOT have this issue because LoadingStation is not a
---- vehicle specialization.
+--- No-op: dischargeToObject is a spec function, so RmVehicleAdapter registers the hook per vehicle type.
 function RmTransferCoordinator.installDischargeableHook()
     -- No-op: hook is now registered via VehicleAdapter specialization system
     Log:debug("Dischargeable hook: registered via VehicleAdapter specialization (type-level)")
 end
 
---- Wrapped Dischargeable transfer function
---- SIGNATURE from v1: (vehicle, superFunc, dischargeNode, emptyLiters, object, targetFillUnitIndex)
+--- Wrapped Dischargeable dischargeToObject (vehicle -> vehicle, storage or trigger)
 ---@param vehicle table The discharging vehicle (self in Dischargeable)
 ---@param superFunc function Original function
 ---@param dischargeNode table Discharge node configuration
@@ -184,8 +175,8 @@ function RmTransferCoordinator.dischargeToObject(vehicle, superFunc, dischargeNo
     local sourceFillUnitIndex = dischargeNode.fillUnitIndex
     local sourceContainerId = RmVehicleAdapter:getContainerIdForFillUnit(vehicle, sourceFillUnitIndex, fillType)
 
-    -- Resolve destination (complex - v1 has extensive resolution logic)
-    -- Target can be: Vehicle, Storage, UnloadTrigger→Storage, UnloadTrigger→UnloadingStation→Storage
+    -- Resolve destination
+    -- Target can be: Vehicle, Storage, UnloadTrigger->Storage, UnloadTrigger->UnloadingStation->Storage
     local destContainerId = RmTransferCoordinator.resolveDischargeTarget(object, targetFillUnitIndex, fillType)
 
     -- Stage transfer if both containers tracked
@@ -241,14 +232,7 @@ end
 -- TARGET RESOLUTION HELPER
 -- =============================================================================
 
---- Resolve discharge target to containerId
---- CRITICAL: v1 has extensive resolution logic for different target types
---- Patterns from v1 (scripts-v1/RmFresh.lua:935-1058):
----   1. Direct RmPerishableVehicle (vehicle-to-vehicle)
----   2. Direct RmPerishablePlaceable
----   3. UnloadTrigger → .target → RmPerishablePlaceable
----   4. UnloadTrigger → UnloadingStation → owningPlaceable
----   5. Storage → owningPlaceable
+--- Resolves a discharge target (vehicle, storage, unload trigger or placeable) to a containerId.
 ---@param object table Target object
 ---@param targetFillUnitIndex number Target fill unit (for vehicles)
 ---@param fillType number Fill type index
@@ -312,9 +296,8 @@ function RmTransferCoordinator.resolveDischargeTarget(object, targetFillUnitInde
         end
     end
 
-    -- Pattern 5: Husbandry feedingTroughs (not yet implemented)
-    -- Full implementation requires HusbandryFoodAdapter reverse lookup
-    -- For now, husbandry discharges will create fresh batches (age=0)
+    -- Husbandry feeding troughs are not resolved here; their fill keeps its age through the
+    -- fillType staging or the retroactive correction in RmFreshManager:onFillChanged
 
     Log:trace("DISCHARGE_TARGET_UNRESOLVED: objectType=%s", tostring(object.typeName or type(object)))
     return nil
@@ -323,15 +306,10 @@ end
 -- =============================================================================
 -- DIRECT BATCH TRANSFER (EXPERIMENTAL)
 -- =============================================================================
--- Used by ObjectStorageAdapter for entry/exit transfers where entire batch
--- lists need to move between containers (not incremental fill changes).
---
--- EXPERIMENTAL: May be refactored or removed if approach doesn't work.
+
 -- =============================================================================
 
---- Transfer all batches from source container to destination container
---- Moves entire batch list, preserving ages. Clears source batches after transfer.
---- SERVER ONLY - batch data only exists on server
+--- Move a container's whole batch list to another, ages kept, then clear the source; server only.
 ---@param sourceContainerId string Source container ID
 ---@param destContainerId string Destination container ID
 ---@return boolean success True if transfer completed

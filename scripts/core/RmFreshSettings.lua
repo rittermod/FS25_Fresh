@@ -28,7 +28,7 @@ RmFreshSettings.GLOBAL_DEFAULTS = {
     preset = "normal", -- Difficulty preset (veryEasy/easy/normal/hard/custom)
 }
 
---- Merge threshold for batch compaction (0.01 periods = ~7 in-game hours)
+--- Merge threshold for batch compaction, in periods
 RmFreshSettings.MERGE_THRESHOLD = 0.01
 
 --- Default thresholds for unknown fill types (used when fillType not configured)
@@ -61,7 +61,7 @@ RmFreshSettings.modDirectory = nil
 --- All fillTypes from game (fillTypeName -> { name, title })
 RmFreshSettings.allFillTypes = {}
 
---- Mod defaults from fillTypeDefaults.xml (fillTypeName -> { period = X } or { expires = false })
+--- Mod defaults from data/defaultSettings.xml (fillTypeName -> { period = X } or { expires = false })
 RmFreshSettings.modDefaults = {}
 
 --- User overrides
@@ -78,12 +78,10 @@ RmFreshSettings.hiddenCategoryIndices = {}
 --- Runtime cache - index-keyed for fast lookups (rebuilt on settings change)
 RmFreshSettings.perishableByIndex = {}
 
---- Batch mode flag: when true, onSettingsChanged() is suppressed
---- Used by applyBatchChanges() to apply multiple overrides with one notify
+--- While true, onSettingsChanged() is suppressed (applyBatchChanges notifies once for many overrides)
 RmFreshSettings.suppressNotify = false
 
---- Fill type source tracking (populated by hooks during map load)
---- fillTypeName -> { source = "basegame"|"dlc"|"mod"|"map", modName = string|nil }
+--- fillTypeName -> { source = "basegame"|"dlc"|"mod"|"map", modName }, filled by hooks during map load
 RmFreshSettings.fillTypeSourceMap = {}
 
 --- Internal flag: true during mod fill type loading phase
@@ -92,37 +90,22 @@ RmFreshSettings._isLoadingModFillTypes = false
 --- Storage aging enabled toggle (loaded from XML storageClasses#enabled)
 RmFreshSettings.storageAgingEnabled = true
 
---- Bundled baseline for storageAgingEnabled (captured after loadStorageClasses, before any
---- custom overlay) so a client can revert to it when a sync removes the override
+--- Bundled storageAgingEnabled (pre-overlay), restored on a client when a sync drops the override
 RmFreshSettings.bundledStorageAgingEnabled = true
 
---- Storage class overrides (keyed by uniqueId string or "itemsInWorld" -> storage class value)
---- Set in the Fresh settings menu (or fSetStorage on development builds), synced via RmSettingsSyncEvent
+--- Storage class overrides: uniqueId or "itemsInWorld" -> class value; synced by RmSettingsSyncEvent
 RmFreshSettings.storageClassOverrides = {}
 
---- Runtime storage class multipliers (classValue -> multiplier)
---- Populated by loadStorageClasses() from XML, falls back to DEFAULT_CLASS_MULTIPLIERS
+--- classValue -> aging multiplier, from loadStorageClasses() over DEFAULT_CLASS_MULTIPLIERS
 RmFreshSettings.classMultipliers = {}
 
---- Per-fillType maximum benefit class ceiling (fillTypeName -> classValue)
---- Populated by loadStorageClasses() from XML maxBenefitClass attributes
+--- fillTypeName -> max benefit class ceiling, from the XML maxBenefitClass attributes
 RmFreshSettings.maxBenefitClassDefaults = {}
 
---- Per-fillType maximum benefit class user overrides (fillTypeName -> classValue)
---- Set by admin via settings UI, synced via RmSettingsSyncEvent
+--- fillTypeName -> max benefit class set by an admin in the menu; synced by RmSettingsSyncEvent
 RmFreshSettings.maxBenefitClassOverrides = {}
 
---- Custom defaults overlay: server-side modSettings/FS25_Fresh/customDefaults.xml
---- A default tier ABOVE bundled defaults but BELOW savegame overrides.
---- Re-read each launch, NEVER persisted to the savegame, NEVER routed through getUserOverrides().
---- Carried to clients as its own additive sync section (server's copy diverges from bundled).
---- Keyed by fillType NAME; entries for fillTypes absent this game stay dormant (portable across saves).
----   global              = { key -> value }            global default seeds
----   fillTypes           = { name -> { period=X } / { expires=false } / hidden=true }
----   maxBenefit          = { name -> classValue }       per-fillType ceiling
----   classMultipliers    = { classValue -> multiplier } storage-class aging multipliers
----   storageAgingEnabled = nil | true | false           tri-state (nil = unset, keep bundled)
----   hiddenCategoryNames = { categoryName -> true }      raw names, resolved + merged at apply
+--- modSettings customDefaults.xml tier (above bundled, below savegame); never saved; keyed by fillType name
 RmFreshSettings.customDefaults = {
     global = {},
     fillTypes = {},
@@ -269,8 +252,7 @@ end
 -- INITIALIZATION
 -- =============================================================================
 
---- Initialize the settings module - load game fillTypes and mod defaults
---- DEPENDENCY: Must be called AFTER g_fillTypeManager is available (during map load)
+--- Load game fillTypes and mod defaults; call during map load, once g_fillTypeManager exists
 ---@param modDir string The mod directory path
 function RmFreshSettings:initialize(modDir)
     self.modDirectory = modDir
@@ -361,11 +343,7 @@ function RmFreshSettings:loadModDefaults()
         self:tableCount(self.modDefaults), self:tableCount(self.hiddenCategoryIndices))
 end
 
---- Parse the storageClasses / maxBenefitClass sections of any settings file.
---- NON-DESTRUCTIVE: returns a delta table and does NOT mutate live state, so the
---- same parse serves both the bundled (reset-then-apply) and custom (overlay) paths.
---- The unified global/fillTypes/categories parse lives in RmFreshIO:loadSettings;
---- this covers only the storageClasses + maxBenefitClass attributes it does not.
+--- Parse into a delta; mutates no live state
 ---@param xmlPath string Full path to a freshSettings-format XML file
 ---@return table delta { classMultipliers = { classValue -> mult },
 ---                      maxBenefit = { fillTypeName -> classValue },
@@ -430,9 +408,7 @@ function RmFreshSettings:parseStorageClassesFromFile(xmlPath)
     return delta
 end
 
---- Load storage class configuration from defaultSettings.xml (bundled).
---- Reset-then-apply: starts from DEFAULT_CLASS_MULTIPLIERS, then applies the
---- bundled delta. loadCustomDefaults overlays its own delta on top afterwards.
+--- Load bundled storage classes: reset to DEFAULT_CLASS_MULTIPLIERS, then apply the bundled delta.
 function RmFreshSettings:loadStorageClasses()
     -- Initialize with defaults
     self.classMultipliers = {}
@@ -470,13 +446,7 @@ function RmFreshSettings:loadStorageClasses()
         self.storageAgingEnabled and "enabled" or "disabled")
 end
 
---- Load the optional server-side custom defaults overlay (modSettings).
---- OVERLAYS (never replaces): custom keys win, bundled keys absent from the custom
---- file are preserved. Stored by fillType NAME; entries for fillTypes absent from this
---- game stay dormant (consumed only if/when that fillType is present), so one file is
---- portable across saves. A single malformed entry never aborts the rest (existing
---- RmFreshIO:loadSettings + parseStorageClassesFromFile validation handles that).
---- Server only; clients receive these values via RmSettingsSyncEvent.
+--- Server only: overlay the optional modSettings custom defaults (custom keys win, bundled ones stay).
 ---@param path string|nil Full path override (test seam). Defaults to the modSettings file.
 function RmFreshSettings:loadCustomDefaults(path)
     -- Reset overlay state to a clean baseline each launch (re-read from disk)
@@ -530,11 +500,7 @@ function RmFreshSettings:loadCustomDefaults(path)
         self:tableCount(self.customDefaults.hiddenCategoryNames), xmlPath)
 end
 
---- Apply the custom-defaults overlay to the live storage-aging tables and hidden
---- categories. Idempotent given the current customDefaults state; called from
---- loadCustomDefaults (server) and setCustomDefaults (client sync).
---- classMultipliers/storageAgingEnabled/hiddenCategories merge here; getExpiration/
---- getMaxBenefitClass/getGlobal consult customDefaults directly (no overlay needed).
+--- Idempotently merge customDefaults into the storage-aging tables and hidden categories.
 function RmFreshSettings:applyCustomDefaultsOverlay()
     -- classMultipliers: custom values win over bundled, absent classes keep bundled
     for classValue, multiplier in pairs(self.customDefaults.classMultipliers or {}) do
@@ -561,9 +527,7 @@ function RmFreshSettings:applyCustomDefaultsOverlay()
     end
 end
 
---- Emit ONE DEBUG summary listing custom fillType entries (fillTypes + maxBenefit)
---- whose names are not registered in this game. Dormant entries are normal for a
---- portable config; this never warns per entry and never drops the entries.
+--- One DEBUG line naming custom entries this game lacks; dormant entries are normal and kept.
 function RmFreshSettings:logUnregisteredCustomFillTypes()
     local seen = {}
     local unregistered = {}
@@ -600,9 +564,7 @@ function RmFreshSettings:getClassMultiplier(classValue)
     return 1.0
 end
 
---- Get the maximum benefit class ceiling for a fillType
---- Returns the highest storage class that provides aging benefit for this fillType
---- Priority: user override -> config default -> SHELTERED fallback
+--- Highest storage class that still slows aging for a fillType: user, custom, then bundled default, else SHELTERED.
 ---@param fillTypeIndex number Fill type index
 ---@return number Storage class value (fallback: SHELTERED)
 function RmFreshSettings:getMaxBenefitClass(fillTypeIndex)
@@ -628,10 +590,7 @@ end
 -- QUERY FUNCTIONS
 -- =============================================================================
 
---- Get expiration period for a fillType (3-layer merge: user -> preset x mod -> nil)
---- Returns nil for fillTypes that don't expire
---- Hidden fillTypes always return nil
---- User override ALWAYS wins for non-hidden fillTypes (safety: prevents inventory loss on mod update)
+--- Expiration period (user, then preset x mod); nil when hidden or non-expiring. A user override always wins.
 ---@param fillTypeName string The fillType name (e.g., "WHEAT")
 ---@return number|nil Expiration period in months, or nil if doesn't expire
 function RmFreshSettings:getExpiration(fillTypeName)
@@ -814,9 +773,7 @@ end
 -- SETTINGS CHANGE NOTIFICATION
 -- =============================================================================
 
---- Called after any settings change to notify dependents and sync MP
---- Rebuilds index cache and broadcasts to connected clients
---- IMPORTANT: Do NOT call from setUserOverrides() - that's the sync receiver
+--- Rebuild the cache and broadcast after a change; never call it from setUserOverrides (the receiver).
 function RmFreshSettings:onSettingsChanged()
     if self.suppressNotify then
         Log:trace("    onSettingsChanged suppressed (batch mode)")
@@ -825,7 +782,7 @@ function RmFreshSettings:onSettingsChanged()
 
     Log:trace(">>> onSettingsChanged()")
 
-    -- Rebuild index cache (replaces RmFreshConfig:initialize())
+    -- Rebuild index cache
     self:rebuildIndexCache()
     Log:trace("    Index cache rebuilt")
 
@@ -956,12 +913,7 @@ function RmFreshSettings:resetAllOverrides()
     end
 end
 
---- Clear fillType overrides that are redundant (match the EFFECTIVE default exactly or hidden)
---- Called when switching to a preset so the preset multiplier can take effect
---- Keeps overrides where the user intentionally changed the value from the default
---- EFFECTIVE default = customDefaults overlay if present, else bundled modDefaults.
---- This lets a savegame override equal to the current custom value be cleared, so a later
---- customDefaults.xml edit can take effect (preserving the "behaves like modDefaults" contract).
+--- On a preset switch, drop overrides equal to the effective default (custom, else bundled) or hidden.
 function RmFreshSettings:clearRedundantOverrides()
     local removed = 0
     for name, override in pairs(self.userOverrides.fillTypes) do
@@ -1146,18 +1098,13 @@ end
 -- CUSTOM DEFAULTS ACCESSORS (MP sync only - NEVER persisted to savegame)
 -- =============================================================================
 
---- Get the custom defaults overlay for MP sync (server -> client).
---- This is a separate tier from getUserOverrides() and is NEVER routed through
---- the savegame; it rides RmSettingsSyncEvent as its own additive section.
+--- Custom defaults for the sync event's own section; a tier apart from getUserOverrides, never saved.
 ---@return table customDefaults { global, fillTypes, maxBenefit, classMultipliers, storageAgingEnabled, hiddenCategoryNames }
 function RmFreshSettings:getCustomDefaults()
     return self.customDefaults
 end
 
---- Set the custom defaults overlay from MP sync (client side).
---- Mirrors loadCustomDefaults' overlay step but takes already-parsed data instead of
---- reading disk; does NOT persist. Caller (RmSettingsSyncEvent:run) rebuilds the index
---- cache once after applying all tiers.
+--- Client: apply synced custom defaults without saving; the caller rebuilds the index cache.
 ---@param t table customDefaults payload from the server
 function RmFreshSettings:setCustomDefaults(t)
     t = t or {}

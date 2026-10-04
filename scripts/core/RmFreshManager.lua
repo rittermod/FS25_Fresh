@@ -3,66 +3,21 @@
 -- Author: Ritter
 -- Architecture: THE central hub - all batch data lives here (Single Source of Truth)
 --
--- =============================================================================
--- CONTAINER TYPE DEFINITION (Identity Model)
--- =============================================================================
+-- One container per fillType, not per entity: a vehicle holding WHEAT and BARLEY has two.
+-- A container carries its own id (fresh_ + 16 chars from Utils.getUniqueId, decoupled from FS25
+-- ids), entityType, a persisted identityMatch { worldObject, storage }, runtime-only
+-- runtimeEntity and fillTypeIndex, and data: batches (oldest first), farmId, metadata.
 --
--- GRANULARITY: One container = one fillType (not one entity!)
--- A vehicle with WHEAT and BARLEY has TWO containers, not one.
---
--- Container = {
---     -- Identity (OUR stable ID)
---     id = "fresh_xxx",              -- Generated via Utils.getUniqueId
---     entityType = "vehicle",        -- Adapter type: vehicle|bale|placeable|husbandry|stored
---
---     -- identityMatch (PERSISTED for heuristic matching on load)
---     identityMatch = {
---         worldObject = {
---             uniqueId = "vehicle8fd6...",  -- FS25 entity uniqueId (IF available)
---             -- Other adapter-specific fields for matching
---         },
---         storage = {
---             fillTypeName = "WHEAT",        -- String (STABLE across mods)
---             fillUnitIndex = 1,             -- For heuristic matching on multi-storage
---             amount = 4000,                 -- For disambiguation if needed
---             -- Other content-specific fields for matching
---         },
---     },
---
---     -- Runtime (NOT persisted, nil after load until reconciled)
---     runtimeEntity = nil,           -- FS25 entity reference (set during reconciliation)
---     fillTypeIndex = nil,           -- Cached from fillTypeName at runtime
---
---     -- Data
---     batches = {},                  -- Flat batch array (oldest first, FIFO)
---     farmId = 1,                    -- Owner farm for notifications/access (not identity)
---     metadata = {},                 -- Adapter-specific data
--- }
---
--- RECONCILIATION FLOW:
--- 1. onLoad: Containers loaded into reconciliationPool (runtimeEntity = nil)
--- 2. Adapter registers: buildIdentityMatch() creates match criteria
--- 3. Manager finds match in pool using heuristic algorithm
--- 4. On match: Container moved to containers, runtimeEntity set
--- 5. After all adapters: Remaining pool entries are orphans (entity deleted)
--- =============================================================================
---
--- Container ID Scheme: Generated IDs decoupled from FS25 entity IDs
---   Format: fresh_{16-char-md5} (e.g., "fresh_a1b2c3d4e5f67890")
---   Generated via Utils.getUniqueId("fresh", containers, "fresh_", 16)
+-- Reconciliation: load puts saved containers in reconciliationPool with no runtimeEntity; each
+-- adapter registers with buildIdentityMatch(), a matching pool entry moves to containers and gets
+-- its runtimeEntity, and entries left after every adapter registered are orphans.
 
 RmFreshManager = {}
 
 -- Get logger (RmLogging loaded before this module in main.lua)
 local Log = RmLogging.getLogger("Fresh")
 
---- Run a function under error protection so a crash in one periodic step cannot
---- abort the rest of the tick or propagate out of the g_messageCenter callback,
---- keeping the rest of our own work - and other periodic game updates such as
---- animal aging - running. Used at the periodic-handler boundary and per-iteration
---- inside the periodic loops. The xpcall message handler logs the Lua call stack at
---- the throw site (via the engine's printCallstack) before the stack unwinds, then
---- returns the error string.
+--- xpcall fn, logging the call stack at the throw, so one failing periodic step cannot abort the tick.
 ---@param label string Identifies the protected step in error logs
 ---@param fn function Zero-arg closure to execute
 ---@return boolean ok True if fn completed without error
@@ -237,9 +192,7 @@ function RmFreshManager:setDetectedStorageClass(containerId, storageClass)
     return true
 end
 
---- Resolve effective storage class by applying ceiling logic
---- DISABLED (5) bypasses ceiling - always returns DISABLED (player opt-out)
---- For all other classes: math.min(storageClass, maxBenefitClass) caps benefit
+--- Cap a class at the fillType's max benefit class; DISABLED (a player opt-out) is never capped.
 ---@param storageClass number Storage class value (0-5)
 ---@param maxBenefitClass number Maximum benefit class for this fillType
 ---@return number Effective storage class value
@@ -265,54 +218,27 @@ end
 -- STATE
 -- =============================================================================
 
---- Container registry - the SINGLE SOURCE OF TRUTH for all batch data
---- Structure: id -> Container (see Container type definition in header)
---- Do NOT access directly from adapters - use API methods
---- NOTE: Populated by adapters calling registerContainer() during their load lifecycle
+--- Container registry (id -> Container), the single source of truth; adapters go through the API
 RmFreshManager.containers = {}
 
---- Reconciliation Pool - holds loaded containers awaiting entity match
---- Structure: id -> Container (same as containers, but runtimeEntity = nil)
---- LIFECYCLE:
----   1. onLoad populates pool from savegame
----   2. Adapters call tryClaimContainer() during their registration
----   3. Matched containers move to containers, orphans remain in pool
----   4. After reconciliation period, orphans are either garbage collected or logged
---- NOTE: This replaces the old entityIdIndex approach with a heuristic matching system
+--- Loaded containers awaiting an entity match (id -> Container, runtimeEntity nil)
 RmFreshManager.reconciliationPool = {}
 
 -- =============================================================================
 -- RECONCILIATION API
 -- =============================================================================
--- These functions define the adapter <-> manager reconciliation contract.
--- Adapters call these when they find entities that might have persisted data.
---
--- CALL ORDER (expected):
---   1. Adapter loads entity (onLoad/onPostLoad)
---   2. Adapter builds identityMatch = { worldObject = {...}, storage = {...} }
---   3. Adapter calls Manager:tryClaimContainer(identityMatch, runtimeEntity)
---   4. Manager searches reconciliationPool for best match
---   5. If matched: Container moved to containers, runtimeEntity set, returns containerId
---   6. If not matched: Returns nil, adapter creates new container
+
+-- An adapter builds identityMatch { worldObject, storage } and registers; registerContainer
+-- claims a matching pool entry (moved to containers, runtimeEntity set) or creates a new one.
+
 -- =============================================================================
 
---- Check if two identityMatch structures represent the same entity/content
---- Uses uniqueId as definitive match when present, falls back to generic comparison
----
---- ALGORITHM:
---- 1. Validate structure (nil checks)
---- 2. If saved.worldObject.uniqueId exists -> compare ONLY uniqueId (definitive shortcut)
---- 3. If no uniqueId -> fall back to generic key-value comparison for worldObject
---- 4. Compare ALL storage fields (with amount tolerance)
----
---- TOLERANCE: storage.amount uses proximity tolerance (5% or 10 units minimum)
---- to handle float precision, transfer timing, and game state drift
----
+--- A saved uniqueId replaces the other worldObject fields; storage fields always match, amount within max(5%, 10).
 ---@param saved table identityMatch from saved container (reconciliationPool)
 ---@param current table identityMatch from registering adapter
 ---@return boolean true if match
 function RmFreshManager:identityMatches(saved, current)
-    -- 1.2: Validate structure - return false if nil or missing required sub-tables
+    -- Validate structure - return false if nil or missing required sub-tables
     if saved == nil or current == nil then
         Log:trace("MATCH_FAIL: nil identityMatch (saved=%s current=%s)",
             tostring(saved ~= nil), tostring(current ~= nil))
@@ -329,7 +255,7 @@ function RmFreshManager:identityMatches(saved, current)
         return false
     end
 
-    -- 1.3 + 1.4: uniqueId shortcut - definitive outer anchor when present
+    -- uniqueId shortcut - definitive outer anchor when present
     -- If saved has uniqueId, it's THE definitive identifier (skip other worldObject fields)
     if saved.worldObject.uniqueId ~= nil then
         if saved.worldObject.uniqueId ~= current.worldObject.uniqueId then
@@ -340,7 +266,7 @@ function RmFreshManager:identityMatches(saved, current)
         -- uniqueId matched! Skip other worldObject fields, proceed to storage
         Log:trace("MATCH_OK: worldObject.uniqueId=%s (definitive shortcut)", saved.worldObject.uniqueId)
     else
-        -- 1.5: No uniqueId (e.g., Object Storage) - fall back to generic field comparison
+        -- No uniqueId (e.g., Object Storage) - fall back to generic field comparison
         -- All saved worldObject fields must exist and match in current
         for key, savedValue in pairs(saved.worldObject) do
             if current.worldObject[key] ~= savedValue then
@@ -351,7 +277,7 @@ function RmFreshManager:identityMatches(saved, current)
         end
     end
 
-    -- 1.6: Compare ALL storage fields (with special handling for amount)
+    -- Compare ALL storage fields (with special handling for amount)
     for key, savedValue in pairs(saved.storage) do
         local currentValue = current.storage[key]
 
@@ -378,14 +304,7 @@ function RmFreshManager:identityMatches(saved, current)
     return true
 end
 
---- Find a matching container in the reconciliation pool
---- Iterates pool searching for containers that match the given identity
----
---- ALGORITHM:
---- 1. Filter by entityType first (quick rejection)
---- 2. Call identityMatches() for full identity comparison
---- 3. Return first match (order not guaranteed in Lua table iteration)
----
+--- First pool entry of the same entityType whose identity matches (pool order is not defined)
 ---@param entityType string Adapter type: "vehicle" | "bale" | "placeable" | etc.
 ---@param identityMatch table Identity structure from adapter { worldObject, storage }
 ---@return string|nil containerId if found
@@ -400,124 +319,77 @@ function RmFreshManager:findMatchingContainer(entityType, identityMatch)
         poolSize)
 
     for containerId, container in pairs(self.reconciliationPool) do
-        -- 2.3: Filter by entityType first (quick rejection)
+        -- Filter by entityType first (quick rejection)
         if container.entityType == entityType then
-            -- 2.4: Full identity comparison
+            -- Full identity comparison
             if self:identityMatches(container.identityMatch, identityMatch) then
-                -- 2.5: DEBUG log on match found
+                -- DEBUG log on match found
                 Log:debug("RECONCILE_MATCH: found %s for %s", containerId, entityType)
                 Log:trace("<<< findMatchingContainer = %s (match found)", containerId)
                 return containerId, container
             end
         end
     end
-    -- 2.6: No match found
+    -- No match found
     Log:trace("<<< findMatchingContainer = nil (no match)")
     return nil, nil
 end
 
---- Entity Reference Index - maps entity object references to container IDs
---- Structure: entityRefIndex[entity] = containerId
---- Used for display hooks where we need entity -> containerId lookup
---- NETWORK SAFE: Uses direct object references (not uniqueId strings or integer node IDs)
---- - Server: entity is the actual game object
---- - Client: entity is resolved via NetworkUtil.readNodeObject() during sync
---- LIFECYCLE: Updated on register/unregister
+--- entity object -> containerId for display lookups; works on clients too (entity resolved at sync)
 RmFreshManager.entityRefIndex = {}
 
---- Statistics tracking for reporting and debugging
---- totalExpired: Cumulative count of expired batches (incremented during onHourChanged)
----   Type: number
---- expiredByFillType: Breakdown by fill type index (maps fillTypeIndex to count)
----   Type: table {fillTypeIndex -> count}
----   Example: { [5] = 10, [7] = 5 } means 10 WHEAT (index 5), 5 BARLEY (index 7) expired
---- lossLog: Recent expiration events for debugging and player notifications
----   Type: array of { fillType=number, amount=number, container=string, timestamp=number }
----   @skeleton Currently not populated - will be filled in onHourChanged() when fully implemented
+--- Expiry totals, saved with the savegame and printed by fStats; nothing writes lossLog (RmLossTracker has the log)
 RmFreshManager.statistics = {
     totalExpired = 0,
     expiredByFillType = {},
     lossLog = {}
 }
 
---- Transfer context for coordinating fill operations
---- active: Whether a transfer is in progress
---- Future: sourceContainer, sourceFillUnit, amount, fillType
+--- Transfer context, reserved: nothing sets active yet (unregisterContainer only clears it)
 
---- Console mode flag: when true, onFillChanged skips automatic batch creation
---- Used by console commands that need to add batches with specific age values
---- The fill change hook would otherwise create a batch with age=0
+--- While true, onFillChanged creates no age-0 batch (console commands add batches with their own age)
 RmFreshManager.suppressFillChangeBatch = false
 RmFreshManager.transferContext = {
     active = false
 }
 
---- Dirty containers for MP delta sync optimization
---- Contains container IDs that have changed since last sync
---- Future: Used by MP sync to send only changed containers
+--- Container IDs marked changed, reserved for delta sync: nothing reads it yet
 RmFreshManager.dirtyContainers = {}
 
---- Initialization flag to prevent double-subscription
---- CRITICAL: Prevents multiple HOUR_CHANGED subscriptions
+--- Set once initialized, so HOUR_CHANGED is never subscribed twice
 RmFreshManager.initialized = false
 
---- Reconciliation finalized flag
---- Set to true after first HOUR_CHANGED when all adapters have had time to register
---- Prevents orphan processing until reconciliation window closes
+--- Set after the first HOUR_CHANGED, once adapters had time to register; orphans wait for it
 RmFreshManager.reconciliationFinalized = false
 
---- Adapter registry - maps entityType to adapter module
---- Structure: entityType -> adapter module (e.g., { vehicle = RmVehicleAdapter })
---- Used by console commands to call adapter-specific methods like adjustFillLevel()
---- Populated by adapters calling registerAdapter() during their source() load
+--- entityType -> adapter module; adapters add themselves via registerAdapter() when sourced
 RmFreshManager.adapters = {}
 
---- Test isolation prefix - when set, global operations only affect containers with matching prefix
---- Used by RmFreshTests to prevent test operations from affecting real player containers
---- Set to RmFreshTests.TEST_PREFIX during test runs, nil during normal operation
---- Affects: simulateHours(), forceExpireAll()
+--- When set (test runs), global operations touch only containers whose id has this prefix
 RmFreshManager.testContainerPrefix = nil
 
---- Transfer pending batches: containerId -> { batches, timestamp }
---- Used by TransferCoordinator to stage batches before fill occurs
---- Adapters check this when fill increases to use transferred ages
+--- containerId -> { batches, timestamp } staged by a transfer hook for the destination's fill
 RmFreshManager.transferPending = {}
 
---- Transfer pending by fillType: fillTypeIndex -> { batches, timestamp }
---- FALLBACK for physics-based transfers (pallets, undetected discharge paths)
---- When Dischargeable.dischargeToObject isn't called, this catches the transfer
---- Source staging on negative delta, consumed on positive delta
+--- fillTypeIndex -> { batches, timestamp }: fallback for transfers no hook sees (staged on -delta)
 RmFreshManager.transferPendingByFillType = {}
 
---- Pending correction: fillTypeIndex -> { containerId, timestamp }
---- RETROACTIVE FIX for same-frame timing issue where dest +delta fires before source -delta
---- When fresh batch is created (no pending), record it here so source can correct the age
---- Corrects first-tick fresh batches with actual source age
+--- fillTypeIndex -> { containerId, timestamp }: lets a late source -delta re-age a fresh +delta batch
 RmFreshManager.pendingCorrection = {}
 
---- Bulk transfer state (nil when not active)
---- Used by ProductionChainManager:distributeGoods() hook
---- Tracks multiple ADD->REMOVE pairs within a single distribution cycle
---- Structure when active: { active = true, pending = { fillType -> [{containerId, amount, batches, isAdd, matched}] } }
+--- Bulk transfer state while distributeGoods runs: { active, pending = fillType -> ADD/REMOVE entries }
 RmFreshManager.bulkTransfer = nil
 
 -- =============================================================================
 -- CONTAINER LIFECYCLE API
 -- =============================================================================
 
---- Register a container in the Manager
---- Called by adapters during their load lifecycle (onLoad, onPostLoad, etc.)
---- Reconciles with reconciliationPool OR creates new container
----
---- SERVER ONLY - registration is server-authoritative
----
+--- Server only: claim a matching pool container or create one
 ---@param entityType string Container type: "vehicle" | "bale" | "placeable" | "husbandry" | "stored"
 ---@param identityMatch table Identity structure { worldObject, storage } for matching
 ---@param runtimeEntity table|nil FS25 entity reference, nil for stored containers
 ---@param metadata table|nil Adapter-specific data, may include:
----                          - location: Display name
----                          - playerCanFill: Can player/vehicles ADD to this container? (Step 4)
----                          - playerCanEmpty: Can player/vehicles REMOVE from this container? (Step 4)
+---   location, playerCanFill, playerCanEmpty (can players add or remove)
 ---@return string|nil containerId The generated or reconciled container ID, nil on error
 function RmFreshManager:registerContainer(entityType, identityMatch, runtimeEntity, metadata)
     -- TRACE: Function entry for AI debugging
@@ -560,7 +432,7 @@ function RmFreshManager:registerContainer(entityType, identityMatch, runtimeEnti
         -- Continue anyway - container can exist with nil fillTypeIndex
     end
 
-    -- Step 4: Extract capability flags from metadata
+    -- Extract capability flags from metadata
     -- These flags indicate whether player/vehicles can interact with this container
     -- Used by onFillChanged to decide whether to use fillType fallback
     local playerCanFill = metadata and metadata.playerCanFill
@@ -592,7 +464,7 @@ function RmFreshManager:registerContainer(entityType, identityMatch, runtimeEnti
         matchedContainer.runtimeEntity = runtimeEntity
         matchedContainer.fillTypeIndex = fillTypeIndex
 
-        -- Step 4: Update capability flags on reconciliation
+        -- Update capability flags on reconciliation
         -- Capabilities are derived from current placeable structure, not saved data
         matchedContainer.playerCanFill = playerCanFill
         matchedContainer.playerCanEmpty = playerCanEmpty
@@ -660,7 +532,7 @@ function RmFreshManager:registerContainer(entityType, identityMatch, runtimeEnti
         farmId = farmId or 0,
         metadata = metadata or {},
 
-        -- Step 4: Capability flags for transfer correlation
+        -- Capability flags for transfer correlation
         -- nil = unknown (use normal fallback logic)
         -- true = player/vehicles CAN interact
         -- false = player/vehicles CANNOT interact (skip fallback)
@@ -692,9 +564,7 @@ function RmFreshManager:registerContainer(entityType, identityMatch, runtimeEnti
     return containerId, false -- wasReconciled = false
 end
 
---- Unregister a container from the Manager
---- Called by adapters during delete/unload lifecycle
---- Removes container and all associated batch data
+--- Remove a container and its batches
 ---@param containerId string Container ID to unregister
 ---@return nil
 function RmFreshManager:unregisterContainer(containerId)
@@ -779,9 +649,7 @@ function RmFreshManager:getContainersByType(containerType)
     return result
 end
 
---- Get all containers for a specific runtime entity
---- Used by HUD display hooks (e.g., RmFreshAgeDisplay) to find all containers
---- for a placeable when player is in trigger zone
+--- All containers of one runtime entity (HUD lookups such as the placeable age bars)
 ---@param entity table The entity object (Placeable, Vehicle, etc.)
 ---@return table Array of containers belonging to this entity
 function RmFreshManager:getContainersByRuntimeEntity(entity)
@@ -796,9 +664,7 @@ function RmFreshManager:getContainersByRuntimeEntity(entity)
     return result
 end
 
---- Get all containers in the registry
---- Returns the containers table directly (not a copy)
---- Used for iteration in console commands and save/load
+--- The live containers table (id -> Container), not a copy
 ---@return table The containers registry table (id -> Container)
 function RmFreshManager:getAllContainers()
     return self.containers
@@ -1038,10 +904,7 @@ function RmFreshManager:getStorageList(farmId)
     return result
 end
 
---- Get container ID by entity reference
---- NETWORK SAFE: Uses direct object reference lookup (not uniqueId or node ID)
---- Used by adapter display hooks to find container for an entity
---- Works on both server (direct entity) and client (NetworkUtil-resolved entity)
+--- containerId for an entity object; works on server and client (entity resolved at sync)
 ---@param entity table The entity object (Vehicle, Bale, etc.)
 ---@return string|nil Container ID or nil if entity not tracked
 function RmFreshManager:getContainerIdByEntity(entity)
@@ -1049,10 +912,7 @@ function RmFreshManager:getContainerIdByEntity(entity)
     return self.entityRefIndex[entity]
 end
 
---- Register entity->container mapping on client (MP sync)
---- Called by adapters when they receive containerId via their stream hooks
---- NETWORK SAFE: Establishes entity reference mapping on client for display hooks
---- This is the client-side counterpart to server's registerContainer()
+--- Client: map an entity received through a stream hook to its containerId
 ---@param entity table The entity object (Vehicle, Bale, etc.)
 ---@param containerId string The container ID received from server
 function RmFreshManager:registerClientEntity(entity, containerId)
@@ -1075,10 +935,7 @@ end
 -- LIFECYCLE FUNCTIONS
 -- =============================================================================
 
---- Initialize the Manager
---- Subscribes to game events (HOUR_CHANGED for aging)
---- CRITICAL: Must be called from main.lua onLoadMapFinished() lifecycle
---- CRITICAL: Must only be called ONCE per session - uses initialized flag to prevent double-subscription
+--- Subscribe to game events, once per session (the initialized flag guards a second call)
 ---@return nil
 function RmFreshManager:initialize()
     if self.initialized then
@@ -1089,7 +946,7 @@ function RmFreshManager:initialize()
     -- Subscribe to HOUR_CHANGED for hourly aging
     g_messageCenter:subscribe(MessageType.HOUR_CHANGED, self.onHourChanged, self)
 
-    -- Subscribe to DAY_CHANGED for daily loss notifications (29-4)
+    -- Subscribe to DAY_CHANGED for daily loss notifications
     g_messageCenter:subscribe(MessageType.DAY_CHANGED, self.onDayChanged, self)
 
     self.initialized = true
@@ -1106,7 +963,7 @@ function RmFreshManager:destroy()
     -- Unsubscribe from HOUR_CHANGED
     g_messageCenter:unsubscribe(MessageType.HOUR_CHANGED, self)
 
-    -- Unsubscribe from DAY_CHANGED (29-4)
+    -- Unsubscribe from DAY_CHANGED
     g_messageCenter:unsubscribe(MessageType.DAY_CHANGED, self)
 
     -- Clear containers and indexes
@@ -1124,9 +981,7 @@ function RmFreshManager:destroy()
     Log:info("RmFreshManager destroyed")
 end
 
---- Finalize reconciliation after all adapters have had time to register
---- Called on first HOUR_CHANGED tick - orphan containers are logged and removed
---- SERVER ONLY - reconciliation is server-authoritative
+--- Server only: on the first HOUR_CHANGED, log and remove the containers no adapter claimed
 ---@return number orphanCount Number of containers removed from pool
 function RmFreshManager:finalizeReconciliation()
     if g_server == nil then return 0 end
@@ -1173,9 +1028,7 @@ function RmFreshManager:finalizeReconciliation()
     return orphanCount
 end
 
---- Rescan world entities for containers that became perishable after settings change
---- Called from RmFreshSettings:onSettingsChanged() (server only)
---- Containers not registered when fillType initially non-perishable
+--- Server only: register containers for fill types that became perishable after a settings change
 function RmFreshManager:rescanForNewPerishables()
     if g_server == nil then return end
 
@@ -1237,7 +1090,7 @@ function RmFreshManager:onHourChanged()
             RmShelterDetector.recheckAll(g_currentMission.time)
         end)
 
-        -- Check if expiration is enabled globally (AC #12)
+        -- Check if expiration is enabled globally
         if not RmFreshSettings:isExpirationEnabled() then
             Log:trace("HOURLY_AGING: Skipped - expiration disabled")
             return
@@ -1248,7 +1101,7 @@ function RmFreshManager:onHourChanged()
     end)
 end
 
---- Handle day change - delegate to LossTracker for notifications (29-4)
+--- Handle day change - delegate to LossTracker for notifications
 --- SERVER ONLY - notifications are sent from server
 function RmFreshManager:onDayChanged()
     if not g_server then return end
@@ -1259,9 +1112,7 @@ function RmFreshManager:onDayChanged()
     end)
 end
 
---- Called during save game
---- Delegates to RmFreshIO for persistence of containers and statistics
---- CRITICAL: Called from main.lua saveToXMLFile hook
+--- Save containers and statistics through RmFreshIO
 ---@param savegameDir string Path to savegame directory
 ---@return nil
 function RmFreshManager:onSave(savegameDir)
@@ -1285,11 +1136,7 @@ function RmFreshManager:onSave(savegameDir)
     RmFreshIO:saveSettings(settingsPath, overrides)
 end
 
---- Called during load game
---- Delegates to RmFreshIO for loading, populates reconciliationPool
---- CRITICAL: Called from main.lua EARLY in loadMapFinished (before adapters)
---- NOTE: Adapters will claim containers from reconciliationPool during their load
----   Unclaimed containers become orphans (processed in finalizeReconciliation)
+--- Load into reconciliationPool before adapters register; entries left unclaimed become orphans
 ---@param savegameDir string Path to savegame directory
 ---@return nil
 function RmFreshManager:onLoad(savegameDir)
@@ -1343,9 +1190,7 @@ end
 
 -- Entity reference index rebuilt via rebuildEntityRefIndex()
 
---- Rebuild entity reference index from loaded container data
---- Called on client after RmFreshSyncEvent to enable display lookups
---- Populates: entityRefIndex[entity] -> containerId
+--- Client: rebuild entityRefIndex from synced containers so display lookups work
 ---@return nil
 function RmFreshManager:rebuildEntityRefIndex()
     local containerCount = self:getContainerCount()
@@ -1370,12 +1215,7 @@ function RmFreshManager:rebuildEntityRefIndex()
     Log:debug("REBUILD_REF_INDEX: indexed %d containers by entity ref", refCount)
 end
 
---- Validate containers - removes orphaned entries where entity/runtimeEntity is nil
---- CRITICAL TIMING: Must be called AFTER all adapters have had a chance to register
---- Adapters reconcile containers during their load lifecycle, setting entity reference
---- Containers that still have entity=nil after all adapters load are orphans (deleted from game)
---- Call this from main.lua AFTER loadMapFinished when all adapters have registered
---- Checks both entity (legacy) and runtimeEntity fields
+--- Remove orphans (no runtimeEntity); only valid once every adapter has registered
 ---@return number Number of orphans removed
 function RmFreshManager:validateContainers()
     local orphanCount = 0
@@ -1417,9 +1257,7 @@ end
 -- BATCH OPERATIONS
 -- =============================================================================
 
---- Add a batch to a container
---- Appends batch in FIFO order to container.batches
---- DEPENDENCY: Container must be registered first via registerContainer()
+--- Append a batch (FIFO order) to a registered container
 ---@param containerId string Container ID
 ---@param amount number Batch amount
 ---@param ageInPeriods number|nil Initial age in periods (default 0)
@@ -1462,9 +1300,7 @@ function RmFreshManager:addBatch(containerId, amount, ageInPeriods, skipMerge)
         containerId, amount, ageInPeriods or 0, #container.batches)
 end
 
---- Consume batches from a container in FIFO order
---- Returns consumed batches with their ages for transfer chain
---- SERVER ONLY - mutates batch data
+--- Server only: consume FIFO; returns the consumed batches with their ages (for transfers)
 ---@param containerId string Container ID
 ---@param amount number Amount to consume
 ---@return table { consumed = number, batches = array of {amount, ageInPeriods} }
@@ -1517,9 +1353,7 @@ function RmFreshManager:getBatches(containerId)
     return container.batches or {}
 end
 
---- Clear all batches from a container (EXPERIMENTAL)
---- Used by TransferCoordinator.transferAllBatches after moving batches to destination
---- SERVER ONLY
+--- Server only: clear a container's batches (a spawned object's age-0 batch before stored ones land)
 ---@param containerId string Container ID
 ---@return boolean success True if batches were cleared
 function RmFreshManager:clearBatches(containerId)
@@ -1538,10 +1372,7 @@ function RmFreshManager:clearBatches(containerId)
     return true
 end
 
---- Handle fill level changes reported by adapters
---- Called when fill amount increases (add batch) or decreases (consume batches)
---- SERVER ONLY - all batch mutations are server-authoritative
---- NOTE: fillUnitIndex kept in signature for adapter compatibility/logging, not used for batch lookup
+--- Server only: a fill increase adds a batch, a decrease consumes FIFO; fillUnitIndex is for logs
 ---@param containerId string Container ID
 ---@param fillUnitIndex number Fill unit index (1-based) - for logging/adapter reference
 ---@param delta number Change in fill level (positive = add, negative = consume)
@@ -1596,7 +1427,7 @@ function RmFreshManager:onFillChanged(containerId, fillUnitIndex, delta, fillTyp
         -- Check for pending transfer batches FIRST
         local pendingBatches = self:getTransferPending(containerId)
 
-        -- TRACE: Log pending lookup result (AI debugging per 12.5 guidelines)
+        -- TRACE: Log pending lookup result
         Log:trace("FILL_CHANGED_PENDING_CHECK: container=%s found=%s count=%d",
             containerId, tostring(pendingBatches ~= nil), pendingBatches and #pendingBatches or 0)
 
@@ -1626,7 +1457,7 @@ function RmFreshManager:onFillChanged(containerId, fillUnitIndex, delta, fillTyp
 
                 local batchesAfter = #(self.containers[containerId] and self.containers[containerId].batches or {})
 
-                -- DEBUG: Log transfer received with state transition (per 12.5 guidelines)
+                -- DEBUG: Log transfer received with state transition
                 Log:debug("FILL_CHANGED_TRANSFER: container=%s delta=%.1f pendingBatches=%d batches: %d->%d",
                     containerId, delta, batchCount, batchesBefore, batchesAfter)
 
@@ -1645,7 +1476,7 @@ function RmFreshManager:onFillChanged(containerId, fillUnitIndex, delta, fillTyp
             -- Handled by bulk mode - queued for matching with source REMOVE
             return
         elseif container and container.playerCanFill == false then
-            -- Step 6: Production output - skip fillType fallback entirely
+            -- Production output - skip fillType fallback entirely
             -- Production outputs (milk, factory products) should NEVER use stale fallback
             -- They are created fresh by the game, not transferred from player
             if not self.suppressFillChangeBatch then
@@ -1681,7 +1512,7 @@ function RmFreshManager:onFillChanged(containerId, fillUnitIndex, delta, fillTyp
                         batchCount = batchCount + 1
                     end
 
-                    -- Step 2 fix: Handle remainder not covered by fallback batches
+                    -- Handle remainder not covered by fallback batches
                     -- This happens when fallback amount < delta (e.g., 0.8L fallback for 43.9L delta)
                     -- The remainder represents fill that wasn't part of the correlated transfer
                     if remaining > 0.001 then
@@ -1701,7 +1532,7 @@ function RmFreshManager:onFillChanged(containerId, fillUnitIndex, delta, fillTyp
                 end
             elseif not self.suppressFillChangeBatch then
                 -- No pending by containerId, bulk mode, or fillType = fresh fill (age 0)
-                -- FIX: Use normal merge (not skipMerge) - correction still works on merged batch
+                -- Use normal merge (not skipMerge) - correction still works on merged batch
                 -- If no correction comes (buy station, harvester), merged batch stays age=0 (correct)
                 self:addBatch(containerId, delta, 0)
                 -- Note: addBatch already logs BATCH_ADD at debug level
@@ -1735,7 +1566,7 @@ function RmFreshManager:onFillChanged(containerId, fillUnitIndex, delta, fillTyp
             -- where Dischargeable.dischargeToObject isn't called
             local peeked = self:peekBatches(containerId, -delta)
             if peeked.totalAmount > 0 then
-                -- Step 6: Only set fillType pending if container can be player-emptied
+                -- Only set fillType pending if container can be player-emptied
                 -- Production inputs/bedding (playerCanEmpty=false) are consumed internally, not transferred
                 -- nil is treated as true for backward compatibility
                 if container == nil or container.playerCanEmpty ~= false then
@@ -1975,9 +1806,7 @@ end
 -- CONSOLE SUPPORT - Test Isolation Helper
 -- =============================================================================
 
---- Check if a container should be processed in global operations
---- Used for test isolation - when testContainerPrefix is set, only matching containers are processed
---- This prevents automated tests from affecting real player containers
+--- False for containers outside the test prefix while one is set, keeping tests off player stock
 ---@param containerId string Container ID to check
 ---@return boolean True if container should be processed
 function RmFreshManager:shouldProcessContainer(containerId)
@@ -1992,10 +1821,7 @@ end
 -- AGING LOGIC (Core + Console Support)
 -- =============================================================================
 
---- Core aging logic - ages all containers by specified hours
---- PRIVATE - use processHourlyAging() for real aging, simulateHours() for testing
---- Formula: ageIncrement = hours / (daysPerPeriod * 24)
---- TEST ISOLATION: When testContainerPrefix is set, only processes matching containers
+--- Age every container by hours / (daysPerPeriod * 24); test-prefix aware, private
 ---@param hours number Hours to age
 ---@return table { containersProcessed, batchesExpired, amountExpired }
 function RmFreshManager:_applyAging(hours)
@@ -2031,7 +1857,7 @@ function RmFreshManager:_applyAging(hours)
         end
     end
 
-    -- Handle empty containers after loop (safe iteration pattern from v1)
+    -- Handle empty containers after loop (never remove while iterating)
     for _, entry in ipairs(entitiesToDelete) do
         -- Crash safeguard (per-item): one failed cleanup must not abort the rest.
         runProtected("onContainerEmpty:" .. tostring(entry.containerId), function()
@@ -2044,10 +1870,7 @@ function RmFreshManager:_applyAging(hours)
     return stats
 end
 
---- Age a single container by `increment` periods, process expirations, remove
---- expired fill from the game entity, and broadcast the update. Extracted from
---- _applyAging so the per-container work can run under runProtected for crash
---- isolation. Mutates `stats` and appends to `entitiesToDelete` in place.
+--- Age, expire and broadcast one container; separate so it runs under runProtected
 ---@param containerId string Container ID
 ---@param container table Container record
 ---@param increment number Base age increment in periods (before storage multiplier)
@@ -2056,7 +1879,7 @@ end
 function RmFreshManager:_applyAgingToContainer(containerId, container, increment, stats, entitiesToDelete)
     stats.containersProcessed = stats.containersProcessed + 1
 
-    -- Skip aging for fillTypes no longer perishable (AC #13: settings changes apply immediately)
+    -- Skip aging for fillTypes no longer perishable (settings changes apply immediately)
     if not RmFreshSettings:isPerishableByIndex(container.fillTypeIndex) then
         Log:trace("SKIP_AGE: container=%s (fillType no longer perishable)", containerId)
         -- Skip aging for fermenting bales, etc.
@@ -2136,9 +1959,7 @@ function RmFreshManager:_applyAgingToContainer(containerId, container, increment
     end
 end
 
---- Process real hourly aging - called from onHourChanged
---- SERVER ONLY - ages all containers by 1 hour
---- Entry point for actual game time aging (not testing)
+--- Server only: real hourly aging, one hour for every container
 ---@return table { containersProcessed, batchesExpired, amountExpired }
 function RmFreshManager:processHourlyAging()
     if g_server == nil then return { containersProcessed = 0, batchesExpired = 0, amountExpired = 0 } end
@@ -2155,9 +1976,7 @@ function RmFreshManager:processHourlyAging()
     return stats
 end
 
---- Simulate time passage for testing (console command: fAge)
---- SERVER ONLY - ages all containers by specified hours
---- Entry point for console testing (not real game time)
+--- Server only: age every container by `hours` (fAge console testing)
 ---@param hours number Hours to simulate
 ---@return table { containersProcessed, batchesExpired, amountExpired }
 function RmFreshManager:simulateHours(hours)
@@ -2171,9 +1990,7 @@ function RmFreshManager:simulateHours(hours)
     return stats
 end
 
---- Simulate time passage for a single container
---- Ages batches and processes expirations for one container only
---- SERVER ONLY - console command support
+--- Server only: age one container by `hours` and process its expirations (console)
 ---@param containerId string Container ID
 ---@param hours number Hours to simulate
 ---@return table { batchesExpired, amountExpired } or nil if container not found
@@ -2310,11 +2127,7 @@ function RmFreshManager:forceExpire(containerId, batchIndex)
     return expiredAmount, string.format("Force expired %.1f units", expiredAmount)
 end
 
---- Force expire all batches by entity type
---- Expires all batches in all containers of the specified type
---- SERVER ONLY - console command support
---- NOTE: Broadcasts per-container. For large server optimization, consider bulk sync event.
---- TEST ISOLATION: When testContainerPrefix is set, only processes matching containers
+--- Server only: expire every batch of one entity type (console); test-prefix aware, broadcasts each
 ---@param entityType string Entity type: "vehicle" | "bale" | "placeable" | "husbandry" | "stored"
 ---@return table { containersAffected, totalExpired }
 function RmFreshManager:forceExpireAll(entityType)
@@ -2420,9 +2233,7 @@ function RmFreshManager:getDisplayInfo(containerId)
     }
 end
 
---- Determine if a container should age
---- Delegates to adapter-specific logic (e.g., fermentation check for bales)
---- Returns true by default (most containers age)
+--- True unless the adapter says otherwise (fermenting bales do not age)
 ---@param container table Container entry
 ---@return boolean True if container should age
 function RmFreshManager:shouldAge(container)
@@ -2442,14 +2253,7 @@ function RmFreshManager:shouldAge(container)
     return true -- Default: age
 end
 
---- Sync fillType from bale entity to container
---- Called before aging to ensure fillType is current after fermentation completes
---- Bale-specific: GRASS_WINDROW -> SILAGE transformation during fermentation
---- CRITICAL: Preserves batches (transformation, not replacement)
----
---- ASSUMPTION: Bales undergo single-step transformations (GRASS->SILAGE).
---- Multi-step refills (GRASS->other->SILAGE) are out of scope.
----
+--- Before aging, carry a bale's fermented fillType over (GRASS_WINDROW -> SILAGE), keeping batches
 ---@param containerId string Container ID
 ---@param container table Container entry
 function RmFreshManager:syncBaleFillType(containerId, container)
@@ -2487,9 +2291,7 @@ function RmFreshManager:syncBaleFillType(containerId, container)
     end
 end
 
---- Register an adapter module for a container type
---- Called by adapters at the end of their module file (after source() loads it)
---- Enables console commands to access adapter-specific methods like adjustFillLevel()
+--- Register an entityType's adapter; adapters call it when sourced, console commands use it
 ---@param entityType string Container type: "vehicle" | "bale" | "placeable" | "husbandry" | "stored"
 ---@param adapter table Adapter module (e.g., RmVehicleAdapter)
 ---@return nil
@@ -2547,31 +2349,16 @@ end
 -- FILLTYPE NAME HELPERS
 -- =============================================================================
 
---- Legacy compatibility map for fill type names
---- Maps old/alternative names to current FS25 names
---- Add entries here if mods or old saves use different naming conventions
+--- Old or alternative fillType names -> current FS25 names (mods or old saves)
 RmFreshManager.FILLTYPE_LEGACY_MAP = {
     -- Example legacy mappings (add as needed for compatibility):
     -- ["GRAIN_WHEAT"] = "WHEAT",
     -- ["GRAIN_BARLEY"] = "BARLEY",
 }
 
---- Resolve fillTypeName string to fillTypeIndex number
---- Used when loading containers - converts stored names to runtime indices
---- fillTypeName is the persisted form, fillTypeIndex is runtime-only
----
---- NORMALIZATION: Names are converted to uppercase for consistent matching
---- COMPATIBILITY: Legacy name aliases are checked via FILLTYPE_LEGACY_MAP
----
---- DEFENSIVE: Returns nil for unknown/modded fillTypes that aren't loaded
---- Caller should check for nil and skip containers with unresolvable fillTypes
----
+--- Persisted fillTypeName -> runtime index: case-insensitive, legacy aliases mapped, nil if not loaded
 ---@param fillTypeName string Fill type name (e.g., "WHEAT", "wheat", "Wheat")
 ---@return number|nil fillTypeIndex or nil if not found
----@example
----   local idx = RmFreshManager:resolveFillTypeIndex("WHEAT")
----   local idx2 = RmFreshManager:resolveFillTypeIndex("wheat")  -- also works
----   if idx then container.fillTypeIndex = idx end
 function RmFreshManager:resolveFillTypeIndex(fillTypeName)
     Log:trace(">>> resolveFillTypeIndex(%q)", tostring(fillTypeName))
 
@@ -2613,18 +2400,9 @@ function RmFreshManager:resolveFillTypeIndex(fillTypeName)
     return result
 end
 
---- Get fillTypeName string from fillTypeIndex number
---- Used when saving containers - converts runtime indices to stable names
---- fillTypeName is the persisted form, fillTypeIndex is runtime-only
----
---- DEFENSIVE: Returns fallback string for unknown indices (shouldn't happen)
---- Format: "FT_{index}" for unknown types to preserve data without crashing
----
+--- Runtime index -> persisted fillTypeName; "FT_{index}" for an unknown index keeps the data
 ---@param fillTypeIndex number Fill type index (e.g., FillType.WHEAT)
 ---@return string fillTypeName (e.g., "WHEAT") or "FT_{index}" fallback
----@example
----   local name = RmFreshManager:getFillTypeName(FillType.WHEAT)
----   container.identityMatch.storage.fillTypeName = name
 function RmFreshManager:getFillTypeName(fillTypeIndex)
     Log:trace(">>> getFillTypeName(%s)", tostring(fillTypeIndex))
 
@@ -2662,9 +2440,7 @@ end
 -- REFACTOR VALIDATION
 -- =============================================================================
 
---- Validate that refactor was applied correctly
---- Run this in tests/CI to ensure removed functions are not referenced
---- and new structures exist as expected
+--- Check that refactor leftovers are gone and the new structures exist (tests)
 ---@return boolean success True if validation passes
 ---@return string|nil errorMessage Error description if validation fails
 function RmFreshManager:debugValidatePostRefactor()
@@ -2725,12 +2501,7 @@ end
 --- Reconciliation threshold - ignore drift smaller than this (float noise)
 RmFreshManager.RECONCILE_THRESHOLD = 0.5
 
---- Inventory display floor (litres). Containers holding less than this are negligible
---- residue (e.g. a grain-tank leftover after unloading) and are hidden from the inventory
---- views. Display-only: the amount is NOT mutated - it stays tracked (and visible in the
---- fInspect/fBatches console) and reappears in the views once the storage passes this floor.
---- A flat floor cannot tell residue from legitimately small production; a more
---- context-aware distinction is left to a future pass.
+--- Inventory views hide containers below this (residue); display only, the amount stays tracked
 RmFreshManager.MIN_DISPLAY_AMOUNT = 1.0
 
 --- Get statistics object
@@ -2786,16 +2557,10 @@ function RmFreshManager:clearLossLog()
     Log:debug("CONSOLE_OP: method=clearLossLog result=success")
 end
 
---- Get containers with goods expiring within specified hours
---- Used by fStatus console command and future GUI displays
---- Calculates remaining hours using daysPerPeriod-aware formula
---- MULTIPLAYER: farmId filter enables "show my goods" for each player
----
+--- Containers expiring within `hours`, soonest first, optionally one farm; none while expiration is off
 --- @param hours number Hours until expiration threshold (e.g., 24 for "next day")
 --- @param farmId number|nil Filter by farm (nil = all farms, for admin/debug)
 --- @return table { totalAmount, thresholdHours, containers[] }; with expiration off, totalAmount 0 and no containers
----   containers sorted by expiresInHours ascending (soonest first)
----   each container: { containerId, entityType, fillTypeName, expiringAmount, expiresInHours, farmId, name }
 function RmFreshManager:getExpiringWithin(hours, farmId)
     -- Default to 24 hours if not specified
     hours = hours or 24
@@ -2919,7 +2684,7 @@ end
 -- DISPLAY AGGREGATION API
 -- =============================================================================
 
---- Get inventory summary aggregated by fillType for a specific farm
+--- Inventory summary by fillType for one farm
 --- @param farmId number The farm to filter by (REQUIRED - use g_currentMission:getFarmId())
 --- @return table fillTypeName -> { totalAmount, expiringAmount, soonestRemaining, soonestAge, soonestMultiplier,
 ---   containerCount, isWarning }; soonest* describe the batch with the least real time left
@@ -3082,7 +2847,7 @@ function RmFreshManager:getInventoryList(farmId, sortBy)
     return list
 end
 
---- Per-container rows for one fillType; shared batch refs, callers must not mutate
+--- Per-container rows for a fillType (shared refs, read only)
 ---@param fillTypeName string FillType name (e.g., "WHEAT")
 ---@param farmId number|nil Filter by farm (nil returns empty)
 ---@return table detail { fillTypeName, fillTypeIndex, fillTypeTitle, totalAmount, threshold, containers }; each
@@ -3666,10 +3431,7 @@ function RmFreshManager:getLossStatsSummary(farmId)
     }
 end
 
---- Reconcile a single container with game state
---- Compares tracked batch totals with actual fill levels and fixes drift
---- SERVER ONLY
---- Uses flat container.batches, single fillType per container
+--- Server only: fix drift between a container's tracked batches and its actual fill
 ---@param containerId string Container ID
 ---@return table { skipped, added, removed } or nil if not found
 function RmFreshManager:reconcileContainer(containerId)
@@ -3738,11 +3500,7 @@ function RmFreshManager:reconcileContainer(containerId)
     return stats
 end
 
---- Reconcile all containers
---- Iterates all containers and reconciles each with game state
---- SERVER ONLY
---- TEST ISOLATION: When testContainerPrefix is set, only processes matching containers
---- Uses suppressReconcileBroadcast to avoid spamming MP clients with updates
+--- Server only: reconcile every container (test-prefix aware) without per-container broadcasts
 ---@return table { containersProcessed, containersSkipped, totalAdded, totalRemoved }
 function RmFreshManager:reconcileAll()
     if g_server == nil then
@@ -3809,9 +3567,7 @@ function RmFreshManager:reconcileAll()
     return stats
 end
 
---- Cleanup empty/near-zero batches from all containers
---- Removes phantom batches caused by floating-point precision issues
---- SERVER ONLY - called from onHourChanged
+--- Server only: drop the near-zero batches float precision leaves (hourly)
 ---@return number Count of batches removed
 function RmFreshManager:cleanupEmptyBatches()
     if g_server == nil then return 0 end
@@ -3845,10 +3601,7 @@ function RmFreshManager:cleanupEmptyBatches()
     return removedCount
 end
 
---- Helper: Add amount during reconciliation (under-tracked scenario)
---- Adds to newest batch or creates new batch with age 0
---- SERVER ONLY - internal helper
---- Respects suppressReconcileBroadcast flag during bulk operations
+--- Server only: under-tracked fill goes to the newest batch, else to a new age-0 batch
 ---@param containerId string Container ID
 ---@param amount number Amount to add
 function RmFreshManager:reconcileAdd(containerId, amount)
@@ -3878,10 +3631,7 @@ function RmFreshManager:reconcileAdd(containerId, amount)
     Log:trace("RECONCILE_ADD: container=%s amount=%.1f batches=%d", containerId, amount, #container.batches)
 end
 
---- Helper: Remove amount during reconciliation (over-tracked scenario)
---- Consumes FIFO from oldest batches
---- SERVER ONLY - internal helper
---- Respects suppressReconcileBroadcast flag during bulk operations
+--- Server only: consume over-tracked fill FIFO; honors suppressReconcileBroadcast
 ---@param containerId string Container ID
 ---@param amount number Amount to remove
 function RmFreshManager:reconcileRemove(containerId, amount)
@@ -3907,22 +3657,13 @@ end
 -- =============================================================================
 -- TRANSFER PENDING API
 -- =============================================================================
--- These APIs enable age-preserving transfers between containers.
--- TransferCoordinator stages batches BEFORE superFunc, adapters consume them during fill.
---
--- USAGE FLOW:
--- 1. TransferCoordinator hooks transfer function BEFORE superFunc
--- 2. peekBatches(source) -> preview what batches would transfer
--- 3. setTransferPending(destination, batches) -> stage them for destination
--- 4. superFunc executes the actual transfer
--- 5. Destination adapter's fill callback calls getTransferPending()
--- 6. If pending -> use those batches (preserves ages)
--- 7. If no pending -> create fresh batch (age=0) - normal flow
+
+-- A transfer hook peeks the source batches and stages them for the destination before the game
+-- moves the fill; the destination fill callback takes them (ages kept), or makes an age-0 batch.
+
 -- =============================================================================
 
---- Set pending batches for an incoming transfer
---- Called by TransferCoordinator BEFORE superFunc to stage source batches
---- Adapters check for pending during fill increase to use transferred ages
+--- Stage source batches for a destination before the game moves the fill
 ---@param containerId string Destination container ID
 ---@param batches table Array of batch objects { amount, age }
 function RmFreshManager:setTransferPending(containerId, batches)
@@ -3937,9 +3678,7 @@ function RmFreshManager:setTransferPending(containerId, batches)
         containerId, #batches)
 end
 
---- Get and clear pending batches for a container
---- Called by adapter onFillChanged when fill increases
---- Returns batches AND clears the entry (one-time retrieval)
+--- Take (and clear) the batches staged for a container on its fill increase
 ---@param containerId string Container ID
 ---@return table|nil batches Array of { amount, age } or nil if no pending
 function RmFreshManager:getTransferPending(containerId)
@@ -3955,9 +3694,7 @@ function RmFreshManager:getTransferPending(containerId)
     return nil
 end
 
---- Peek batches from a container (FIFO preview, does NOT consume)
---- Used by TransferCoordinator to preview what batches would be transferred
---- CRITICAL: Does not modify container.batches - just returns a preview
+--- FIFO preview of the batches `amount` would take; container.batches is not modified
 ---@param containerId string Source container ID
 ---@param amount number Amount to peek
 ---@return table { batches = {...}, totalAmount = N }
@@ -3997,16 +3734,13 @@ end
 -- =============================================================================
 -- TRANSFER PENDING BY FILLTYPE
 -- =============================================================================
--- FALLBACK for physics-based transfers where Dischargeable.dischargeToObject
--- is not called (pallets tipping, some trailer dumps, FillVolume-based paths).
---
--- When source loses fill, we stage by fillType. When destination gains fill,
--- we check containerId first (TransferCoordinator), then fillType as fallback.
+
+-- Fallback for transfers no hook sees (pallets tipping, some trailer dumps): a source losing fill
+-- stages by fillType, and a destination checks its containerId first, then the fillType.
+
 -- =============================================================================
 
---- Set pending batches by fillType (fallback staging)
---- Called from onFillChanged when source loses fill (delta < 0)
---- Allows destination to retrieve by fillType if containerId staging wasn't done
+--- Stage a losing source's batches by fillType for a destination with no containerId staging
 ---@param fillType number Fill type index
 ---@param batches table Array of batch objects { amount, age }
 function RmFreshManager:setTransferPendingByFillType(fillType, batches)
@@ -4021,10 +3755,7 @@ function RmFreshManager:setTransferPendingByFillType(fillType, batches)
         fillType, #batches)
 end
 
---- Get and clear pending batches by fillType (fallback retrieval)
---- Called after containerId check fails - uses fillType correlation
---- Returns batches AND clears the entry (one-time retrieval)
---- Has short TTL (2 seconds) to avoid stale data from previous transfers
+--- Take (and clear) fillType-staged batches; entries expire after 2 s so stale ones are not reused
 ---@param fillType number Fill type index
 ---@return table|nil batches Array of { amount, age } or nil if no pending
 function RmFreshManager:getTransferPendingByFillType(fillType)
@@ -4052,15 +3783,13 @@ end
 -- =============================================================================
 -- BULK TRANSFER MODE (Production Points)
 -- =============================================================================
--- ProductionChainManager:distributeGoods() performs multiple transfers in a loop.
--- Each transfer is ADD (destination) then REMOVE (source) within a single frame.
--- Bulk mode queues ADDs, matches them to REMOVEs, and applies batch arrays (FIFO).
--- Key insight: Use batch arrays, NOT weighted average, to preserve FIFO ordering.
+
+-- distributeGoods() transfers in a loop, each an ADD (destination) before its REMOVE (source).
+-- Bulk mode queues ADDs, matches REMOVEs, and applies batch arrays, never a weighted average.
+
 -- =============================================================================
 
---- Begin bulk transfer mode
---- Called by ProductionChainManager hook BEFORE distributeGoods() loop
---- SERVER ONLY - production distribution is server-authoritative
+--- Server only: enter bulk mode before the distributeGoods() loop
 function RmFreshManager:beginBulkTransfer()
     if g_server == nil then return end
 
@@ -4071,10 +3800,7 @@ function RmFreshManager:beginBulkTransfer()
     }
 end
 
---- End bulk transfer mode
---- Called by ProductionChainManager hook AFTER distributeGoods() loop
---- Handles unmatched ADDs by creating fresh batches (production output with no source)
---- SERVER ONLY
+--- Server only: leave bulk mode; unmatched ADDs (output with no source) get fresh batches
 function RmFreshManager:endBulkTransfer()
     if g_server == nil then return end
 

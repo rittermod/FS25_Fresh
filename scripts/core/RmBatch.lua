@@ -9,8 +9,7 @@ RmBatch = {}
 -- Get logger (RmLogging loaded before this module in main.lua)
 local Log = RmLogging.getLogger("Fresh")
 
---- Minimum batch amount to count in display/warning calculations
---- Consistent with consumeFIFO cleanup threshold (prevents float overreporting)
+--- Smallest batch amount displays and warnings count; matches consumeFIFO's cleanup threshold.
 RmBatch.MIN_AMOUNT = 0.001
 
 --- Create a new batch
@@ -40,9 +39,7 @@ function RmBatch.isExpired(batch, threshold)
     return batch.ageInPeriods >= (threshold or 1.0)
 end
 
---- Check if batch is near expiration (for warnings)
---- Uses absolute hours remaining instead of percentage
---- Expired batches (negative remaining) return true - expired is a subset of "near expiration"
+--- Near expiration when real hours left <= warningHours (an expired batch counts); never at multiplier 0.
 ---@param batch table PerishableBatch
 ---@param warningHours number Hours threshold (e.g., 24)
 ---@param expirationThreshold number Expiration threshold in periods
@@ -59,8 +56,7 @@ function RmBatch.isNearExpiration(batch, warningHours, expirationThreshold, days
     return remainingHours <= (warningHours or 24)
 end
 
---- Format batch age for display (Phase 1: simple "X days" format)
---- Used by console commands for debugging - shows raw age
+--- Format batch age for console output: hours under 48h, else days
 ---@param batch table PerishableBatch
 ---@return string Age in days (e.g., "0 days", "15 days", "45 days")
 function RmBatch.formatAge(batch, daysPerPeriod)
@@ -73,12 +69,7 @@ function RmBatch.formatAge(batch, daysPerPeriod)
     end
 end
 
---- Format remaining time until expiration for display
---- Uses daysPerPeriod to adapt display to game time settings
---- Breakpoints: <48h -> hours, <60d (1440h) -> days, >=60d -> months
---- DEPENDENCY: Requires FS25 environment with g_i18n loaded and Fresh localization keys registered:
----   fresh_expired, fresh_expires_hour, fresh_expires_hours, fresh_expires_day,
----   fresh_expires_days, fresh_expires_month, fresh_expires_months, fresh_expires_never
+--- Localized time to expiry: hours under 48h, days under 60d, else months (fresh_expired, fresh_expires_* keys).
 ---@param batch table PerishableBatch
 ---@param threshold number Expiration threshold in periods
 ---@param daysPerPeriod number Days per in-game month (from environment)
@@ -137,9 +128,7 @@ function RmBatch.getRealRemaining(batch, threshold, multiplier)
     return remaining / multiplier
 end
 
---- Format remaining time as compact string for HUD suffixes
---- Same breakpoints as formatExpiresIn but uses abbreviated units (h/d/m)
---- No l10n needed - h/d/m are universal gaming abbreviations
+--- Compact HUD form of formatExpiresIn (same breakpoints, unlocalized h/d/m units).
 ---@param remainingHours number Hours remaining until expiration
 ---@return string Compact time string (e.g., "24h", "3d", "2.1m")
 function RmBatch.formatRemainingShort(remainingHours)
@@ -192,7 +181,6 @@ function RmBatch.removeExpired(batches, threshold)
 end
 
 --- Calculate weighted average age of all batches
---- Used by AUTO_DELIVER to get source age when batches are stored as outgoing
 ---@param batches table Array of { amount, ageInPeriods }
 ---@return number Weighted average age, or 0 if no batches
 function RmBatch.weightedAverageAge(batches)
@@ -211,9 +199,7 @@ function RmBatch.weightedAverageAge(batches)
     return totalAmount > 0 and (weightedAgeSum / totalAmount) or 0
 end
 
---- Peek at the age of FIFO batches without consuming them
---- Returns weighted average age for the amount that WOULD be consumed
---- Used by transfer chain to determine source age before superFunc modifies storage
+--- Weighted average age of the amount consumeFIFO would take, without consuming it.
 ---@param batches table Array of PerishableBatch (NOT modified)
 ---@param amount number Amount to peek
 ---@return number Weighted average age of batches that would be consumed, or 0 if no batches
@@ -242,9 +228,7 @@ function RmBatch.peekFIFO(batches, amount)
     return weightedAgeSum / totalAmount
 end
 
---- Consume amount from batches in FIFO order (oldest first)
---- Removes or reduces batches starting from index 1
---- Returns consumed batches with individual ages for transfer chain
+--- Consume amount oldest-first; returns the consumed batches with their own ages (for transfers).
 ---@param batches table Array of PerishableBatch (modified in place)
 ---@param amount number Amount to consume
 ---@return table { consumed = number, batches = array of {amount, ageInPeriods} }
@@ -283,31 +267,16 @@ function RmBatch.consumeFIFO(batches, amount)
     return { consumed = totalConsumed, batches = consumedBatches }
 end
 
---- Merge batches with similar ages to prevent proliferation
---- Batches within threshold age difference are combined using weighted average
----
---- Algorithm: O(n log n) sort-first, then O(n) adjacent merge
---- 1. Sort by age descending (oldest first) - ensures similar ages are adjacent
---- 2. Single pass comparing adjacent pairs - chain merge handles transitive merges
----
---- This ensures non-adjacent similar-age batches merge correctly
---- because sorting brings them adjacent before comparison.
----
---- Example: [{100, 0.50}, {200, 0.10}, {50, 0.51}] with threshold 0.02
----   -> Sort: [{50, 0.51}, {100, 0.50}, {200, 0.10}]
----   -> Merge 0.51 & 0.50 (adjacent, diff 0.01): [{150, 0.503}, {200, 0.10}]
----
---- Threshold meaning: 0.01 periods = ~7 in-game hours (0.01 * 30 days * 24 hours)
----
+--- Sort oldest first, then merge adjacent batches whose ages differ by <= threshold periods (weighted age).
 ---@param batches table Array of PerishableBatch (modified in place, sorted by age descending)
----@param threshold number|nil Age difference threshold for merging (default 0.01 = ~7 hours)
+---@param threshold number|nil Age difference threshold for merging (default 0.01 periods)
 ---@return number Count of merges performed
 function RmBatch.mergeSimilarBatches(batches, threshold)
     if batches == nil or #batches < 2 then
         return 0 -- Nothing to merge
     end
 
-    threshold = threshold or 0.01 -- Default: ~7 in-game hours
+    threshold = threshold or 0.01 -- Default, in periods
     local initialCount = #batches
 
     -- Log input state (only if multiple batches - reduces noise)

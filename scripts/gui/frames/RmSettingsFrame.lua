@@ -56,9 +56,7 @@ RmSettingsFrame.allPerishableFillTypes = nil
 --- Suppression flag to prevent callbacks during programmatic refresh
 RmSettingsFrame.isRefreshing = false
 
---- Reference to the currently DISPLAYED frame instance
---- Updated in onFrameOpen, cleared in onFrameClose
---- Used by sync events to refresh the visible UI
+--- The frame instance on screen (set on open, cleared on close); sync events refresh it.
 RmSettingsFrame.displayedInstance = nil
 
 --- Pending fillType changes accumulated during user interaction
@@ -75,8 +73,7 @@ RmSettingsFrame.currentSubCategory = 1
 --- Storage class dropdown option names (state 1=Auto, 2-7=EXPOSED..DISABLED)
 RmSettingsFrame.STORAGE_CLASS_OPTIONS = { "auto", "exposed", "sheltered", "indoor", "cooled", "frozen", "disabled" }
 
---- Max benefit class dropdown options (state 1=Default, 2-6=EXPOSED..FROZEN)
---- No "Disabled" - that's a per-building opt-out, not a fillType ceiling
+--- Max benefit options (1=Default, 2-6=EXPOSED..FROZEN); no Disabled, which is a per-building opt-out.
 RmSettingsFrame.MAXBENEFIT_OPTIONS = {
     { value = nil,  label = "fresh_maxbenefit_default" },
     { value = 0,    label = "fresh_class_exposed" },
@@ -89,15 +86,13 @@ RmSettingsFrame.MAXBENEFIT_OPTIONS = {
 --- Sentinel value for "clear override" in pendingMaxBenefitChanges
 RmSettingsFrame.MAXBENEFIT_CLEAR = "CLEAR"
 
---- Pending max benefit class changes accumulated during user interaction
---- Flushed on frame close. Key: fillTypeName, Value: classValue (number) or MAXBENEFIT_CLEAR
+--- Pending max benefit edits, flushed on close: fillTypeName -> class value or MAXBENEFIT_CLEAR.
 RmSettingsFrame.pendingMaxBenefitChanges = {}
 
 --- Sentinel value for "clear override" in pendingStorageChanges
 RmSettingsFrame.STORAGE_CLEAR = "CLEAR"
 
---- Pending storage class changes accumulated during user interaction
---- Flushed on frame close. Key: storage key, Value: classValue (number) or STORAGE_CLEAR
+--- Pending storage class edits, flushed on close: storage key -> class value or STORAGE_CLEAR.
 RmSettingsFrame.pendingStorageChanges = {}
 
 function RmSettingsFrame.new()
@@ -326,7 +321,7 @@ end
 -- SUB-CATEGORY TABS
 -- =============================================================================
 
---- Initialize sub-category tab pages (FS25 InGameMenuSettingsFrame pattern)
+--- Initialize sub-category tab pages
 function RmSettingsFrame:initializeSubCategoryPages()
     local subCategories = {}
 
@@ -575,8 +570,7 @@ function RmSettingsFrame:refreshStorageRows()
     end
 end
 
---- Refresh fillType row visibility and selector states from current settings
---- Hides entire rows that are preset-controlled, re-applies alternating colors for visible rows
+--- Refresh fillType rows from settings: hides preset-controlled rows, re-tints the visible ones.
 ---@param rows table|nil Array of { row, multiOption, fillTypeName }
 ---@return number Number of visible rows
 function RmSettingsFrame:refreshFillTypeRows(rows)
@@ -765,7 +759,7 @@ function RmSettingsFrame:populateStorageTab()
                 multiOption:setState(1) -- Auto
             end
 
-            -- Wire onClick closure (keep target intact per CLAUDE.md gotcha)
+            -- Wire onClick closure (keep the callback target intact)
             local key = entry.key
             multiOption.onClickCallback = function(_target, state)
                 self:onStorageClassChanged(key, state)
@@ -1003,8 +997,7 @@ function RmSettingsFrame:populateMaxBenefitTab()
     Log:trace("SETT CLONE MAXBENEFIT: %d rows cloned, template unlinked", #fillTypes)
 end
 
---- Refresh max benefit tab dropdown states from current override values
---- Called during refreshData() - updates states only, no re-cloning
+--- Refresh max benefit dropdown states from current overrides; updates states only, no re-cloning.
 function RmSettingsFrame:refreshMaxBenefitRows()
     if not self.sc3Rows then return end
 
@@ -1061,8 +1054,7 @@ end
 -- PAGE SWITCHING
 -- =============================================================================
 
---- Page switching handler (called by MultiTextOption onClick)
---- Follows base game InGameMenuSettingsFrame pattern: show/hide pages, bind slider, link focus, set focus
+--- Shows the selected page, hides the others, binds the slider, and links and sets focus.
 ---@param state number The paging state index
 function RmSettingsFrame:updateSubCategoryPages(state)
     local idx = tonumber(self.subCategoryPaging.texts[state])
@@ -1129,10 +1121,7 @@ end
 -- READONLY STATE
 -- =============================================================================
 
---- Update disabled state of all controls based on admin status and setting dependencies
---- Non-admin clients get disabled controls (grayed out)
---- Dependency chain: Enable Expiration -> all other controls
----                   Show Warnings -> Warning Threshold
+--- Disable controls for non-admins and by dependency: expiration gates the Settings tab, warnings the threshold.
 function RmSettingsFrame:updateReadonlyState()
     local isAdmin = self:isAdmin()
     local notAdmin = not isAdmin
@@ -1369,11 +1358,7 @@ function RmSettingsFrame:onClickStorageAging(state)
     end
 end
 
---- Update visibility of sub-tabs based on setting dependencies
---- Tab 1 (Settings): always visible
---- Tab 2 (Expiration): visible when expiration enabled
---- Tab 3 (Max Benefit): visible when expiration AND storage aging enabled
---- Tab 4 (Storage): visible when expiration AND storage aging enabled
+--- Show each sub-tab only when the settings it depends on are on.
 function RmSettingsFrame:updateTabVisibility()
     local expirationEnabled = RmFreshSettings:getGlobal("enableExpiration") ~= false
     local storageAgingEnabled = RmFreshSettings.storageAgingEnabled

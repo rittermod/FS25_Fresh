@@ -1,7 +1,6 @@
 -- RmPlaceableAdapter.lua
 -- Purpose: Thin placeable adapter - bridges FS25 placeable storage events to centralized FreshManager
 -- Author: Ritter
--- Note: Storage discovery, fill callbacks, and display logic added in subsequent stories (25-2 to 25-6)
 
 RmPlaceableAdapter = {}
 RmPlaceableAdapter.SPEC_TABLE_NAME = ("spec_%s.rmPlaceableAdapter"):format(g_currentModName)
@@ -47,8 +46,7 @@ end
 -- STORAGE CLASS DETECTION
 -- =============================================================================
 
---- Detect storage class for a placeable based on its specializations
---- HusbandryMilk -> COOLED, everything else (silo, production, factory) -> INDOOR
+--- Storage class from the placeable's specializations: HusbandryMilk is COOLED, everything else INDOOR.
 ---@param placeable table Placeable entity
 ---@return number storageClass Storage class enum value
 function RmPlaceableAdapter.detectStorageClass(placeable)
@@ -63,20 +61,10 @@ function RmPlaceableAdapter.detectStorageClass(placeable)
 end
 
 -- =============================================================================
--- CAPABILITY DETECTION (Step 5)
+-- CAPABILITY DETECTION
 -- =============================================================================
 
---- Detect player interaction capabilities for a container
---- Uses LoadingStation/UnloadingStation to determine if player/vehicles can
---- fill or empty a specific fillType from this placeable.
----
---- **Why this works:** Stations define which fillTypes they accept.
---- - UnloadingStation = player can UNLOAD INTO (fill) this fillType
---- - LoadingStation = player can LOAD FROM (empty) this fillType
----
---- Example: Cow barn's UnloadingStation accepts HAY, STRAW, TMR but NOT MILK.
----          Cow barn's LoadingStation accepts MILK but NOT HAY/STRAW/TMR.
----
+--- Can players fill (an UnloadingStation accepts it) or empty (a LoadingStation serves it) this fillType here?
 ---@param placeable table Placeable entity
 ---@param fillTypeIndex number Fill type index to check
 ---@return boolean playerCanFill Can player/vehicles ADD to this container?
@@ -147,9 +135,7 @@ function RmPlaceableAdapter.detectCapabilities(placeable, fillTypeIndex)
     -- Both capabilities remain false -> production output behavior (always fresh)
 
     -- =========================================================================
-    -- OVERRIDES: Correct station-based detection for specific cases
-    -- The station API returns true for ALL fillTypes in connected storage,
-    -- but doesn't distinguish inputs from outputs. These overrides fix that.
+    -- OVERRIDES: stations report every fillType in connected storage, inputs and outputs alike
     -- =========================================================================
 
     -- Override 1: Husbandry milk outputs (MILK, GOATMILK, BUFFALOMILK)
@@ -396,7 +382,7 @@ function RmPlaceableAdapter:addFillLevel(containerId, delta)
 
     storage:setFillLevel(newLevel, fillTypeIndex)
 
-    -- DEBUG log for state change (per architecture-impl.md 12.5)
+    -- DEBUG log for state change
     Log:debug("PLACEABLE_FILL_SET: container=%s %.1f -> %.1f %s",
         containerId, currentLevel, newLevel, fillTypeName or "?")
 
@@ -423,12 +409,7 @@ end
 -- LOOKUP API
 -- =============================================================================
 
---- Get containerId for a placeable storage and fillType
---- Used by TransferCoordinator to resolve destination containers
---- NOTE: Uses discoverStorages() to find placeable owning the storage
---- CRITICAL: PlaceableAdapter uses POOLED containers - one per (placeable, fillTypeName)
----           Multiple storages with same fillType share ONE container
---- SERVER-ONLY: This function iterates Manager.containers which is empty on clients
+--- Server only. Containers are pooled per (placeable, fillTypeName): storages of one type share one.
 ---@param storage table Storage object
 ---@param fillType number Fill type index
 ---@return string|nil containerId or nil if not found
@@ -457,7 +438,7 @@ function RmPlaceableAdapter:getContainerIdForStorage(storage, fillType)
     local checkedPlaceables = {}
 
     -- Search through placeable containers to find which placeable owns this storage
-    -- Uses shouldProcessContainer for test isolation (review finding 25-8)
+    -- Uses shouldProcessContainer for test isolation
     for containerId, container in pairs(RmFreshManager.containers) do
         if container.entityType == "placeable" and RmFreshManager:shouldProcessContainer(containerId) then
             local placeable = container.runtimeEntity
@@ -544,7 +525,7 @@ function RmPlaceableAdapter.onStorageFillChanged(placeable, spec, storage, fillT
             placeable, storage, fillTypeName, fillLevel
         )
 
-        -- Step 5: Detect capabilities for dynamic registration
+        -- Detect capabilities for dynamic registration
         local playerCanFill, playerCanEmpty = RmPlaceableAdapter.detectCapabilities(
             placeable, fillTypeIndex
         )
@@ -594,10 +575,7 @@ end
 --- Polling timeout for deferred registration: 10 seconds (600 frames at 60fps)
 local DEFER_TIMEOUT_MS = 10000
 
---- Register containers for all perishable fill types in a storage
---- One container per (placeable, fillTypeName) pair - NOT per storage
---- Step 3: Register ALL supported perishable fillTypes,
---- not just ones with fill > 0. Ensures container exists before first fill.
+--- Register one container per (placeable, fillTypeName) for every supported perishable type, even empty.
 ---@param placeable table Placeable entity
 ---@param spec table Adapter spec table
 ---@param storage table Storage object
@@ -608,7 +586,7 @@ function RmPlaceableAdapter.registerStorageContents(placeable, spec, storage)
 
     local registered = 0
 
-    -- Step 3 fix: Iterate ALL supported fillTypes, not just ones with fill
+    -- Iterate ALL supported fillTypes, not just ones with fill
     -- This ensures containers exist for production outputs (e.g., milk) before first fill
     local supportedFillTypes = storage:getSupportedFillTypes() or {}
 
@@ -620,7 +598,7 @@ function RmPlaceableAdapter.registerStorageContents(placeable, spec, storage)
         Log:trace("    checking fillType=%s level=%.1f isPerishable=%s",
             fillTypeName or "?", fillLevel, tostring(isPerishable))
 
-        -- Step 3: Register if perishable (regardless of fillLevel)
+        -- Register if perishable (regardless of fillLevel)
         if isPerishable then
             local alreadyRegistered = spec.containerIds[fillTypeName] ~= nil
             Log:trace("    alreadyRegistered=%s", tostring(alreadyRegistered))
@@ -630,7 +608,7 @@ function RmPlaceableAdapter.registerStorageContents(placeable, spec, storage)
                     placeable, storage, fillTypeName, fillLevel
                 )
 
-                -- Step 5: Detect capabilities from LoadingStation/UnloadingStation
+                -- Detect capabilities from LoadingStation/UnloadingStation
                 local playerCanFill, playerCanEmpty = RmPlaceableAdapter.detectCapabilities(
                     placeable, fillTypeIndex
                 )
@@ -660,7 +638,7 @@ function RmPlaceableAdapter.registerStorageContents(placeable, spec, storage)
                     RmFreshManager:addBatch(containerId, fillLevel, 0)
                 end
 
-                -- Step 3: Log differently for empty vs filled registrations
+                -- Log differently for empty vs filled registrations
                 if fillLevel > 0 then
                     Log:debug("PLACEABLE_REGISTERED: fillType=%s containerId=%s reconciled=%s name=%s",
                         fillTypeName, containerId or "nil", tostring(wasReconciled), placeable:getName() or "unknown")
@@ -723,7 +701,7 @@ function RmPlaceableAdapter.deferRegistration(placeable)
     g_currentMission:addUpdateable({
         placeable = placeable,
         update = function(self, _dt)
-            -- Guard: mission teardown (review finding: avoid accessing nil g_currentMission)
+            -- Guard: mission teardown (g_currentMission is nil)
             if g_currentMission == nil then
                 return -- Can't remove updateable, but will be cleaned up with mission
             end
@@ -801,8 +779,7 @@ end
 -- SPECIALIZATION SETUP
 -- =============================================================================
 
---- Check if placeable has any storage-bearing specializations
---- Checks for: PlaceableSilo, PlaceableSiloExtension, PlaceableHusbandry, PlaceableFactory, PlaceableProductionPoint
+--- True when the placeable has a storage-bearing spec (silo, silo extension, husbandry, factory, production).
 ---@param specializations table Specializations table
 ---@return boolean True if placeable has storage capabilities
 function RmPlaceableAdapter.prerequisitesPresent(specializations)
@@ -832,7 +809,7 @@ function RmPlaceableAdapter.registerOverwrittenFunctions(placeableType)
 end
 
 -- =============================================================================
--- LIFECYCLE HOOKS (Implemented in Stories 25-2, 25-3)
+-- LIFECYCLE HOOKS
 -- =============================================================================
 
 --- Called when placeable loads
@@ -842,8 +819,7 @@ function RmPlaceableAdapter:onLoad(_savegame)
     -- Server only - clients receive container state via sync events
     if not self.isServer then return end
 
-    -- Skip construction preview placeables (similar to vehicle shop preview)
-    -- PlaceablePropertyState: NONE=1, OWNED=2, CONSTRUCTION_PREVIEW=3
+    -- Skip construction previews (CONSTRUCTION_PREVIEW) and NONE placeables
     local propertyState = self:getPropertyState()
     if propertyState == PlaceablePropertyState.CONSTRUCTION_PREVIEW or
         propertyState == PlaceablePropertyState.NONE then
@@ -854,8 +830,8 @@ function RmPlaceableAdapter:onLoad(_savegame)
 
     -- Create spec table for container tracking
     -- containerIds: fillTypeName -> containerId (one per fillType, not per storage)
-    -- storageRefs: containerId -> storage reference (for fill manipulation in 25-5)
-    -- registeredStorages: storage -> true (for callback deduplication in 25-4)
+    -- storageRefs: containerId -> storage reference (for fill manipulation)
+    -- registeredStorages: storage -> true (for callback deduplication)
     self[RmPlaceableAdapter.SPEC_TABLE_NAME] = {
         containerIds = {},           -- fillTypeName -> containerId
         storageRefs = {},            -- containerId -> storage reference
@@ -936,7 +912,7 @@ function RmPlaceableAdapter:onDelete()
     Log:debug("PLACEABLE_DELETE: %s unregistering %d containers",
         self.uniqueId or "?", count)
 
-    -- Clean up spec tables (FS25 pattern)
+    -- Clean up spec tables
     spec.containerIds = nil
     spec.storageRefs = nil
     spec.registeredStorages = nil

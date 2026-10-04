@@ -93,10 +93,7 @@ local Log = RmLogging.getLogger("Fresh")
 -- LIFECYCLE HOOKS
 -- =============================================================================
 
---- Hook ProductionChainManager for bulk transfer mode
---- Wraps distributeGoods() with beginBulkTransfer()/endBulkTransfer()
---- Enables age preservation during production chain auto-delivery
---- SERVER ONLY - production distribution is server-authoritative
+--- Server only: wrap distributeGoods in begin/endBulkTransfer so auto-delivered goods keep their age
 local function installProductionChainHook()
     -- Server only
     if g_server == nil then return end
@@ -285,9 +282,7 @@ local function validatePlaceableTypes(typeManager)
     end
 end
 
---- Inject RmHusbandryFoodAdapter into PlaceableHusbandryFood placeable types
---- NOTE: Coexists with PlaceableAdapter - husbandry buildings often have BOTH
----       general storage (spec_husbandry.storage) AND food storage (spec_husbandryFood.fillLevels)
+--- Inject RmHusbandryFoodAdapter; it coexists with RmPlaceableAdapter (food vs general storage)
 local function validateHusbandryFoodTypes(typeManager)
     if typeManager.typeName ~= "placeable" then
         return
@@ -309,8 +304,7 @@ local function validateHusbandryFoodTypes(typeManager)
     end
 end
 
---- Inject RmObjectStorageAdapter into PlaceableObjectStorage placeable types
---- NOTE: Targets barns, sheds that store pallets/bales (PlaceableObjectStorage)
+--- Inject RmObjectStorageAdapter into PlaceableObjectStorage types (barns and sheds storing pallets, bales)
 local function validateObjectStorageTypes(typeManager)
     if typeManager.typeName ~= "placeable" then
         return

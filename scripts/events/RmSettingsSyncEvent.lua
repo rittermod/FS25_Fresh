@@ -376,11 +376,8 @@ function RmSettingsSyncEvent:run(connection)
     for _ in pairs(self.settingsData.global or {}) do globalCount = globalCount + 1 end
     for _ in pairs(self.settingsData.fillTypes or {}) do ftCount = ftCount + 1 end
 
-    -- SINGLE ordered apply pass: userOverrides -> customDefaults
-    -- (incl. category name->index resolution + storageAgingEnabled) -> storage/maxBenefit
-    -- override tables -> a single rebuildIndexCache at the end.
-    -- Reset storageAgingEnabled to the bundled baseline FIRST so a sync that removes both the
-    -- savegame override and the custom-default flag reverts correctly.
+    -- One ordered pass: user overrides, custom defaults, storage/maxBenefit tables, one cache rebuild.
+    -- Reset storageAgingEnabled to bundled first, so a sync dropping both overrides reverts it.
     RmFreshSettings.storageAgingEnabled = RmFreshSettings.bundledStorageAgingEnabled
     RmFreshSettings:setUserOverrides(self.settingsData)
     RmFreshSettings:setCustomDefaults(self.settingsData.customDefaults or {})
@@ -417,11 +414,7 @@ end
 -- STATIC HELPER METHODS
 -- =============================================================================
 
---- Build a FRESH outbound sync payload.
---- Does NOT mutate the table returned by getUserOverrides(): we copy its global/
---- fillTypes refs into a new table and attach the additive sections (storage /
---- maxBenefit / customDefaults) here. customDefaults rides as its OWN section and is
---- never merged into userOverrides.global/fillTypes, so it cannot reach the save path.
+--- Build a new payload, leaving getUserOverrides intact; customDefaults stays apart, off the save path.
 ---@return table A new settingsData payload table
 function RmSettingsSyncEvent.buildSyncPayload()
     local userOverrides = RmFreshSettings:getUserOverrides()

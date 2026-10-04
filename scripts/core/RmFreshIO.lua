@@ -1,12 +1,8 @@
 -- RmFreshIO.lua
 -- Purpose: Save/load Fresh data to savegame XML files
 -- Author: Ritter
--- Architecture: Centralized persistence - single save file contains all Fresh data
--- Functions: 5
---   Save: save, saveLog
---   Load: load, loadLog
---   Helper: getFilePath
--- Files: rm_FreshData.xml (essential), rm_FreshLog.xml (optional log)
+-- Architecture: Centralized persistence - every Fresh savegame file is read and written here
+-- Files: rm_FreshData.xml (containers, statistics), rm_FreshLog.xml (loss log), rm_FreshSettings.xml (settings)
 
 RmFreshIO = {}
 
@@ -23,10 +19,7 @@ RmFreshIO.FILE_DATA = "rm_FreshData.xml"
 --- Log file name for loss log (optional, can grow large)
 RmFreshIO.FILE_LOG = "rm_FreshLog.xml"
 
---- File format version for compatibility checks
---- v2: Initial container schema (type field)
---- v3: Generated container IDs (entityId, entityType, storageIndex fields)
---- v4: Current identity model (identityMatch, flat batches, fillTypeName as string)
+--- Save format: v2 type field; v3 generated ids; v4 identityMatch, flat batches, fillTypeName strings
 RmFreshIO.VERSION = 4
 
 --- Settings file format version for compatibility checks
@@ -47,9 +40,7 @@ RmFreshIO.logSchema = nil
 -- SCHEMA REGISTRATION
 -- =============================================================================
 
---- Register XML schema for save format validation
---- Called once on first save/load operation
---- Uses FS25 XMLSchema API for path registration and type validation
+--- Register the save-format XMLSchema once, on the first save or load
 function RmFreshIO.registerSchema()
     if RmFreshIO.xmlSchema ~= nil then
         return -- Already registered
@@ -102,9 +93,7 @@ function RmFreshIO.registerSchema()
     Log:debug("SCHEMA_REGISTER: Fresh save format v%d schema registered", RmFreshIO.VERSION)
 end
 
---- Register XML schema for settings format validation
---- Called once on first settings load/save operation
---- Unified format for both mod defaults and user overrides
+--- Register the settings XMLSchema once; one format serves mod defaults and user overrides
 function RmFreshIO.registerSettingsSchema()
     if RmFreshIO.settingsSchema ~= nil then
         return -- Already registered
@@ -204,8 +193,7 @@ end
 -- SAVE FUNCTIONS
 -- =============================================================================
 
---- Save Fresh data to rm_FreshData.xml --- Writes containers using identity model: identityMatch (worldObject + storage), flat batches
---- CRITICAL: Do NOT save runtimeEntity/fillTypeIndex (runtime-only references)
+--- Save to rm_FreshData.xml: identityMatch and flat batches; never runtimeEntity or fillTypeIndex.
 ---@param savegameDir string Path to savegame directory
 ---@param containers table Container registry from RmFreshManager (id -> Container)
 ---@param statistics table Statistics from RmFreshManager
@@ -627,8 +615,7 @@ end
 -- SETTINGS MIGRATIONS
 -- =============================================================================
 
---- Sequential settings migrations. Each function transforms data from version N to N+1.
---- v1 save -> runs [1], then [2] (future), etc. Adding v3 = just add [2].
+--- Settings migrations run in order: entry [N] turns version N into N+1.
 RmFreshIO.SETTINGS_MIGRATIONS = {
     -- v1->v2: Default preset changed from "custom" to "normal"
     -- v1 saved ALL fillTypes (not just overrides), so strip redundant ones first
@@ -693,8 +680,7 @@ end
 -- LOAD FUNCTIONS
 -- =============================================================================
 
---- Load Fresh data from rm_FreshData.xml --- Returns nil if file doesn't exist (new game) or version < 4 (clean slate upgrade)
---- CRITICAL: Loads to reconciliationPool, NOT containers - runtimeEntity will be nil
+--- Load into reconciliationPool (runtimeEntity nil); nil for a new game or a version below 4.
 ---@param savegameDir string Path to savegame directory
 ---@return table|nil { reconciliationPool = {}, statistics = {} } or nil if no save/incompatible
 function RmFreshIO:load(savegameDir)

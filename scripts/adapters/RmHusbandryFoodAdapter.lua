@@ -15,8 +15,7 @@ local Log = RmLogging.getLogger("Fresh")
 -- IDENTITY
 -- =============================================================================
 
---- Build identity structure for husbandry food container
---- HusbandryFood uses spec_husbandryFood.fillLevels directly (NOT Storage class)
+--- Build identity for a husbandry food container (food lives in spec_husbandryFood.fillLevels, not a Storage)
 ---@param placeable table Placeable entity (husbandry with food)
 ---@param fillTypeName string Fill type name (string, not index)
 ---@param fillLevel number|nil Current fill level
@@ -48,10 +47,7 @@ end
 -- SPECIALIZATION SETUP
 -- =============================================================================
 
---- Only inject into placeables with PlaceableHusbandryFood
---- CRITICAL: Checks for PlaceableHusbandryFood, NOT PlaceableHusbandry
---- PlaceableHusbandry has general storage (milk, bedding) - handled by PlaceableAdapter
---- PlaceableHusbandryFood has food storage (what animals eat) - handled HERE
+--- Requires PlaceableHusbandryFood (food); PlaceableHusbandry storage (milk, bedding) is RmPlaceableAdapter's.
 ---@param specializations table The placeable type's specializations
 ---@return boolean hasPrerequisite true if PlaceableHusbandryFood present
 function RmHusbandryFoodAdapter.prerequisitesPresent(specializations)
@@ -71,8 +67,7 @@ function RmHusbandryFoodAdapter.registerEventListeners(placeableType)
     SpecializationUtil.registerEventListener(placeableType, "onReadUpdateStream", RmHusbandryFoodAdapter)
 end
 
---- Register overwritten functions for fill tracking and display
---- CRITICAL: Hooks addFood/removeFood for fill tracking, updateInfo for HUD display
+--- Hook addFood/removeFood for fill tracking and updateInfo for the HUD
 ---@param placeableType table The placeable type
 function RmHusbandryFoodAdapter.registerOverwrittenFunctions(placeableType)
     SpecializationUtil.registerOverwrittenFunction(placeableType, "addFood", RmHusbandryFoodAdapter.addFood)
@@ -249,8 +244,7 @@ function RmHusbandryFoodAdapter.rescanForPerishables()
     return count
 end
 
---- Defer registration until uniqueId is available (for purchased placeables)
---- Pattern: Mirrors RmPlaceableAdapter.deferRegistration exactly
+--- Defer registration until a purchased placeable has its uniqueId (as RmPlaceableAdapter.deferRegistration)
 ---@param placeable table Placeable entity
 function RmHusbandryFoodAdapter.deferRegistration(placeable)
     Log:trace(">>> deferRegistration(husbandryFood=%s)", placeable:getName() or "unknown")
@@ -269,7 +263,7 @@ function RmHusbandryFoodAdapter.deferRegistration(placeable)
     g_currentMission:addUpdateable({
         placeable = placeable,
         update = function(self, _dt)
-            -- Guard: mission teardown (review finding: avoid accessing nil g_currentMission)
+            -- Guard: mission teardown (g_currentMission is nil)
             if g_currentMission == nil then
                 return -- Can't remove updateable, but will be cleaned up with mission
             end
@@ -397,7 +391,6 @@ end
 ---@param ... any Additional arguments (fillPositionData, toolType, extraAttributes)
 ---@return number actualDelta Actual fill level change
 function RmHusbandryFoodAdapter:addFood(superFunc, farmId, deltaFillLevel, fillTypeIndex, ...)
-    -- TRACE entry per 12.5 guidelines
     Log:trace(">>> addFood(farmId=%d, delta=%.1f, fillType=%d)", farmId, deltaFillLevel, fillTypeIndex)
 
     -- Call superFunc first - may trigger additional fill changes for mixed rations
@@ -482,7 +475,6 @@ end
 ---@param fillTypeIndex number Fill type index
 ---@return number actualDelta Actual fill level removed
 function RmHusbandryFoodAdapter:removeFood(superFunc, absDeltaFillLevel, fillTypeIndex)
-    -- TRACE entry per 12.5 guidelines
     Log:trace(">>> removeFood(delta=%.1f, fillType=%d)", absDeltaFillLevel, fillTypeIndex)
 
     -- Call superFunc first
@@ -648,7 +640,7 @@ end
 -- =============================================================================
 
 --- Get fill level for a container by containerId
---- Pattern: Follow RmPlaceableAdapter:getFillLevel (lines 131-168)
+--- Pattern: Follow RmPlaceableAdapter:getFillLevel
 ---@param containerId string Container ID
 ---@return number fillLevel Current fill level
 ---@return number fillTypeIndex Fill type index
@@ -753,22 +745,20 @@ end
 -- =============================================================================
 -- MP STREAM SYNC
 -- =============================================================================
--- NOTE: HusbandryFoodAdapter uses update streams (onWriteUpdateStream/onReadUpdateStream)
--- unlike PlaceableAdapter because:
--- 1. Dynamic registration can occur (new perishable food type added mid-session via addFood)
--- 2. PlaceableAdapter fillTypes are fixed at construction, no dynamic registration
--- 3. Without update streams, client HUD wouldn't show dynamically-added containers until reconnect
--- If this proves unnecessary in practice, simplify in future refactor.
+
+-- Update streams too, unlike RmPlaceableAdapter: addFood can register a food type mid-session,
+-- and without them a client HUD misses that container until it reconnects.
+
 -- =============================================================================
 
 --- MP stream sync - send container state to joining client
---- Pattern: Follow RmPlaceableAdapter:onWriteStream (lines 706-724)
+--- Pattern: Follow RmPlaceableAdapter:onWriteStream
 ---@param streamId number Network stream ID
 ---@param connection table Network connection
 function RmHusbandryFoodAdapter:onWriteStream(streamId, connection)
     Log:trace(">>> onWriteStream(husbandryFood=%s)", self.uniqueId or "?")
 
-    -- Skip if writing TO server (we're on client) (12.5: log decision branches)
+    -- Skip if writing TO server (we're on client)
     if connection:getIsServer() then
         Log:trace("    connection check: to server, skipping")
         Log:trace("<<< onWriteStream (to server, skip)")
@@ -798,13 +788,13 @@ function RmHusbandryFoodAdapter:onWriteStream(streamId, connection)
 end
 
 --- MP stream sync - receive container state on client join
---- Pattern: Follow RmPlaceableAdapter:onReadStream (lines 730-755)
+--- Pattern: Follow RmPlaceableAdapter:onReadStream
 ---@param streamId number Network stream ID
 ---@param connection table Network connection
 function RmHusbandryFoodAdapter:onReadStream(streamId, connection)
     Log:trace(">>> onReadStream(husbandryFood=%s)", self.uniqueId or "?")
 
-    -- Only process data FROM server (12.5: log decision branches)
+    -- Only process data FROM server
     if not connection:getIsServer() then
         Log:trace("    connection check: not from server, skipping")
         Log:trace("<<< onReadStream (not from server, skip)")
@@ -833,7 +823,6 @@ function RmHusbandryFoodAdapter:onReadStream(streamId, connection)
         -- Register entity->containerId mapping for display hooks
         if RmFreshManager and RmFreshManager.registerClientEntity then
             RmFreshManager:registerClientEntity(self, containerId)
-            -- 12.5: DEBUG for significant events
             Log:debug("HUSBANDRY_CLIENT_REGISTERED: containerId=%s fillType=%s entity=%s",
                 containerId, fillTypeName, self.uniqueId or "?")
         end
@@ -848,7 +837,7 @@ end
 ---@param connection table Network connection
 ---@param dirtyMask number Dirty flags mask
 function RmHusbandryFoodAdapter:onWriteUpdateStream(streamId, connection, dirtyMask)
-    -- Skip if writing TO server (12.5: log decision branches)
+    -- Skip if writing TO server
     if connection:getIsServer() then
         Log:trace("onWriteUpdateStream: to server, skipping")
         return
@@ -890,7 +879,7 @@ end
 ---@param timestamp number Update timestamp
 ---@param connection table Network connection
 function RmHusbandryFoodAdapter:onReadUpdateStream(streamId, timestamp, connection)
-    -- Only process data FROM server (12.5: log decision branches)
+    -- Only process data FROM server
     if not connection:getIsServer() then
         Log:trace("onReadUpdateStream: not from server, skipping")
         return
@@ -919,7 +908,6 @@ function RmHusbandryFoodAdapter:onReadUpdateStream(streamId, timestamp, connecti
 
             if RmFreshManager and RmFreshManager.registerClientEntity then
                 RmFreshManager:registerClientEntity(self, containerId)
-                -- 12.5: DEBUG for significant events
                 Log:debug("HUSBANDRY_CLIENT_REGISTERED: containerId=%s fillType=%s entity=%s (update)",
                     containerId, fillTypeName, self.uniqueId or "?")
             end

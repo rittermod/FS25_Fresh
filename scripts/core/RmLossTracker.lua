@@ -7,11 +7,7 @@ RmLossTracker.lossLog = {}
 
 local Log = RmLogging.getLogger("Fresh")
 
---- Run a function under error protection so a crash handling one item cannot abort
---- the rest of the daily notification loop. File-local copy of the same pattern used
---- in RmFreshManager (kept local per the safeHook precedent rather than shared).
---- The xpcall message handler logs the Lua call stack at the throw site (via the
---- engine's printCallstack) before unwinding, then returns the error string.
+--- xpcall fn, logging the call stack at the throw, so one failing item cannot abort the daily loop.
 ---@param label string Identifies the protected step in error logs
 ---@param fn function Zero-arg closure to execute
 ---@return boolean ok True if fn completed without error

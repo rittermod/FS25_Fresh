@@ -17,9 +17,7 @@ local MOD_NAME = g_currentModName
 -- Type Resolution
 -- ============================================================================
 
---- Type aliases for convenience
---- NOTE: "husbandryfood" is the ENTITY_TYPE for husbandry food containers
----       PlaceableAdapter handles general husbandry storage (type "placeable")
+--- Type aliases; husbandry food is "husbandryfood", other husbandry storage is "placeable"
 RmFreshConsole.TYPE_ALIASES = {
     v = "vehicle",
     vehicle = "vehicle",
@@ -462,7 +460,7 @@ function RmFreshConsole:consoleCommandInspect(indexStr)
         end
     end
 
-    -- Step 4: Show capability flags
+    -- Show capability flags
     local canFill = container.playerCanFill
     local canEmpty = container.playerCanEmpty
     if canFill ~= nil or canEmpty ~= nil then
@@ -567,8 +565,7 @@ end
 -- Server-side execution for batch manipulation commands
 -- ============================================================================
 
---- Execute add batch operation --- Adds to BOTH game fill (via adapter) AND batch tracking (via Manager)
---- Order: Game fill FIRST, then Manager (abort if game fails to prevent desync)
+--- Add to game fill, then to batch tracking; stops if the game fill fails, to prevent a desync.
 ---@param containerId string Container ID
 ---@param amount number Amount to add
 ---@param age number|nil Age (default 0)
@@ -625,8 +622,7 @@ function RmFreshConsole:executeAddBatch(containerId, amount, age)
         actualDelta, age, fillBefore, fillAfter)
 end
 
---- Execute remove batch operation --- Removes from BOTH game fill AND batch tracking
---- Order: Game fill FIRST, then Manager (abort if game fails to prevent desync)
+--- Remove from game fill, then from batch tracking; stops if the game fill fails, to prevent a desync.
 ---@param containerId string Container ID
 ---@param batchIndex number Batch index (1-based)
 ---@return string Result message
@@ -1159,8 +1155,7 @@ function RmFreshConsole:consoleCommandAgeContainer(indexStr, hoursStr)
     end
 end
 
---- Console command: Force expire batches --- Usage: fExpire <#> [batchIdx]
---- With batchIdx: expire single batch; without: expire all batches in container
+--- fExpire <#> [batchIdx]: expire one batch, or every batch in the container
 ---@param indexStr string Container index from fList
 ---@param batchIdxStr string|nil Batch index (1-based)
 ---@return string Console output message
@@ -1270,10 +1265,7 @@ function RmFreshConsole:consoleCommandStats()
     return ""
 end
 
---- Console command: Show containers with goods expiring within specified hours
---- Usage: fStatus [hours]
---- Shows goods owned by current player that will expire within threshold
---- Uses daysPerPeriod-aware calculation for accurate time display
+--- fStatus [hours]: the player's goods expiring within the window (days-per-period aware)
 ---@param hoursStr string|nil Hours threshold (default 24)
 ---@return string Console output message
 function RmFreshConsole:consoleCommandStatus(hoursStr)
@@ -1483,9 +1475,7 @@ function RmFreshConsole:consoleCommandClearLog()
     end
 end
 
---- Console command: Reconcile containers (admin only)
---- Usage: fReconcile
---- Fixes drift between tracked batches and actual game fill levels
+--- fReconcile (admin): fix drift between tracked batches and actual fill levels
 ---@return string Console output message
 function RmFreshConsole:consoleCommandReconcile()
     -- Check admin (early feedback)
@@ -1707,10 +1697,7 @@ end
 -- fFillDetail Command
 -- ============================================================================
 
---- Console command: Show per-storage breakdown for a fillType
---- Usage: fFillDetail [fillType]
---- Without args: lists available perishable fillTypes
---- With fillType name: shows per-storage detail with batches, class, expiry
+--- fFillDetail [fillType]: per-storage batches, class and expiry; no argument lists perishable types
 ---@param fillTypeStr string|nil FillType name (e.g., "WHEAT")
 ---@return string Console output message
 function RmFreshConsole:consoleCommandFillDetail(fillTypeStr)
@@ -1788,9 +1775,7 @@ end
 -- fStorageList Command
 -- ============================================================================
 
---- Console command: Show all storages with totals and fillType counts
---- Usage: fStorageList
---- Populates self.storageTargets for follow-up fStorageDetail
+--- fStorageList: all storages with totals; fills storageTargets for fStorageDetail
 ---@return string Console output message
 function RmFreshConsole:consoleCommandStorageList()
     -- Resolve farmId
@@ -1835,9 +1820,7 @@ end
 -- fStorageDetail Command
 -- ============================================================================
 
---- Console command: Show per-fillType breakdown for a storage
---- Usage: fStorageDetail <#>
---- Requires fStorageList to have been run first (populates storageTargets)
+--- fStorageDetail <#>: per-fillType breakdown of a storage; run fStorageList first
 ---@param indexStr string Storage index from fStorageList
 ---@return string Console output message
 function RmFreshConsole:consoleCommandStorageDetail(indexStr)

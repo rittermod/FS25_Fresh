@@ -84,8 +84,7 @@ function RmObjectStorageAdapter:onLoad(_savegame)
         return
     end
 
-    -- Skip construction preview placeables
-    -- PlaceablePropertyState: NONE=1, OWNED=2, CONSTRUCTION_PREVIEW=3
+    -- Skip construction previews (CONSTRUCTION_PREVIEW) and NONE placeables
     local propertyState = self:getPropertyState()
     if propertyState == PlaceablePropertyState.CONSTRUCTION_PREVIEW or
         propertyState == PlaceablePropertyState.NONE then
@@ -375,8 +374,7 @@ end
 -- ENTRY HOOK: Object enters storage
 -- =============================================================================
 
---- Hook for addObjectToObjectStorage - captures batches when object enters storage
---- Called AFTER superFunc so abstractObject exists in storedObjects
+--- Object enters storage: capture its batches before superFunc deletes it, then move them to the new abstractObject.
 ---@param superFunc function Original function
 ---@param object table The real object (bale or pallet) entering storage
 ---@param loadedFromSavegame boolean True if loading from savegame (skip transfer)
@@ -524,8 +522,7 @@ end
 -- EXIT HOOK: Object leaves storage (spawns back)
 -- =============================================================================
 
---- Hook for removeAbstractObjectFromStorage - transfers batches when object spawns
---- Strategy: Snapshot existing containers -> superFunc -> find new container -> transfer
+--- Move batches to a spawned object: snapshot containers, run superFunc, transfer to the new one.
 ---@param superFunc function Original function
 ---@param abstractObject table The abstract object being spawned
 ---@param x number Spawn X position
@@ -770,7 +767,7 @@ end
 -- =============================================================================
 
 --- Build identity structure from abstractObject for Manager registration
---- Uses almost ALL attributes for matching (per design doc)
+--- Uses almost ALL attributes for matching
 ---@param placeable table The placeable (for uniqueId)
 ---@param abstractObject table The abstract stored object
 ---@return table|nil identityMatch or nil if invalid
@@ -868,8 +865,7 @@ function RmObjectStorageAdapter.buildIdentityFromAbstractObject(placeable, abstr
     return identity
 end
 
---- Build identity structure for container registration (legacy interface)
---- Legacy interface - delegates to buildIdentityFromAbstractObject internally
+--- Legacy identity interface; delegates to buildIdentityFromAbstractObject.
 ---@return table identityMatch
 function RmObjectStorageAdapter:buildIdentityMatch()
     return {
@@ -905,7 +901,7 @@ function RmObjectStorageAdapter:onWriteStream(streamId, _connection)
         streamWriteString(streamId, containerId)
     end
 
-    -- Phase 2: Sync expiring counts for HUD display
+    -- Sync expiring counts for HUD display
     local specOS = self.spec_objectStorage
     local numObjectInfos = specOS and specOS.objectInfos and #specOS.objectInfos or 0
     streamWriteUInt8(streamId, numObjectInfos)
@@ -944,7 +940,7 @@ function RmObjectStorageAdapter:onReadStream(streamId, _connection)
         end
     end
 
-    -- Phase 2: Receive expiring counts and soonest hours for HUD display
+    -- Receive expiring counts and soonest hours for HUD display
     local numObjectInfos = streamReadUInt8(streamId)
     local counts = {}
     for i = 1, numObjectInfos do
@@ -962,8 +958,7 @@ end
 -- HUD EXPIRING DISPLAY
 -- =============================================================================
 
---- Count items with near-expiry batches in an objectInfo and find soonest expiry
---- Server-only: uses abstractObjectContainers to find containers
+--- Server only: count near-expiry items in an objectInfo and find the soonest expiry.
 ---@param objectInfo table The objectInfo from spec_objectStorage.objectInfos
 ---@param placeable table The storage placeable
 ---@return number Count of items with expiring batches
@@ -1235,8 +1230,7 @@ end
 -- OLDEST OUT FIRST - Sort stored objects by batch age
 -- =============================================================================
 
---- Hook updateObjectStorageObjectInfos to sort objects by batch age after rebuild
---- Ensures oldest items (by batch age) exit first when user retrieves
+--- Sort rebuilt objectInfos by batch age, so the oldest items come out first.
 ---@param superFunc function Original function
 function RmObjectStorageAdapter:updateObjectStorageObjectInfosHook(superFunc)
     -- Call original (rebuilds objectInfos from storedObjects)

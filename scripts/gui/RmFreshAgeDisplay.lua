@@ -144,8 +144,7 @@ end
 -- Two-phase: showInfo stores vehicle, draw() populates box
 -- =============================================================================
 
---- Store vehicle for drawing (called from RmVehicleAdapter.showInfo)
---- showInfo runs before rendering - box display must happen in draw()
+--- Queue a vehicle for draw(); showInfo runs before rendering, so the bars are drawn later
 ---@param vehicle table The vehicle
 ---@param box table The info box (unused, kept for API compatibility)
 function RmFreshAgeDisplay.drawForVehicle(vehicle, box)
