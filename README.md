@@ -38,7 +38,9 @@ Vanilla FS25 lets you stockpile products indefinitely, waiting for the perfect p
 ### Storage Classes
 - Storages are auto-classified based on type: Exposed, Sheltered, Indoor, Cooled, Frozen, or Disabled (no aging)
 - Each class applies an aging speed multiplier - better storage means slower spoilage
-- Override storage class per-storage via Settings
+- Bales, pallets, big bags, and parked vehicles under a building roof age as Sheltered
+- Vehicle loads follow their cover: Sheltered while the tarp is closed, Exposed while it is open; tankers and closed hoppers age as Sheltered
+- Override storage class per-storage via Settings; the Loose Items setting sets the minimum class for bales and pallets outside a storage
 - Set per-product max benefit class to cap how much a storage class can help
 
 ### Visual Feedback
